@@ -63,7 +63,7 @@ class SystemSettingController extends Controller
             'settings' => ['required', 'array'],
             'settings.*.group' => ['required', 'string'],
             'settings.*.key' => ['required', 'string'],
-            'settings.*.value' => ['required'],
+            'settings.*.value' => ['nullable'], // Allow null/empty for optional fields
             'settings.*.is_public' => ['sometimes', 'boolean'],
         ]);
 

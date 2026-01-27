@@ -195,10 +195,12 @@ export default function SystemSettingsPage() {
       
       // General settings
       Object.entries(data.general).forEach(([key, value]) => {
+        // Convert empty strings to null for optional fields
+        const finalValue = (key === "app_url" && (!value || value.trim() === "")) ? null : value;
         settingsArray.push({
           group: "general",
           key,
-          value,
+          value: finalValue,
           is_public: key === "app_name" || key === "app_url",
         });
       });
@@ -237,7 +239,11 @@ export default function SystemSettingsPage() {
       toast.success("System settings updated successfully");
       await fetchSettings();
     } catch (error: any) {
-      toast.error(error.message || "Failed to update system settings");
+      const errorMessage = error.response?.data?.message 
+        || error.response?.data?.error 
+        || error.message 
+        || "Failed to update system settings";
+      toast.error(errorMessage);
     } finally {
       setIsSaving(false);
     }
