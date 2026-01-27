@@ -32,6 +32,7 @@ Thumbs.db
 /backend/bootstrap/cache/*
 !/backend/bootstrap/cache/.gitkeep
 /backend/database/*.sqlite
+/backend/public/storage
 
 # Next.js
 /frontend/.next/

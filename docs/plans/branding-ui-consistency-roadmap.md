@@ -28,13 +28,16 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 - [x] Create logo component that handles different display modes (full, icon-only)
 - [ ] Add logo to sign-in page and authentication screens
 
-### App Name Consistency (MEDIUM Priority) - Partial
+### App Name Consistency (MEDIUM Priority) - In Progress
 - [x] Create centralized app name configuration (single source of truth)
+- [ ] Make app name dynamic from system settings (not just env vars)
+- [ ] Use app name from settings when no logo is present
 - [ ] Update sign-in page to use configured app name
 - [ ] Update sign-up/registration pages to use configured app name
 - [ ] Update password reset pages to use configured app name
 - [ ] Update email templates to use configured app name
-- [ ] Update page titles and meta tags to use configured app name
+- [ ] Update page titles to include page name (e.g., "Recipes | Sourdough", "Dashboard | Sourdough")
+- [ ] Update meta tags to use configured app name
 - [ ] Update any hardcoded "Sourdough" references throughout codebase
 - [ ] Add app name to footer (if applicable)
 
@@ -86,9 +89,16 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 - Centralized app configuration at `frontend/config/app.ts`
 - Environment variables for app name customization
 
+**In Progress (2026-01-27)**:
+- Making app name dynamic from system settings (not just env vars)
+- App name from settings will be used when no logo is present
+- Creating app-config context/hook to fetch settings from API
+
 **Remaining Problems**:
 - ~~Header layout may need improvements for better UX~~ ✅ Fixed
 - ~~Collapsed sidebar lacks proper app icon representation~~ ✅ Fixed
+- App name is static (env vars only) - needs to be dynamic from system settings
+- App name should be used from settings when no logo is present
 - App name hardcoded in auth pages (login, register, password reset)
 - Sign-in and other pages do not display app branding/logo
 - Dark mode is currently the default (should be light mode)
@@ -232,7 +242,8 @@ Update all authentication pages to use centralized branding:
    - Add logo to auth pages
 
 2. **Update page metadata**
-   - Page titles: "Page Name | {App Name}"
+   - Page titles: Include page name with app name (e.g., "Recipes | Sourdough", "Dashboard | Sourdough")
+   - All pages should follow consistent title format: "{Page Name} | {App Name}"
    - Meta descriptions with app name
    - Open Graph tags
 
@@ -308,11 +319,16 @@ Update all authentication pages to use centralized branding:
 - `.env.example` - Added branding variables
 
 **Still Need Modification**:
+- `frontend/lib/app-config.ts` - **NEW** - Context/hook to fetch app name and logo from settings API
+- `frontend/config/app.ts` - Update to support dynamic values from settings
+- `frontend/components/logo.tsx` - Use dynamic app name from settings when no logo
+- `frontend/components/providers.tsx` - Add AppConfigProvider
+- `frontend/app/page.tsx` - Use dynamic app name instead of hardcoded "Sourdough"
+- `frontend/app/layout.tsx` - Use dynamic app name in metadata (with SSR-safe defaults)
 - `frontend/components/theme-provider.tsx` - Change default theme to light
 - `frontend/app/globals.css` - Add CSS variables for primary/secondary colors and header font
 - `frontend/app/(auth)/login/page.tsx` - Add branding
 - `frontend/app/(auth)/register/page.tsx` - Add branding
-- `frontend/app/layout.tsx` - Use app config for metadata, add Newsreader font import
 - ~~`frontend/app/(dashboard)/configuration/system/page.tsx` - Make app_url optional, default app_name to "Sourdough"~~ ✅ Complete
 
 **Dependencies to Add**:

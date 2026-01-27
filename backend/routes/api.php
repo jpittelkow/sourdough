@@ -35,6 +35,10 @@ Route::get('/health', fn() => response()->json(['status' => 'ok']));
 // SSO Provider Info (public)
 Route::get('/auth/sso/providers', [SSOController::class, 'providers']);
 
+// Public system settings and branding (no auth required)
+Route::get('/system-settings/public', [SystemSettingController::class, 'publicSettings']);
+Route::get('/branding', [BrandingController::class, 'show']);
+
 /*
 |--------------------------------------------------------------------------
 | Authentication Routes
@@ -126,9 +130,6 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::put('/', [SystemSettingController::class, 'update']);
         Route::get('/{group}', [SystemSettingController::class, 'show']);
     });
-    
-    // Public system settings (no auth required)
-    Route::get('/system-settings/public', [SystemSettingController::class, 'publicSettings']);
     
     // Notifications
     Route::prefix('notifications')->group(function () {
@@ -226,8 +227,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{webhook}', [WebhookController::class, 'destroy']);
     });
     
-    // Branding (Public read, admin write)
-    Route::get('/branding', [BrandingController::class, 'show']);
+    // Branding (admin write only - public read is defined above)
     Route::prefix('branding')->middleware('can:manage-settings')->group(function () {
         Route::put('/', [BrandingController::class, 'update']);
         Route::post('/logo', [BrandingController::class, 'uploadLogo']);

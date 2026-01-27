@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
+import { AppConfigProvider } from "@/lib/app-config";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, isInitialized } = useAuth();
@@ -34,12 +35,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
-        <AuthInitializer>
-          {children}
-        </AuthInitializer>
-        <Toaster richColors position="top-right" />
-      </ThemeProvider>
+      <AppConfigProvider>
+        <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
+          <AuthInitializer>
+            {children}
+          </AuthInitializer>
+          <Toaster richColors position="top-right" />
+        </ThemeProvider>
+      </AppConfigProvider>
     </QueryClientProvider>
   );
 }

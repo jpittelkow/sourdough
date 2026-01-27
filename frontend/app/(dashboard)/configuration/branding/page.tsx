@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,6 +38,7 @@ export default function BrandingSettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
   const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<BrandingForm>({
     resolver: zodResolver(brandingSchema),
@@ -86,6 +88,8 @@ export default function BrandingSettingsPage() {
     try {
       await api.put("/branding", data);
       toast.success("Branding settings updated successfully");
+      // Invalidate app-config cache so logo updates immediately
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
       await fetchSettings();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update branding settings");
@@ -122,6 +126,8 @@ export default function BrandingSettingsPage() {
       setValue("logo_url", response.data.url);
       setLogoPreview(response.data.url);
       toast.success("Logo uploaded successfully");
+      // Invalidate app-config cache so logo updates immediately
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to upload logo");
     } finally {

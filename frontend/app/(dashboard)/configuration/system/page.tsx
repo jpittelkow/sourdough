@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,6 +113,7 @@ export default function SystemSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<SystemForm | null>(null);
+  const queryClient = useQueryClient();
 
   const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<SystemForm>({
     resolver: zodResolver(systemSchema),
@@ -237,6 +239,8 @@ export default function SystemSettingsPage() {
 
       await api.put("/system-settings", { settings: settingsArray });
       toast.success("System settings updated successfully");
+      // Invalidate app-config cache so app name updates immediately
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
       await fetchSettings();
     } catch (error: any) {
       const errorMessage = error.response?.data?.message 
@@ -317,7 +321,7 @@ export default function SystemSettingsPage() {
                   <Label htmlFor="default_timezone">Default Timezone</Label>
                   <Select
                     value={watch("general.default_timezone")}
-                    onValueChange={(value) => setValue("general.default_timezone", value)}
+                    onValueChange={(value) => setValue("general.default_timezone", value, { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select timezone" />
@@ -341,7 +345,7 @@ export default function SystemSettingsPage() {
                   <Label htmlFor="default_locale">Default Locale</Label>
                   <Select
                     value={watch("general.default_locale")}
-                    onValueChange={(value) => setValue("general.default_locale", value)}
+                    onValueChange={(value) => setValue("general.default_locale", value, { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select locale" />
@@ -383,7 +387,7 @@ export default function SystemSettingsPage() {
                   <Switch
                     checked={watch("registration.enabled")}
                     onCheckedChange={(checked) =>
-                      setValue("registration.enabled", checked)
+                      setValue("registration.enabled", checked, { shouldDirty: true })
                     }
                   />
                 </div>
@@ -400,7 +404,7 @@ export default function SystemSettingsPage() {
                   <Switch
                     checked={watch("registration.email_verification_required")}
                     onCheckedChange={(checked) =>
-                      setValue("registration.email_verification_required", checked)
+                      setValue("registration.email_verification_required", checked, { shouldDirty: true })
                     }
                   />
                 </div>
@@ -473,7 +477,7 @@ export default function SystemSettingsPage() {
                   <Switch
                     checked={watch("security.password_require_special")}
                     onCheckedChange={(checked) =>
-                      setValue("security.password_require_special", checked)
+                      setValue("security.password_require_special", checked, { shouldDirty: true })
                     }
                   />
                 </div>
@@ -522,7 +526,7 @@ export default function SystemSettingsPage() {
                   <Label htmlFor="default_theme">Default Theme</Label>
                   <Select
                     value={watch("defaults.default_theme")}
-                    onValueChange={(value) => setValue("defaults.default_theme", value)}
+                    onValueChange={(value) => setValue("defaults.default_theme", value, { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select theme" />

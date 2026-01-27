@@ -133,6 +133,34 @@ docker-compose exec app chown -R www-data:www-data /var/www/html/backend/storage
 docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/.next
 ```
 
+### Changes Not Being Picked Up
+
+If file changes aren't reflected:
+
+1. **Backend (PHP):** Restart container to apply new `php-dev.ini`:
+   ```bash
+   docker-compose restart
+   ```
+
+2. **Frontend - clear Next.js cache:** The `.next` cache volume may have stale builds:
+   ```bash
+   docker-compose down
+   docker volume rm sourdough_frontend_next_cache 2>/dev/null || true
+   docker-compose up -d
+   ```
+
+3. **Verify development mode:** Check logs for "development mode":
+   ```bash
+   docker-compose logs | grep -i "development"
+   ```
+
+4. **Verify polling is enabled:** Check Next.js logs show webpack polling:
+   ```bash
+   docker-compose logs | grep -i "watching"
+   ```
+
+**Note:** Webpack polling and `WATCHPACK_POLLING=true` are already configured for Windows compatibility. If changes still aren't detected, clearing the Next.js cache volume (step 2) should resolve it.
+
 ## Volume Mounts
 
 The development setup uses these volumes:
@@ -148,6 +176,28 @@ The development setup uses these volumes:
 
 **Note:** Named volumes (`frontend_node_modules`, `frontend_next_cache`) isolate container dependencies from host, preventing conflicts.
 
+## Hot Reload / File Change Detection
+
+**Backend (PHP/Laravel):**
+- Source is mounted at `./backend:/var/www/html/backend`
+- Development uses `docker/php-dev.ini` with `opcache.validate_timestamps=1`
+- PHP detects file changes immediately without restart
+
+**Frontend (Next.js):**
+- Source is mounted at `./frontend:/var/www/html/frontend`
+- Runs in development mode with `npm run dev` and hot module replacement
+- Uses webpack polling (configured in `next.config.js`) for reliable change detection
+- `WATCHPACK_POLLING=true` environment variable enables watchpack polling mode
+
+### Windows File Watching
+
+Docker on Windows (via WSL2/Hyper-V) doesn't reliably propagate filesystem events (`inotify`) to containers. The project uses **polling** instead:
+
+1. **Webpack polling** in `frontend/next.config.js` - Checks for changes every 1 second
+2. **WATCHPACK_POLLING=true** in `docker-compose.yml` - Enables watchpack polling
+
+This ensures file changes are detected regardless of the host OS.
+
 ## Key Files
 
 - `docker-compose.yml` - Development compose configuration
@@ -156,6 +206,8 @@ The development setup uses these volumes:
 - `docker/entrypoint.sh` - Container startup script
 - `docker/supervisord.conf` - Process management
 - `docker/nginx.conf` - Web server configuration
+- `docker/php.ini` - PHP config (production)
+- `docker/php-dev.ini` - PHP config (development, mounted in docker-compose.yml)
 - `.env` - Local environment variables (not committed)
 - `.env.example` - Environment template
 

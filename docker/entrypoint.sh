@@ -23,6 +23,12 @@ mkdir -p ${FRONTEND_DIR}/.next/cache
 chown -R www-data:www-data ${FRONTEND_DIR}/.next
 chmod -R 775 ${FRONTEND_DIR}/.next
 
+# In development mode, remove BUILD_ID to force Next.js dev mode with hot reload
+if [ "${APP_ENV}" = "local" ] || [ "${APP_ENV}" = "development" ]; then
+    echo "Development mode: Clearing Next.js production build marker..."
+    rm -f ${FRONTEND_DIR}/.next/BUILD_ID
+fi
+
 # Ensure data directory exists with proper permissions
 echo "Setting up data directory..."
 mkdir -p ${DATA_DIR}

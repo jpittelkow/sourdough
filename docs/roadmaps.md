@@ -26,6 +26,8 @@ Requires foundation work or longer-term planning.
 | Roadmap | Priority | Dependencies |
 |---------|----------|--------------|
 | [Admin Features](plans/admin-features-roadmap.md) | HIGH | Env to Database |
+| [Audit Logs & Logging](plans/audit-logs-roadmap.md) | MEDIUM | None |
+| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | Audit Logs & Logging |
 | [Env to Database Migration](plans/env-to-database-roadmap.md) | MEDIUM | None (Settings Restructure complete) |
 | [Integration Settings](plans/integration-settings-roadmap.md) | MEDIUM | Env to Database |
 | [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | MEDIUM | None |

@@ -4,15 +4,18 @@
  * Logo/icon paths are null by default - the Logo component displays
  * text fallbacks. When logos are uploaded via the branding configuration
  * page, these paths will be populated.
+ * 
+ * Note: For dynamic app name from settings, use the `useAppConfig()` hook
+ * from `@/lib/app-config`. This static config is used as fallback/defaults.
  */
 export const APP_CONFIG = {
-  /** Full application name */
+  /** Full application name (fallback - use useAppConfig() for dynamic value) */
   name: process.env.NEXT_PUBLIC_APP_NAME || 'Sourdough',
   
   /** Short name for collapsed states (1-3 characters recommended) */
   shortName: process.env.NEXT_PUBLIC_APP_SHORT_NAME || 'SD',
   
-  /** Full logo path (null = use text fallback) */
+  /** Full logo path (null = use text fallback) - use useAppConfig() for dynamic value */
   logo: null as string | null,
   
   /** Square icon path for collapsed sidebar (null = use text fallback) */

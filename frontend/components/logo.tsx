@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { APP_CONFIG } from "@/config/app";
+import { useAppConfig } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 
 export interface LogoProps {
@@ -45,13 +46,17 @@ const sizeConfig = {
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   const [logoError, setLogoError] = useState(false);
   const [iconError, setIconError] = useState(false);
+  const { appName, logoUrl } = useAppConfig();
   const sizes = sizeConfig[size];
+  
+  // Use dynamic logo URL from settings, fallback to APP_CONFIG
+  const currentLogo = logoUrl || APP_CONFIG.logo;
 
   // Text-only variant
   if (variant === "text") {
     return (
       <span className={cn("font-semibold", sizes.text, className)}>
-        {APP_CONFIG.name}
+        {appName}
       </span>
     );
   }
@@ -65,7 +70,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
         <div className={cn(sizes.icon, "relative", className)}>
           <Image
             src={APP_CONFIG.icon!}
-            alt={APP_CONFIG.name}
+            alt={appName}
             fill
             className="object-contain"
             onError={() => setIconError(true)}
@@ -92,15 +97,16 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   }
 
   // Full variant (logo + name, or text-only fallback)
-  const hasLogo = APP_CONFIG.logo && !logoError;
+  // Use app name from settings when no logo is present
+  const hasLogo = currentLogo && !logoError;
 
   return (
     <div className={cn("flex items-center", sizes.gap, className)}>
       {hasLogo ? (
         <div className={cn(sizes.full, "relative aspect-square")}>
           <Image
-            src={APP_CONFIG.logo!}
-            alt={APP_CONFIG.name}
+            src={currentLogo}
+            alt={appName}
             fill
             className="object-contain"
             onError={() => setLogoError(true)}
@@ -120,7 +126,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
           {APP_CONFIG.shortName}
         </div>
       )}
-      <span className={cn("font-semibold", sizes.text)}>{APP_CONFIG.name}</span>
+      <span className={cn("font-semibold", sizes.text)}>{appName}</span>
     </div>
   );
 }
