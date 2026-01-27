@@ -6,6 +6,11 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 **Status**: Active Development  
 **Last Updated**: 2026-01-27
 
+**Recent Updates (2026-01-27)**:
+- Fixed page title not updating with app name (removed duplicate app-config.tsx file)
+- Added Logo component to all authentication pages (login, register, forgot-password, reset-password, verify-email)
+- App name now displays correctly on all auth pages when no logo is selected
+
 **Dependencies**:
 - ~~[Settings Restructure](settings-restructure-roadmap.md)~~ ✅ Complete - Configuration page structure for `/configuration/branding`
 
@@ -26,15 +31,16 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 - [ ] Add favicon and PWA icons (multiple sizes)
 - [x] Ensure logo scales appropriately in all contexts
 - [x] Create logo component that handles different display modes (full, icon-only)
-- [ ] Add logo to sign-in page and authentication screens
+- [x] Add logo to sign-in page and authentication screens
 
 ### App Name Consistency (MEDIUM Priority) - In Progress
 - [x] Create centralized app name configuration (single source of truth)
-- [ ] Make app name dynamic from system settings (not just env vars)
-- [ ] Use app name from settings when no logo is present
-- [ ] Update sign-in page to use configured app name
-- [ ] Update sign-up/registration pages to use configured app name
-- [ ] Update password reset pages to use configured app name
+- [x] Make app name dynamic from system settings (not just env vars)
+- [x] Use app name from settings when no logo is present
+- [x] Update sign-in page to use configured app name
+- [x] Update sign-up/registration pages to use configured app name
+- [x] Update password reset pages to use configured app name
+- [ ] **Fix page title not updating with app name from settings** - document.title effect not working reliably
 - [ ] Update email templates to use configured app name
 - [ ] Update page titles to include page name (e.g., "Recipes | Sourdough", "Dashboard | Sourdough")
 - [ ] Update meta tags to use configured app name
@@ -97,10 +103,11 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 **Remaining Problems**:
 - ~~Header layout may need improvements for better UX~~ ✅ Fixed
 - ~~Collapsed sidebar lacks proper app icon representation~~ ✅ Fixed
-- App name is static (env vars only) - needs to be dynamic from system settings
-- App name should be used from settings when no logo is present
-- App name hardcoded in auth pages (login, register, password reset)
-- Sign-in and other pages do not display app branding/logo
+- ~~App name is static (env vars only) - needs to be dynamic from system settings~~ ✅ Fixed
+- ~~App name should be used from settings when no logo is present~~ ✅ Fixed
+- ~~App name hardcoded in auth pages (login, register, password reset)~~ ✅ Fixed
+- ~~Sign-in and other pages do not display app branding/logo~~ ✅ Fixed
+- **Page title not updating with app name from settings** - document.title effect in AppConfigProvider not working reliably
 - Dark mode is currently the default (should be light mode)
 - No color customization options for primary/secondary colors
 - Logo upload functionality needs verification
@@ -327,8 +334,8 @@ Update all authentication pages to use centralized branding:
 - `frontend/app/layout.tsx` - Use dynamic app name in metadata (with SSR-safe defaults)
 - `frontend/components/theme-provider.tsx` - Change default theme to light
 - `frontend/app/globals.css` - Add CSS variables for primary/secondary colors and header font
-- `frontend/app/(auth)/login/page.tsx` - Add branding
-- `frontend/app/(auth)/register/page.tsx` - Add branding
+- ~~`frontend/app/(auth)/login/page.tsx` - Add branding~~ ✅ Complete
+- ~~`frontend/app/(auth)/register/page.tsx` - Add branding~~ ✅ Complete
 - ~~`frontend/app/(dashboard)/configuration/system/page.tsx` - Make app_url optional, default app_name to "Sourdough"~~ ✅ Complete
 
 **Dependencies to Add**:

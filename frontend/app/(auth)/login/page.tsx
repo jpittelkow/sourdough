@@ -13,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { TwoFactorForm } from "@/components/auth/two-factor-form";
+import { Logo } from "@/components/logo";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -63,6 +64,9 @@ export default function LoginPage() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <div className="w-full max-w-md space-y-6">
           <div className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <h1 className="text-2xl font-bold">Two-Factor Authentication</h1>
             <p className="text-muted-foreground mt-2">
               Enter the code from your authenticator app
@@ -81,6 +85,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <Logo variant="full" size="lg" />
+          </div>
           <h1 className="text-2xl font-bold">Sign In</h1>
           <p className="text-muted-foreground mt-2">
             Enter your credentials to access your account

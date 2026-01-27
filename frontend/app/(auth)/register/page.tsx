@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
+import { Logo } from "@/components/logo";
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -55,6 +56,9 @@ export default function RegisterPage() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
         <div className="text-center">
+          <div className="flex justify-center mb-4">
+            <Logo variant="full" size="lg" />
+          </div>
           <h1 className="text-2xl font-bold">Create Account</h1>
           <p className="text-muted-foreground mt-2">
             Get started with your free account

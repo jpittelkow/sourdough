@@ -23,6 +23,7 @@ import {
   Mail,
   ArrowRight,
 } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -76,6 +77,9 @@ function VerifyEmailContent() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <div className="mx-auto">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
             </div>
@@ -95,6 +99,9 @@ function VerifyEmailContent() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
@@ -127,6 +134,9 @@ function VerifyEmailContent() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <div className="mx-auto w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
               <Mail className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
             </div>
@@ -174,6 +184,9 @@ function VerifyEmailContent() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Logo variant="full" size="lg" />
+          </div>
           <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
             <XCircle className="h-6 w-6 text-destructive" />
           </div>

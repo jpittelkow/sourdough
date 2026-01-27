@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ArrowLeft, Loader2, CheckCircle, AlertTriangle } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const resetPasswordSchema = z
   .object({
@@ -80,6 +81,9 @@ function ResetPasswordContent() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
               <AlertTriangle className="h-6 w-6 text-destructive" />
             </div>
@@ -120,6 +124,9 @@ function ResetPasswordContent() {
       <div className="min-h-screen flex items-center justify-center p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              <Logo variant="full" size="lg" />
+            </div>
             <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
               <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
             </div>
@@ -147,6 +154,9 @@ function ResetPasswordContent() {
     <div className="min-h-screen flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
+          <div className="flex justify-center mb-4">
+            <Logo variant="full" size="lg" />
+          </div>
           <CardTitle>Reset Password</CardTitle>
           <CardDescription>
             Enter your new password for{" "}
