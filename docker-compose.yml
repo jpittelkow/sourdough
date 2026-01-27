@@ -1,0 +1,53 @@
+# Sourdough Development Docker Compose
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+      args:
+        APP_VERSION: "0.1.0-dev"
+        BUILD_SHA: "development"
+    container_name: ${CONTAINER_NAME:-sourdough-dev}
+    ports:
+      - "${APP_PORT:-8080}:80"
+    volumes:
+      # Mount source code for development
+      - ./backend:/var/www/html/backend
+      - ./frontend:/var/www/html/frontend
+      # Use named volumes to avoid host/container conflicts
+      - frontend_node_modules:/var/www/html/frontend/node_modules
+      - frontend_next_cache:/var/www/html/frontend/.next
+      # Persist data
+      - sourdough_data:/var/www/html/data
+      - sourdough_storage:/var/www/html/backend/storage/app
+    environment:
+      - APP_ENV=local
+      - APP_DEBUG=true
+      - APP_URL=http://localhost:${APP_PORT:-8080}
+      - FRONTEND_URL=http://localhost:${APP_PORT:-8080}
+      - LOG_CHANNEL=stack
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=/var/www/html/data/database.sqlite
+      - CACHE_STORE=file
+      - SESSION_DRIVER=file
+      - QUEUE_CONNECTION=database
+      - SANCTUM_STATEFUL_DOMAINS=localhost,localhost:${APP_PORT:-8080},127.0.0.1,127.0.0.1:${APP_PORT:-8080},::1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  sourdough_data:
+    driver: local
+  sourdough_storage:
+    driver: local
+  frontend_node_modules:
+    driver: local
+  frontend_next_cache:
+    driver: local

@@ -1,0 +1,245 @@
+# ADR-007: Backup System Design
+
+## Status
+
+Accepted
+
+## Date
+
+2026-01-24
+
+## Context
+
+Self-hosted applications need robust backup and restore capabilities:
+- Users must be able to backup their data easily
+- Backups must be restorable on new installations
+- Configuration and secrets need secure handling
+- Large installations need scheduled automated backups
+- Remote storage options for disaster recovery
+
+## Decision
+
+We will implement a **ZIP-based backup system** with a manifest file for versioning and validation.
+
+### Backup Format
+
+```
+backup_sourdough_2026-01-24_143052.zip
+├── manifest.json           # Backup metadata
+├── database/
+│   └── database.sql        # SQL dump or SQLite file
+├── storage/
+│   └── app/                # All uploaded files
+│       ├── avatars/
+│       ├── attachments/
+│       └── ...
+└── config/
+    └── settings.enc        # Encrypted settings export
+```
+
+### Manifest Structure
+
+```json
+{
+  "version": "2.0",
+  "app_version": "0.1.0",
+  "created_at": "2026-01-24T14:30:52Z",
+  "database": {
+    "driver": "sqlite",
+    "tables": 12,
+    "total_rows": 1547
+  },
+  "storage": {
+    "files": 234,
+    "total_size_bytes": 52428800
+  },
+  "config": {
+    "encrypted": true,
+    "hash": "sha256:abc123..."
+  },
+  "checksum": "sha256:def456..."
+}
+```
+
+### Architecture
+
+```
+┌──────────────────────────────────────────────────────────────────┐
+│                       Backup System                               │
+├──────────────────────────────────────────────────────────────────┤
+│                                                                   │
+│  ┌──────────────────┐                                            │
+│  │  BackupService   │                                            │
+│  └────────┬─────────┘                                            │
+│           │                                                       │
+│           ├──► exportDatabase()                                   │
+│           │         │                                             │
+│           │         ├── SQLite: Copy file                        │
+│           │         ├── MySQL: mysqldump                          │
+│           │         └── PostgreSQL: pg_dump                       │
+│           │                                                       │
+│           ├──► exportStorage()                                    │
+│           │         │                                             │
+│           │         └── Copy storage/app/* to ZIP                │
+│           │                                                       │
+│           ├──► exportConfig()                                     │
+│           │         │                                             │
+│           │         └── Encrypt settings with backup key         │
+│           │                                                       │
+│           └──► createManifest()                                   │
+│                     │                                             │
+│                     └── Generate checksums, metadata             │
+│                                                                   │
+│  ┌──────────────────┐                                            │
+│  │  RestoreService  │                                            │
+│  └────────┬─────────┘                                            │
+│           │                                                       │
+│           ├──► validateBackup()                                   │
+│           │         │                                             │
+│           │         └── Check manifest, checksums, version       │
+│           │                                                       │
+│           ├──► restoreDatabase() (in transaction)                │
+│           │                                                       │
+│           ├──► restoreStorage()                                   │
+│           │                                                       │
+│           └──► restoreConfig()                                    │
+│                                                                   │
+└──────────────────────────────────────────────────────────────────┘
+```
+
+### Scheduled Backups
+
+Using Laravel's scheduler:
+
+```php
+// app/Console/Kernel.php
+$schedule->job(new CreateBackupJob)
+    ->dailyAt('03:00')
+    ->when(fn() => config('backup.schedule.enabled'));
+```
+
+Configuration options:
+- Frequency: hourly, daily, weekly
+- Retention: keep last N backups
+- Destinations: local, S3, SFTP
+
+### Backup Destinations
+
+```
+┌─────────────┐     ┌─────────────────────────────────────┐
+│   Backup    │────►│         Destination Adapter          │
+│   Service   │     ├─────────────────────────────────────┤
+└─────────────┘     │  • LocalDisk - storage/app/backups  │
+                    │  • S3 - AWS S3 or compatible        │
+                    │  • SFTP - Remote server              │
+                    │  • GoogleDrive - OAuth-based        │
+                    └─────────────────────────────────────┘
+```
+
+### Database Backup Strategy
+
+| Driver | Method | Restoration |
+|--------|--------|-------------|
+| SQLite | File copy | Replace file, migrate |
+| MySQL | mysqldump | mysql import, migrate |
+| PostgreSQL | pg_dump | psql import, migrate |
+
+All restores run migrations after import to handle version differences.
+
+### Security Considerations
+
+1. **Sensitive Data Encryption**: Settings containing API keys are encrypted in backups
+2. **Backup Encryption**: Optional full-backup encryption with user-provided password
+3. **Checksum Validation**: SHA-256 checksums prevent tampering
+4. **Version Compatibility**: Manifest version ensures compatible restores
+
+### Configuration
+
+```php
+// config/backup.php
+return [
+    'enabled' => env('BACKUP_ENABLED', true),
+    
+    'schedule' => [
+        'enabled' => env('BACKUP_SCHEDULE_ENABLED', false),
+        'frequency' => env('BACKUP_FREQUENCY', 'daily'),
+        'time' => env('BACKUP_TIME', '03:00'),
+        'retention' => env('BACKUP_RETENTION', 7),
+    ],
+    
+    'destinations' => [
+        'local' => [
+            'path' => storage_path('app/backups'),
+        ],
+        's3' => [
+            'bucket' => env('BACKUP_S3_BUCKET'),
+            'region' => env('BACKUP_S3_REGION', 'us-east-1'),
+            'path' => env('BACKUP_S3_PATH', 'backups'),
+        ],
+    ],
+    
+    'encryption' => [
+        'enabled' => env('BACKUP_ENCRYPT', false),
+        // Key derived from APP_KEY + user password
+    ],
+];
+```
+
+### API Endpoints
+
+```
+GET  /api/backup              - List available backups
+POST /api/backup/create       - Create new backup
+GET  /api/backup/{id}/download - Download backup file
+POST /api/backup/upload       - Upload backup for restore
+POST /api/backup/restore      - Restore from uploaded backup
+DELETE /api/backup/{id}       - Delete a backup
+```
+
+## Consequences
+
+### Positive
+
+- ZIP format is universally readable
+- Manifest enables version-aware restoration
+- Scheduled backups reduce data loss risk
+- Multiple destinations provide redundancy
+- Encrypted configs protect sensitive data
+
+### Negative
+
+- Large databases take time to backup
+- ZIP compression limited for already-compressed files
+- Remote storage requires additional configuration
+- Restoration requires application downtime
+
+### Neutral
+
+- Backups are admin-only by default
+- Manual and scheduled backups use same format
+- Cross-database restoration is best-effort
+
+## Related Decisions
+
+- [ADR-010: Database Abstraction Strategy](./010-database-abstraction.md)
+
+## Notes
+
+### Restore Safety
+
+The restore process:
+1. Validates backup before any changes
+2. Creates automatic pre-restore backup
+3. Runs in database transaction where possible
+4. Rolls back on any error
+5. Clears all caches after restore
+
+### Version Migration
+
+When restoring from older versions:
+1. Import data as-is
+2. Run all pending migrations
+3. Run any necessary data transformations
+4. Validate data integrity
+
+This allows restoring backups from previous versions onto newer installations.

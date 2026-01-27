@@ -1,0 +1,167 @@
+---
+description: Standard commands for local Docker development environment
+alwaysApply: true
+---
+
+# Local Docker Development
+
+Standard commands and procedures for running Sourdough locally via Docker.
+
+## Starting the Development Environment
+
+**Always use these exact commands:**
+
+```bash
+# First time setup (copy env file)
+cp .env.example .env
+
+# Start the container (builds if needed)
+docker-compose up -d
+
+# Access at http://localhost:8080
+```
+
+**Do NOT use `docker run` directly** - always use `docker-compose`.
+
+## Common Operations
+
+### Start/Stop Container
+
+```bash
+# Start (detached)
+docker-compose up -d
+
+# Stop
+docker-compose down
+
+# Stop and remove volumes (CAUTION: loses data)
+docker-compose down -v
+```
+
+### Rebuild After Changes
+
+**When to rebuild:**
+- Changes to `docker/Dockerfile`
+- Changes to `docker-compose.yml`
+- Changes to `docker/*.conf` files
+- Changes to `docker/*.sh` scripts
+- Dependency changes (`composer.json`, `package.json`)
+
+```bash
+# Rebuild and restart
+docker-compose up -d --build
+
+# Force full rebuild (no cache)
+docker-compose build --no-cache && docker-compose up -d
+```
+
+### View Logs
+
+```bash
+# All logs (follow)
+docker-compose logs -f
+
+# Last 100 lines
+docker-compose logs --tail=100
+
+# Specific service logs
+docker-compose logs -f app
+```
+
+### Access Container Shell
+
+```bash
+# Bash shell
+docker-compose exec app bash
+
+# Run artisan command
+docker-compose exec app php /var/www/html/backend/artisan migrate
+
+# Run npm command
+docker-compose exec app npm --prefix /var/www/html/frontend run build
+```
+
+## Environment Configuration
+
+### Port Configuration
+
+Default port is `8080`. To change, edit `.env`:
+
+```env
+APP_PORT=8081
+```
+
+### Container Name
+
+Default is `sourdough-dev`. To change (useful for multiple instances):
+
+```env
+CONTAINER_NAME=sourdough-myproject
+```
+
+## Troubleshooting
+
+### Container Won't Start
+
+1. Check logs: `docker-compose logs`
+2. Check port conflicts: `docker ps` or `netstat -an | findstr 8080`
+3. Try rebuild: `docker-compose up -d --build`
+
+### Database Issues
+
+```bash
+# Reset database (CAUTION: loses data)
+docker-compose down -v
+docker-compose up -d
+```
+
+### Frontend Build Issues
+
+```bash
+# Clear frontend volumes and rebuild
+docker-compose down
+docker volume rm sourdough_frontend_node_modules sourdough_frontend_next_cache 2>/dev/null || true
+docker-compose up -d --build
+```
+
+### Permission Issues
+
+The entrypoint script handles permissions. If issues persist:
+
+```bash
+docker-compose exec app chown -R www-data:www-data /var/www/html/backend/storage
+docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/.next
+```
+
+## Volume Mounts
+
+The development setup uses these volumes:
+
+| Volume | Purpose |
+|--------|---------|
+| `./backend` | Backend source (live reload) |
+| `./frontend` | Frontend source (live reload) |
+| `frontend_node_modules` | Node modules (isolated) |
+| `frontend_next_cache` | Next.js build cache (isolated) |
+| `sourdough_data` | SQLite database |
+| `sourdough_storage` | Laravel storage |
+
+**Note:** Named volumes (`frontend_node_modules`, `frontend_next_cache`) isolate container dependencies from host, preventing conflicts.
+
+## Key Files
+
+- `docker-compose.yml` - Development compose configuration
+- `docker-compose.prod.yml` - Production compose configuration
+- `docker/Dockerfile` - Container image definition
+- `docker/entrypoint.sh` - Container startup script
+- `docker/supervisord.conf` - Process management
+- `docker/nginx.conf` - Web server configuration
+- `.env` - Local environment variables (not committed)
+- `.env.example` - Environment template
+
+## Do NOT
+
+- Use `docker run` directly (use `docker-compose`)
+- Edit files inside running container (edit on host, auto-synced)
+- Manually create database (entrypoint handles it)
+- Skip `--build` flag after Dockerfile changes

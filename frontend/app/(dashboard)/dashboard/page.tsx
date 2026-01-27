@@ -22,25 +22,25 @@ const settingsCards = [
   {
     title: "Profile Settings",
     description: "Update your profile, password, and account settings.",
-    href: "/settings/profile",
+    href: "/user/profile",
     icon: User,
   },
   {
     title: "Security",
     description: "Manage 2FA, SSO connections, and security settings.",
-    href: "/settings/security",
+    href: "/user/security",
     icon: Shield,
   },
   {
     title: "Notifications",
     description: "Configure notification channels and preferences.",
-    href: "/settings/notifications",
+    href: "/configuration/notifications",
     icon: Bell,
   },
   {
     title: "AI/LLM Settings",
     description: "Configure LLM providers and orchestration mode.",
-    href: "/settings/ai",
+    href: "/configuration/ai",
     icon: Brain,
   },
 ];
@@ -80,7 +80,7 @@ export default function DashboardPage() {
             </Link>
           ))}
 
-          <Link href="/admin/backup" className="block group">
+          <Link href="/configuration/backup" className="block group">
             <Card className="h-full transition-colors hover:border-primary border-dashed">
               <CardHeader>
                 <div className="flex items-center justify-between">

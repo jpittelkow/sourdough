@@ -1,0 +1,117 @@
+<?php
+
+use App\Models\User;
+
+describe('Two-Factor Authentication', function () {
+    
+    describe('2FA Status', function () {
+        it('returns 2FA status for authenticated user', function () {
+            $user = User::factory()->create();
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->getJson('/api/auth/2fa/status');
+
+            $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'enabled',
+                    'confirmed',
+                ]);
+        });
+    });
+
+    describe('Enable 2FA', function () {
+        it('can initiate 2FA setup', function () {
+            $user = User::factory()->create();
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->postJson('/api/auth/2fa/enable');
+
+            $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'secret',
+                    'qr_code',
+                ]);
+        });
+
+        it('returns existing setup if already started', function () {
+            $user = User::factory()->create([
+                'two_factor_secret' => encrypt('TESTSECRET'),
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->postJson('/api/auth/2fa/enable');
+
+            $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'secret',
+                    'qr_code',
+                ]);
+        });
+    });
+
+    describe('Confirm 2FA', function () {
+        it('validates the TOTP code on confirm', function () {
+            $user = User::factory()->create([
+                'two_factor_secret' => encrypt('TESTSECRET'),
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->postJson('/api/auth/2fa/confirm', [
+                    'code' => '123456',
+                ]);
+
+            // Invalid code should fail
+            $response->assertStatus(400);
+        });
+    });
+
+    describe('Disable 2FA', function () {
+        it('can disable 2FA with valid password', function () {
+            $user = User::factory()->create([
+                'password' => bcrypt('password123'),
+                'two_factor_secret' => encrypt('TESTSECRET'),
+                'two_factor_confirmed_at' => now(),
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->postJson('/api/auth/2fa/disable', [
+                    'password' => 'password123',
+                ]);
+
+            $response->assertStatus(200);
+        });
+
+        it('fails to disable 2FA with invalid password', function () {
+            $user = User::factory()->create([
+                'password' => bcrypt('password123'),
+                'two_factor_secret' => encrypt('TESTSECRET'),
+                'two_factor_confirmed_at' => now(),
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->postJson('/api/auth/2fa/disable', [
+                    'password' => 'wrongpassword',
+                ]);
+
+            $response->assertStatus(400);
+        });
+    });
+
+    describe('Recovery Codes', function () {
+        it('can retrieve recovery codes when 2FA is enabled', function () {
+            $user = User::factory()->create([
+                'two_factor_secret' => encrypt('TESTSECRET'),
+                'two_factor_confirmed_at' => now(),
+                'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+            ]);
+
+            $response = $this->actingAs($user, 'sanctum')
+                ->getJson('/api/auth/2fa/recovery-codes');
+
+            $response->assertStatus(200)
+                ->assertJsonStructure([
+                    'recovery_codes',
+                ]);
+        });
+    });
+});
