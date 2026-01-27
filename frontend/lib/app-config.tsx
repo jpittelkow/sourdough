@@ -33,17 +33,14 @@ function useAppConfigQuery() {
         const branding = brandingResponse?.data?.settings || {};
 
         return {
-          appName:
-            systemSettings.general?.app_name ||
-            process.env.NEXT_PUBLIC_APP_NAME ||
-            APP_CONFIG.name,
+          // app_name is required in settings and has a default, so no need for env var fallback
+          appName: systemSettings.general?.app_name || APP_CONFIG.name,
           logoUrl: branding.logo_url || null,
         };
       } catch (error) {
-        // Fallback to defaults on error
+        // Fallback to default on error (app_name always has a default in settings)
         return {
-          appName:
-            process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG.name,
+          appName: APP_CONFIG.name,
           logoUrl: null,
         };
       }
@@ -61,7 +58,8 @@ function useAppConfigQuery() {
 export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   const query = useAppConfigQuery();
 
-  const appName = query.data?.appName || process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG.name;
+  // app_name is required in settings and has a default, so no need for env var fallback
+  const appName = query.data?.appName || APP_CONFIG.name;
   const logoUrl = query.data?.logoUrl || null;
 
   const value: AppConfigState = {
@@ -120,7 +118,7 @@ export function useAppConfig(): AppConfigState {
   if (context === undefined) {
     // Fallback if used outside provider (shouldn't happen, but safe fallback)
     return {
-      appName: process.env.NEXT_PUBLIC_APP_NAME || APP_CONFIG.name,
+      appName: APP_CONFIG.name,
       logoUrl: null,
       isLoading: false,
       error: null,

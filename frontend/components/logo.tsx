@@ -45,12 +45,11 @@ const sizeConfig = {
  */
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   const [logoError, setLogoError] = useState(false);
-  const [iconError, setIconError] = useState(false);
   const { appName, logoUrl } = useAppConfig();
   const sizes = sizeConfig[size];
   
-  // Use dynamic logo URL from settings, fallback to APP_CONFIG
-  const currentLogo = logoUrl || APP_CONFIG.logo;
+  // Use logo from settings if present (no fallback to APP_CONFIG since logo is optional)
+  const currentLogo = logoUrl;
 
   // Text-only variant
   if (variant === "text") {
@@ -63,23 +62,11 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
 
   // Icon variant (for collapsed sidebar)
   if (variant === "icon") {
-    const hasIcon = APP_CONFIG.icon && !iconError;
+    // For icon variant, we use the first character of app name as fallback
+    // (no separate icon from settings currently, but could be added later)
+    const iconChar = appName.charAt(0).toUpperCase();
 
-    if (hasIcon) {
-      return (
-        <div className={cn(sizes.icon, "relative", className)}>
-          <Image
-            src={APP_CONFIG.icon!}
-            alt={appName}
-            fill
-            className="object-contain"
-            onError={() => setIconError(true)}
-          />
-        </div>
-      );
-    }
-
-    // Fallback: Short name in styled square container
+    // Fallback: First character of app name in styled square container
     return (
       <div
         className={cn(
@@ -91,13 +78,13 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
           className
         )}
       >
-        {APP_CONFIG.shortName}
+        {iconChar}
       </div>
     );
   }
 
   // Full variant (logo + name, or text-only fallback)
-  // Use app name from settings when no logo is present
+  // Order: logo from settings → app name from settings (app_name always has a default)
   const hasLogo = currentLogo && !logoError;
 
   return (
@@ -113,7 +100,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
           />
         </div>
       ) : (
-        // No logo: show styled icon fallback before text
+        // No logo: show first character of app name in styled icon container before text
         <div
           className={cn(
             sizes.icon,
@@ -123,7 +110,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
             size === "lg" && "text-base"
           )}
         >
-          {APP_CONFIG.shortName}
+          {appName.charAt(0).toUpperCase()}
         </div>
       )}
       <span className={cn("font-semibold", sizes.text)}>{appName}</span>

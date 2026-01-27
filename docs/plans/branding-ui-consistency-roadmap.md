@@ -32,6 +32,8 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 - [x] Ensure logo scales appropriately in all contexts
 - [x] Create logo component that handles different display modes (full, icon-only)
 - [x] Add logo to sign-in page and authentication screens
+- [ ] **Verify logo display on default (home) page and sign-in page** - Ensure logo shows correctly, no flash of content
+- [ ] **Refactor logo/app name fallback order** - Use logo from settings if present, then fall back to app name from settings (which always has a default). Remove unnecessary env var fallbacks.
 
 ### App Name Consistency (MEDIUM Priority) - In Progress
 - [x] Create centralized app name configuration (single source of truth)
@@ -107,6 +109,8 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 - ~~App name should be used from settings when no logo is present~~ ✅ Fixed
 - ~~App name hardcoded in auth pages (login, register, password reset)~~ ✅ Fixed
 - ~~Sign-in and other pages do not display app branding/logo~~ ✅ Fixed
+- **Logo/app name fallback order is incorrect** - Should be: logo from settings → app name from settings (no env var fallbacks needed since app_name is required with default)
+- **Logo display verification needed** - Verify logo shows correctly on home page and sign-in page, no flash of content when loading
 - **Page title not updating with app name from settings** - document.title effect in AppConfigProvider not working reliably
 - Dark mode is currently the default (should be light mode)
 - No color customization options for primary/secondary colors

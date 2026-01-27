@@ -1,20 +1,19 @@
 "use client";
 
 import { useAuth } from "@/lib/auth";
-import { useAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import Link from "next/link";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
-  const { appName } = useAppConfig();
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
       <div className="max-w-2xl text-center space-y-8">
-        <h1 className="text-5xl font-bold tracking-tight">
-          {appName}
-        </h1>
+        <div className="flex justify-center">
+          <Logo variant="full" size="lg" />
+        </div>
         <p className="text-xl text-muted-foreground">
           A starter for AI to develop other apps - with enterprise-grade user management,
           multi-provider notifications, and AI/LLM orchestration.
