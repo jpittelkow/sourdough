@@ -4,13 +4,15 @@ import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import Link from "next/link";
+import { useVersion } from "@/lib/version-provider";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
+  const { version } = useVersion();
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">
-      <div className="max-w-2xl text-center space-y-8">
+      <div className="max-w-2xl text-center space-y-8 flex-1 flex flex-col">
         <div className="flex justify-center">
           <Logo variant="full" size="lg" />
         </div>
@@ -58,6 +60,13 @@ export default function Home() {
             </p>
           </div>
         </div>
+        {version && (
+          <div className="mt-auto pt-8">
+            <p className="text-xs text-muted-foreground">
+              v{version}
+            </p>
+          </div>
+        )}
       </div>
     </main>
   );

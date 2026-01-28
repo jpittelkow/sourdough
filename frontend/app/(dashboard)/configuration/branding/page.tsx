@@ -18,16 +18,32 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload, Image as ImageIcon } from "lucide-react";
+import { Loader2, Upload, RotateCcw, Trash2 } from "lucide-react";
+import { ColorPicker } from "@/components/ui/color-picker";
+import { BrandingPreview } from "@/components/branding-preview";
+import { useAppConfig } from "@/lib/app-config";
 
 const brandingSchema = z.object({
-  logo_url: z.string().url().optional().or(z.literal("")),
-  favicon_url: z.string().url().optional().or(z.literal("")),
-  primary_color: z.string().regex(/^#[0-9A-Fa-f]{6}$/).optional().or(z.literal("")),
-  dark_mode_default: z.boolean(),
+  logo_url: z.string().optional(),
+  favicon_url: z.string().optional(),
+  primary_color: z.string()
+    .refine((val) => {
+      if (!val || val === "") return true; // Empty is valid
+      return /^#[0-9A-Fa-f]{6}$/.test(val);
+    }, {
+      message: "Must be a valid hex color (e.g., #3b82f6)",
+    })
+    .optional(),
+  secondary_color: z.string()
+    .refine((val) => {
+      if (!val || val === "") return true; // Empty is valid
+      return /^#[0-9A-Fa-f]{6}$/.test(val);
+    }, {
+      message: "Must be a valid hex color (e.g., #3b82f6)",
+    })
+    .optional(),
   custom_css: z.string().optional(),
 });
 
@@ -37,21 +53,26 @@ export default function BrandingSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { appName } = useAppConfig();
 
-  const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<BrandingForm>({
+  const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch, reset } = useForm<BrandingForm>({
     resolver: zodResolver(brandingSchema),
+    mode: "onBlur", // Validate on blur to avoid blocking while typing
     defaultValues: {
       logo_url: "",
       favicon_url: "",
       primary_color: "",
-      dark_mode_default: false,
+      secondary_color: "",
       custom_css: "",
     },
   });
 
   const logoUrl = watch("logo_url");
+  const faviconUrl = watch("favicon_url");
 
   useEffect(() => {
     fetchSettings();
@@ -60,8 +81,18 @@ export default function BrandingSettingsPage() {
   useEffect(() => {
     if (logoUrl) {
       setLogoPreview(logoUrl);
+    } else {
+      setLogoPreview(null);
     }
   }, [logoUrl]);
+
+  useEffect(() => {
+    if (faviconUrl) {
+      setFaviconPreview(faviconUrl);
+    } else {
+      setFaviconPreview(null);
+    }
+  }, [faviconUrl]);
 
   const fetchSettings = async () => {
     setIsLoading(true);
@@ -69,12 +100,23 @@ export default function BrandingSettingsPage() {
       const response = await api.get("/branding");
       const settings = response.data.settings || {};
 
-      Object.keys(settings).forEach((key) => {
-        setValue(key as any, settings[key] || "");
-      });
+      // Reset form with fetched values (this sets them as the new default state)
+      // Using reset() ensures isDirty works correctly by establishing new default values
+      const formValues = {
+        logo_url: settings.logo_url || "",
+        favicon_url: settings.favicon_url || "",
+        primary_color: settings.primary_color || "",
+        secondary_color: settings.secondary_color || "",
+        custom_css: settings.custom_css || "",
+      };
+      
+      reset(formValues);
 
       if (settings.logo_url) {
         setLogoPreview(settings.logo_url);
+      }
+      if (settings.favicon_url) {
+        setFaviconPreview(settings.favicon_url);
       }
     } catch (error: any) {
       toast.error(error.message || "Failed to load branding settings");
@@ -86,7 +128,17 @@ export default function BrandingSettingsPage() {
   const onSubmit = async (data: BrandingForm) => {
     setIsSaving(true);
     try {
-      await api.put("/branding", data);
+      // Filter out empty strings - send undefined/null instead so backend treats them as "clear this field"
+      const payload = {
+        ...data,
+        logo_url: data.logo_url || null,
+        favicon_url: data.favicon_url || null,
+        primary_color: data.primary_color || null,
+        secondary_color: data.secondary_color || null,
+        custom_css: data.custom_css || null,
+      };
+      
+      await api.put("/branding", payload);
       toast.success("Branding settings updated successfully");
       // Invalidate app-config cache so logo updates immediately
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
@@ -123,7 +175,7 @@ export default function BrandingSettingsPage() {
         },
       });
 
-      setValue("logo_url", response.data.url);
+      setValue("logo_url", response.data.url, { shouldDirty: true });
       setLogoPreview(response.data.url);
       toast.success("Logo uploaded successfully");
       // Invalidate app-config cache so logo updates immediately
@@ -133,6 +185,73 @@ export default function BrandingSettingsPage() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    if (file.size > 512 * 1024) {
+      toast.error("Favicon must be less than 512KB");
+      return;
+    }
+
+    setIsUploadingFavicon(true);
+    try {
+      const formData = new FormData();
+      formData.append("favicon", file);
+
+      const response = await api.post("/branding/favicon", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setValue("favicon_url", response.data.url, { shouldDirty: true });
+      setFaviconPreview(response.data.url);
+      toast.success("Favicon uploaded successfully");
+      // Invalidate app-config cache so favicon updates immediately
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to upload favicon");
+    } finally {
+      setIsUploadingFavicon(false);
+    }
+  };
+
+  const handleResetDefaults = () => {
+    setValue("primary_color", "#3b82f6");
+    setValue("secondary_color", "#6366f1");
+    setValue("logo_url", "");
+    setValue("favicon_url", "");
+    setLogoPreview(null);
+    setFaviconPreview(null);
+    toast.success("Reset to default values");
+  };
+
+  const handleDeleteLogo = () => {
+    setValue("logo_url", "", { shouldDirty: true });
+    setLogoPreview(null);
+    toast.success("Logo removed");
+  };
+
+  const handleDeleteFavicon = () => {
+    setValue("favicon_url", "", { shouldDirty: true });
+    setFaviconPreview(null);
+    toast.success("Favicon removed");
+  };
+
+  const handleResetPrimaryColor = () => {
+    setValue("primary_color", "", { shouldDirty: true });
+  };
+
+  const handleResetSecondaryColor = () => {
+    setValue("secondary_color", "", { shouldDirty: true });
   };
 
   if (isLoading) {
@@ -152,7 +271,8 @@ export default function BrandingSettingsPage() {
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)}>
+      <div className="grid gap-6 md:grid-cols-2">
+        <form onSubmit={handleSubmit(onSubmit)}>
         <Card>
           <CardHeader>
             <CardTitle>Branding</CardTitle>
@@ -166,12 +286,21 @@ export default function BrandingSettingsPage() {
                 <Label>Logo</Label>
                 <div className="flex items-center gap-4">
                   {logoPreview && (
-                    <div className="relative">
+                    <div className="relative group">
                       <img
                         src={logoPreview}
                         alt="Logo preview"
                         className="h-20 w-auto object-contain border rounded"
                       />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={handleDeleteLogo}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
                     </div>
                   )}
                   <div className="flex-1">
@@ -211,9 +340,52 @@ export default function BrandingSettingsPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="favicon_url">Favicon URL</Label>
+                <Label>Favicon</Label>
+                <div className="flex items-center gap-4">
+                  {faviconPreview && (
+                    <div className="relative group">
+                      <img
+                        src={faviconPreview}
+                        alt="Favicon preview"
+                        className="h-16 w-16 object-contain border rounded"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={handleDeleteFavicon}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFaviconUpload}
+                      disabled={isUploadingFavicon}
+                      className="hidden"
+                      id="favicon-upload"
+                    />
+                    <Label
+                      htmlFor="favicon-upload"
+                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
+                    >
+                      {isUploadingFavicon ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {isUploadingFavicon ? "Uploading..." : "Upload Favicon"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Or enter a URL
+                    </p>
+                  </div>
+                </div>
                 <Input
-                  id="favicon_url"
                   {...register("favicon_url")}
                   placeholder="https://example.com/favicon.ico"
                 />
@@ -228,24 +400,25 @@ export default function BrandingSettingsPage() {
 
               <div className="space-y-2">
                 <Label htmlFor="primary_color">Primary Color</Label>
-                <div className="flex gap-2">
-                  <Input
-                    id="primary_color"
-                    {...register("primary_color")}
-                    placeholder="#3b82f6"
-                    className="flex-1"
+                <div className="flex items-center gap-2">
+                  <ColorPicker
+                    value={watch("primary_color") || ""}
+                    onChange={(color) => setValue("primary_color", color, { shouldDirty: true })}
                   />
                   {watch("primary_color") && (
-                    <div
-                      className="w-12 h-10 rounded border"
-                      style={{
-                        backgroundColor: watch("primary_color") || "#3b82f6",
-                      }}
-                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleResetPrimaryColor}
+                      title="Reset to system default"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
                   )}
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Hex color code (e.g., #3b82f6)
+                  Leave empty to use system default
                 </p>
                 {errors.primary_color && (
                   <p className="text-sm text-destructive">
@@ -254,19 +427,33 @@ export default function BrandingSettingsPage() {
                 )}
               </div>
 
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label>Dark Mode Default</Label>
-                  <p className="text-sm text-muted-foreground">
-                    Set dark mode as the default theme
-                  </p>
+              <div className="space-y-2">
+                <Label htmlFor="secondary_color">Secondary Color</Label>
+                <div className="flex items-center gap-2">
+                  <ColorPicker
+                    value={watch("secondary_color") || ""}
+                    onChange={(color) => setValue("secondary_color", color, { shouldDirty: true })}
+                  />
+                  {watch("secondary_color") && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleResetSecondaryColor}
+                      title="Reset to system default"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
-                <Switch
-                  checked={watch("dark_mode_default")}
-                  onCheckedChange={(checked) =>
-                    setValue("dark_mode_default", checked)
-                  }
-                />
+                <p className="text-sm text-muted-foreground">
+                  Leave empty to use system default
+                </p>
+                {errors.secondary_color && (
+                  <p className="text-sm text-destructive">
+                    {errors.secondary_color.message}
+                  </p>
+                )}
               </div>
 
               <Separator />
@@ -286,7 +473,16 @@ export default function BrandingSettingsPage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter className="flex justify-end">
+          <CardFooter className="flex justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleResetDefaults}
+              disabled={isSaving}
+            >
+              <RotateCcw className="mr-2 h-4 w-4" />
+              Reset to Defaults
+            </Button>
             <Button type="submit" disabled={!isDirty || isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Save Changes
@@ -294,6 +490,14 @@ export default function BrandingSettingsPage() {
           </CardFooter>
         </Card>
       </form>
+
+      <BrandingPreview
+        logoUrl={watch("logo_url") || undefined}
+        primaryColor={watch("primary_color") || undefined}
+        secondaryColor={watch("secondary_color") || undefined}
+        appName={appName}
+      />
+      </div>
     </div>
   );
 }

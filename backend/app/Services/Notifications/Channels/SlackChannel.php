@@ -9,7 +9,7 @@ class SlackChannel implements ChannelInterface
 {
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
-        $webhookUrl = $user->getSetting('slack_webhook_url')
+        $webhookUrl = $user->getSetting('notifications', 'slack_webhook_url')
             ?? config('notifications.channels.slack.webhook_url');
 
         if (!$webhookUrl) {
@@ -47,7 +47,11 @@ class SlackChannel implements ChannelInterface
 
     public function isAvailableFor(User $user): bool
     {
-        return config('notifications.channels.slack.enabled', false);
+        // User-configurable channel: available if user has webhook OR global webhook exists
+        $userWebhook = $user->getSetting('notifications', 'slack_webhook_url');
+        $globalWebhook = config('notifications.channels.slack.webhook_url');
+
+        return !empty($userWebhook) || !empty($globalWebhook);
     }
 
     private function getColorForType(string $type): string

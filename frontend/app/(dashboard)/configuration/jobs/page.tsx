@@ -206,7 +206,7 @@ export default function JobsPage() {
                   No scheduled tasks found
                 </div>
               ) : (
-                <div className="rounded-md border">
+                <div className="rounded-md border overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow>

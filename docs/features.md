@@ -20,6 +20,13 @@ Core functionality and feature documentation:
 
 - [ADR-005: Notification System Architecture](adr/005-notification-system-architecture.md) - Multi-channel notification delivery system
 - [API Notification Endpoints](api/README.md#notifications) - Notification management API
+- [Recipe: Trigger Notifications](ai/recipes/trigger-notifications.md) - Send notifications from backend code
+
+**Capabilities:**
+- In-app notification UI: header bell with unread badge, dropdown of recent items, full `/notifications` page with filters and bulk actions
+- Real-time updates via Laravel Echo + Pusher when broadcasting is configured
+- NotificationContext provider for client-side state
+- **Global vs per-user config:** Admins enable which channels are available in Configuration > Notifications (`/configuration/notifications`); users enable channels, add webhooks/phone, test, and accept usage in User Preferences (`/user/preferences`). Users cannot enable a channel until an admin has made it available. SMS: admin chooses preferred provider (Twilio/Vonage/SNS); users enter phone number and test.
 
 **Multi-channel notification delivery:**
 

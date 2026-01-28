@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Broadcast;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,3 +20,7 @@ Route::get('/', function () {
         'api' => url('/api'),
     ]);
 });
+
+// Broadcasting authentication (for Laravel Echo)
+// This route is used by the frontend to authenticate private channel subscriptions
+Broadcast::routes(['middleware' => ['auth:sanctum']]);

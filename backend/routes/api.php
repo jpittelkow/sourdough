@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\NotificationSettingsController;
+use App\Http\Controllers\Api\NotificationChannelConfigController;
 use App\Http\Controllers\Api\SystemSettingController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuditLogController;
@@ -20,6 +21,7 @@ use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\LLMController;
 use App\Http\Controllers\Api\UserSettingController;
+use App\Http\Controllers\Api\UserNotificationSettingsController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -112,6 +114,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('user')->group(function () {
         Route::get('/settings', [UserSettingController::class, 'show']);
         Route::put('/settings', [UserSettingController::class, 'update']);
+        Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show']);
+        Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update']);
     });
     
     // Settings (Admin only)
@@ -129,6 +133,12 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [SystemSettingController::class, 'index']);
         Route::put('/', [SystemSettingController::class, 'update']);
         Route::get('/{group}', [SystemSettingController::class, 'show']);
+    });
+
+    // Admin notification channel config (available toggles, SMS preferred provider)
+    Route::prefix('admin')->middleware('can:manage-settings')->group(function () {
+        Route::get('notification-channels', [NotificationChannelConfigController::class, 'index']);
+        Route::put('notification-channels', [NotificationChannelConfigController::class, 'update']);
     });
     
     // Notifications
@@ -231,6 +241,9 @@ Route::middleware(['auth:sanctum'])->group(function () {
     Route::prefix('branding')->middleware('can:manage-settings')->group(function () {
         Route::put('/', [BrandingController::class, 'update']);
         Route::post('/logo', [BrandingController::class, 'uploadLogo']);
+        Route::post('/favicon', [BrandingController::class, 'uploadFavicon']);
+        Route::delete('/logo', [BrandingController::class, 'deleteLogo']);
+        Route::delete('/favicon', [BrandingController::class, 'deleteFavicon']);
     });
     
 });

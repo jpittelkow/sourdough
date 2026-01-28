@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
   Card,
@@ -22,13 +23,33 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import Link from "next/link";
 
 interface UserPreferences {
   theme?: "light" | "dark" | "system";
   default_llm_mode?: "single" | "aggregation" | "council";
   notification_channels?: string[];
+}
+
+interface NotificationSetting {
+  key: string;
+  label: string;
+  type: string;
+  value: string;
+  placeholder?: string;
+}
+
+interface NotificationChannelPref {
+  id: string;
+  name: string;
+  description: string;
+  enabled: boolean;
+  configured: boolean;
+  usage_accepted: boolean;
+  settings: NotificationSetting[];
 }
 
 export default function PreferencesPage() {
@@ -40,10 +61,116 @@ export default function PreferencesPage() {
     default_llm_mode: "single",
     notification_channels: [],
   });
+  const [channels, setChannels] = useState<NotificationChannelPref[]>([]);
+  const [channelsLoading, setChannelsLoading] = useState(true);
+  const [channelSettings, setChannelSettings] = useState<Record<string, Record<string, string>>>({});
+  const [savingChannel, setSavingChannel] = useState<string | null>(null);
+  const [testingChannel, setTestingChannel] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPreferences();
   }, []);
+
+  useEffect(() => {
+    fetchChannels();
+  }, []);
+
+  const fetchChannels = async () => {
+    try {
+      const response = await api.get("/user/notification-settings");
+      const raw = response.data?.channels ?? [];
+      const list = raw.map((c: NotificationChannelPref) => ({
+        id: c.id,
+        name: c.name,
+        description: c.description,
+        enabled: Boolean(c.enabled),
+        configured: Boolean(c.configured),
+        usage_accepted: Boolean(c.usage_accepted),
+        settings: Array.isArray(c.settings) ? c.settings : [],
+      }));
+      setChannels(list);
+      const initial: Record<string, Record<string, string>> = {};
+      list.forEach((ch: NotificationChannelPref) => {
+        initial[ch.id] = {};
+        ch.settings?.forEach((s) => {
+          initial[ch.id][s.key] = s.value ?? "";
+        });
+      });
+      setChannelSettings(initial);
+    } catch (e) {
+      console.warn("Failed to fetch notification channels:", e);
+      setChannels([]);
+    } finally {
+      setChannelsLoading(false);
+    }
+  };
+
+  const toggleChannel = async (channelId: string, enabled: boolean) => {
+    const name = channels.find((c) => c.id === channelId)?.name ?? channelId;
+    setChannels((prev) =>
+      prev.map((ch) => (ch.id === channelId ? { ...ch, enabled } : ch))
+    );
+    try {
+      const payload: { channel: string; enabled: boolean; usage_accepted?: boolean } = {
+        channel: channelId,
+        enabled,
+      };
+      if (enabled) payload.usage_accepted = true;
+      await api.put("/user/notification-settings", payload);
+      toast.success(`Notifications ${enabled ? "enabled" : "disabled"} for ${name}`);
+    } catch (err: unknown) {
+      setChannels((prev) =>
+        prev.map((ch) => (ch.id === channelId ? { ...ch, enabled: !enabled } : ch))
+      );
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to update channel");
+    }
+  };
+
+  const updateChannelSetting = (channelId: string, key: string, value: string) => {
+    setChannelSettings((prev) => ({
+      ...prev,
+      [channelId]: { ...(prev[channelId] ?? {}), [key]: value },
+    }));
+  };
+
+  const saveChannelSettings = async (channelId: string) => {
+    setSavingChannel(channelId);
+    try {
+      const settings = channelSettings[channelId] ?? {};
+      await api.put("/user/notification-settings", { channel: channelId, settings });
+      toast.success("Settings saved");
+      setChannels((prev) =>
+        prev.map((ch) =>
+          ch.id === channelId ? { ...ch, configured: true } : ch
+        )
+      );
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to save settings");
+    } finally {
+      setSavingChannel(null);
+    }
+  };
+
+  const testChannel = async (channelId: string) => {
+    setTestingChannel(channelId);
+    try {
+      await api.post(`/notifications/test/${channelId}`);
+      toast.success("Test notification sent");
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to send test");
+    } finally {
+      setTestingChannel(null);
+    }
+  };
 
   const fetchPreferences = async () => {
     try {
@@ -256,20 +383,87 @@ export default function PreferencesPage() {
             Notification Preferences
           </CardTitle>
           <CardDescription>
-            Choose which channels you want to receive notifications on.
+            Enable channels, add your webhook or phone number, test, and accept usage. Only channels enabled by an administrator are shown.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <p className="text-sm text-muted-foreground">
-            Notification channel preferences are managed in the{" "}
-            <a
-              href="/configuration/notifications"
-              className="text-primary hover:underline"
-            >
-              Configuration
-            </a>{" "}
-            section. This setting will be available once the backend API is implemented.
-          </p>
+          {channelsLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            </div>
+          ) : channels.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No notification channels available. An administrator must enable channels in{" "}
+              <Link href="/configuration/notifications" className="text-primary hover:underline">
+                Configuration
+              </Link>
+              .
+            </p>
+          ) : (
+            <div className="space-y-6">
+              {channels.map((channel) => (
+                <div key={channel.id} className="space-y-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0 flex-1">
+                      <Label className="text-base font-medium">{channel.name}</Label>
+                      <p className="text-sm text-muted-foreground">{channel.description}</p>
+                    </div>
+                    <Switch
+                      checked={channel.enabled}
+                      onCheckedChange={(enabled) => toggleChannel(channel.id, enabled)}
+                      disabled={channel.settings.length > 0 && !channel.configured}
+                    />
+                  </div>
+                  {channel.settings.length > 0 && (
+                    <>
+                      <Separator />
+                      <div className="space-y-3 pl-0">
+                        {channel.settings.map((s) => (
+                          <div key={s.key} className="space-y-1">
+                            <Label htmlFor={`${channel.id}-${s.key}`}>{s.label}</Label>
+                            <Input
+                              id={`${channel.id}-${s.key}`}
+                              type={s.type === "password" ? "password" : "text"}
+                              value={channelSettings[channel.id]?.[s.key] ?? ""}
+                              onChange={(e) => updateChannelSetting(channel.id, s.key, e.target.value)}
+                              placeholder={s.placeholder}
+                            />
+                          </div>
+                        ))}
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={() => saveChannelSettings(channel.id)}
+                            disabled={savingChannel === channel.id}
+                          >
+                            {savingChannel === channel.id && (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            )}
+                            Save settings
+                          </Button>
+                          {channel.configured && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => testChannel(channel.id)}
+                              disabled={testingChannel === channel.id}
+                            >
+                              {testingChannel === channel.id ? (
+                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              ) : (
+                                <Send className="mr-2 h-4 w-4" />
+                              )}
+                              Test
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

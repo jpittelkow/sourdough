@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
+import { PageTitleManager } from "@/components/page-title-manager";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -14,10 +15,17 @@ function AppShellContent({ children }: AppShellProps) {
 
   return (
     <div className="min-h-screen bg-background">
+      <PageTitleManager />
       <Sidebar />
-      <div className={cn("transition-all duration-300", isExpanded ? "pl-56" : "pl-16")}>
+      <div
+        className={cn(
+          "transition-all duration-300",
+          "pl-0",
+          isExpanded ? "md:pl-56" : "md:pl-16"
+        )}
+      >
         <Header />
-        <main>{children}</main>
+        <main className="px-4 sm:px-6 md:px-0">{children}</main>
       </div>
     </div>
   );

@@ -24,6 +24,8 @@ services:
       - sourdough_storage:/var/www/html/backend/storage/app
       # Development PHP config with opcache that detects file changes
       - ./docker/php-dev.ini:/usr/local/etc/php/conf.d/app.ini:ro
+      # Development nginx config (override image config)
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
     environment:
       # Enable file watching polling for Docker on Windows
       - WATCHPACK_POLLING=true

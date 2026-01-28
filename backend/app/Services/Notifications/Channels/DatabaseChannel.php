@@ -2,8 +2,9 @@
 
 namespace App\Services\Notifications\Channels;
 
-use App\Models\User;
+use App\Events\NotificationSent;
 use App\Models\Notification;
+use App\Models\User;
 
 class DatabaseChannel implements ChannelInterface
 {
@@ -16,6 +17,10 @@ class DatabaseChannel implements ChannelInterface
             'message' => $message,
             'data' => $data,
         ]);
+
+        if (config('broadcasting.default') !== 'null') {
+            NotificationSent::dispatch($notification, $user);
+        }
 
         return [
             'notification_id' => $notification->id,

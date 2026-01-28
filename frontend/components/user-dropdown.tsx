@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -12,7 +13,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown } from "lucide-react";
+import { User, Settings, LogOut, ChevronDown, Info } from "lucide-react";
+import { AboutDialog } from "@/components/about-dialog";
 
 function getInitials(name: string) {
   return name
@@ -26,6 +28,7 @@ function getInitials(name: string) {
 export function UserDropdown() {
   const { user, logout } = useAuth();
   const router = useRouter();
+  const [aboutOpen, setAboutOpen] = useState(false);
 
   if (!user) {
     return null;
@@ -37,7 +40,8 @@ export function UserDropdown() {
   };
 
   return (
-    <DropdownMenu>
+    <>
+      <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button 
           type="button"
@@ -81,11 +85,18 @@ export function UserDropdown() {
           Preferences
         </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => setAboutOpen(true)}>
+          <Info className="mr-2 h-4 w-4" />
+          About
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
+    </>
   );
 }

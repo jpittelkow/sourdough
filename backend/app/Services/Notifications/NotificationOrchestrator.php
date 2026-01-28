@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Models\User;
 use App\Models\Notification;
+use App\Models\SystemSetting;
 use App\Services\Notifications\Channels\ChannelInterface;
 use App\Services\Notifications\Channels\DatabaseChannel;
 use App\Services\Notifications\Channels\EmailChannel;
@@ -17,10 +18,12 @@ use App\Services\Notifications\Channels\VonageChannel;
 use App\Services\Notifications\Channels\SNSChannel;
 use App\Services\Notifications\Channels\WebPushChannel;
 use App\Services\Notifications\Channels\FCMChannel;
+use App\Services\Notifications\Channels\NtfyChannel;
 use Illuminate\Support\Facades\Log;
 
 class NotificationOrchestrator
 {
+    use NotificationChannelMetadata;
     private array $channelInstances = [];
 
     /**
@@ -42,6 +45,18 @@ class NotificationOrchestrator
                 $channelInstance = $this->getChannelInstance($channel);
 
                 if (!$channelInstance || !$this->isChannelEnabled($channel)) {
+                    continue;
+                }
+
+                if (!$this->isChannelAvailableToUsers($channel)) {
+                    continue;
+                }
+
+                if (!$this->isUserChannelEnabled($user, $channel)) {
+                    continue;
+                }
+
+                if (!$channelInstance->isAvailableFor($user)) {
                     continue;
                 }
 
@@ -78,6 +93,10 @@ class NotificationOrchestrator
 
         if (!$this->isChannelEnabled($channel)) {
             throw new \RuntimeException("Channel is not enabled: {$channel}");
+        }
+
+        if (!$this->isChannelAvailableToUsers($channel)) {
+            throw new \RuntimeException("Channel is not available to users: {$channel}");
         }
 
         return $channelInstance->send(
@@ -125,6 +144,33 @@ class NotificationOrchestrator
     }
 
     /**
+     * Check if the channel is available to users (admin has enabled it).
+     * Database and email are always available; others use SystemSetting.
+     */
+    protected function isChannelAvailableToUsers(string $channel): bool
+    {
+        if ($this->isAlwaysAvailableChannel($channel)) {
+            return true;
+        }
+
+        $value = SystemSetting::get("channel_{$channel}_available", false, 'notifications');
+
+        return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Check if the user has enabled this channel in their preferences.
+     */
+    protected function isUserChannelEnabled(User $user, string $channel): bool
+    {
+        if ($channel === 'database') {
+            return true;
+        }
+
+        return (bool) $user->getSetting('notifications', "{$channel}_enabled", false);
+    }
+
+    /**
      * Get or create channel instance.
      */
     private function getChannelInstance(string $channel): ?ChannelInterface
@@ -146,6 +192,7 @@ class NotificationOrchestrator
             'sns' => new SNSChannel(),
             'webpush' => new WebPushChannel(),
             'fcm' => new FCMChannel(),
+            'ntfy' => new NtfyChannel(),
             default => null,
         };
 

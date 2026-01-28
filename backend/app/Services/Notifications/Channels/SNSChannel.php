@@ -20,7 +20,8 @@ class SNSChannel implements ChannelInterface
 
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
-        $phoneNumber = $user->getSetting('phone_number');
+        $phoneNumber = $user->getSetting('notifications', 'sns_phone_number')
+            ?? $user->getSetting('phone_number');
 
         if (!$phoneNumber) {
             throw new \RuntimeException('Phone number not configured for user');
@@ -114,7 +115,10 @@ class SNSChannel implements ChannelInterface
 
     public function isAvailableFor(User $user): bool
     {
+        $phone = $user->getSetting('notifications', 'sns_phone_number')
+            ?? $user->getSetting('phone_number');
+
         return config('notifications.channels.sns.enabled', false)
-            && !empty($user->getSetting('phone_number'));
+            && !empty($phone);
     }
 }

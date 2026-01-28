@@ -51,8 +51,8 @@ export default function DashboardPage() {
   return (
     <div className="container py-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Welcome back, {user?.name?.split(" ")[0]}
+        <h1 className="text-3xl font-bold tracking-tight" suppressHydrationWarning>
+          Welcome back, {user?.name?.split(" ")[0] || "User"}
         </h1>
         <p className="text-muted-foreground mt-1">
           {user?.is_admin

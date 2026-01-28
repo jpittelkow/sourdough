@@ -1,8 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
-import { APP_CONFIG } from "@/config/app";
 import { useAppConfig } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 
@@ -39,13 +37,14 @@ const sizeConfig = {
 /**
  * Logo component with multiple display variants and automatic fallbacks.
  * 
- * - `full`: Shows logo image + app name (falls back to text-only if no image)
- * - `icon`: Shows square icon (falls back to short name in styled container)
+ * - `full`: Shows logo image (replaces app name) or icon + app name if no logo
+ * - `icon`: Shows favicon image (falls back to first letter in styled container)
  * - `text`: Shows app name as text only
  */
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   const [logoError, setLogoError] = useState(false);
-  const { appName, logoUrl } = useAppConfig();
+  const [faviconError, setFaviconError] = useState(false);
+  const { appName, logoUrl, faviconUrl } = useAppConfig();
   const sizes = sizeConfig[size];
   
   // Use logo from settings if present (no fallback to APP_CONFIG since logo is optional)
@@ -54,7 +53,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   // Text-only variant
   if (variant === "text") {
     return (
-      <span className={cn("font-semibold", sizes.text, className)}>
+      <span className={cn("font-semibold", sizes.text, className)} suppressHydrationWarning>
         {appName}
       </span>
     );
@@ -62,11 +61,20 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
 
   // Icon variant (for collapsed sidebar)
   if (variant === "icon") {
-    // For icon variant, we use the first character of app name as fallback
-    // (no separate icon from settings currently, but could be added later)
-    const iconChar = appName.charAt(0).toUpperCase();
+    // If favicon exists, show it
+    if (faviconUrl && !faviconError) {
+      return (
+        <img
+          src={faviconUrl}
+          alt={appName || ''}
+          className={cn(sizes.icon, "object-contain", className)}
+          onError={() => setFaviconError(true)}
+        />
+      );
+    }
 
     // Fallback: First character of app name in styled square container
+    const iconChar = appName ? appName.charAt(0).toUpperCase() : '';
     return (
       <div
         className={cn(
@@ -77,43 +85,45 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
           size === "lg" && "text-base",
           className
         )}
+        suppressHydrationWarning
       >
         {iconChar}
       </div>
     );
   }
 
-  // Full variant (logo + name, or text-only fallback)
+  // Full variant (logo replaces app name, or icon + name fallback)
   // Order: logo from settings → app name from settings (app_name always has a default)
   const hasLogo = currentLogo && !logoError;
 
+  // If logo exists, show only the logo (replaces app name)
+  if (hasLogo) {
+    return (
+      <img
+        src={currentLogo}
+        alt={appName || ''}
+        className={cn(sizes.full, "w-auto max-w-[200px] object-contain flex-shrink-0", className)}
+        onError={() => setLogoError(true)}
+      />
+    );
+  }
+
+  // No logo: show icon + app name
   return (
     <div className={cn("flex items-center", sizes.gap, className)}>
-      {hasLogo ? (
-        <div className={cn(sizes.full, "relative aspect-square")}>
-          <Image
-            src={currentLogo}
-            alt={appName}
-            fill
-            className="object-contain"
-            onError={() => setLogoError(true)}
-          />
-        </div>
-      ) : (
-        // No logo: show first character of app name in styled icon container before text
-        <div
-          className={cn(
-            sizes.icon,
-            "flex items-center justify-center rounded-md bg-primary text-primary-foreground font-bold flex-shrink-0",
-            size === "sm" && "text-xs",
-            size === "md" && "text-sm",
-            size === "lg" && "text-base"
-          )}
-        >
-          {appName.charAt(0).toUpperCase()}
-        </div>
-      )}
-      <span className={cn("font-semibold", sizes.text)}>{appName}</span>
+      <div
+        className={cn(
+          sizes.icon,
+          "flex items-center justify-center rounded-md bg-primary text-primary-foreground font-bold flex-shrink-0",
+          size === "sm" && "text-xs",
+          size === "md" && "text-sm",
+          size === "lg" && "text-base"
+        )}
+        suppressHydrationWarning
+      >
+        {appName ? appName.charAt(0).toUpperCase() : ''}
+      </div>
+      <span className={cn("font-semibold", sizes.text)} suppressHydrationWarning>{appName}</span>
     </div>
   );
 }

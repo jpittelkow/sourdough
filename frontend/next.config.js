@@ -16,6 +16,7 @@ const nextConfig = {
   },
   
   // API rewrites for development
+  // Note: Next.js API routes (app/api/*) take precedence over rewrites
   async rewrites() {
     return process.env.NODE_ENV === 'development'
       ? [
@@ -27,6 +28,10 @@ const nextConfig = {
             source: '/sanctum/:path*',
             destination: 'http://localhost:8000/sanctum/:path*',
           },
+          {
+            source: '/broadcasting/:path*',
+            destination: 'http://localhost:8000/broadcasting/:path*',
+          },
         ]
       : [];
   },
@@ -35,6 +40,8 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Sourdough',
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
+    NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '',
+    NEXT_PUBLIC_PUSHER_APP_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER || 'mt1',
   },
 };
 

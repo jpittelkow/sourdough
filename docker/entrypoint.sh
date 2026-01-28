@@ -46,6 +46,12 @@ mkdir -p ${BACKEND_DIR}/storage/logs
 chown -R www-data:www-data ${BACKEND_DIR}/storage
 chmod -R 775 ${BACKEND_DIR}/storage
 
+# Create nginx client body temp directory with proper permissions
+echo "Setting up nginx temp directories..."
+mkdir -p /tmp/nginx_client_body
+chown -R www-data:www-data /tmp/nginx_client_body
+chmod -R 755 /tmp/nginx_client_body
+
 # Create SQLite database if it doesn't exist
 if [ ! -f "${DB_PATH}" ]; then
     echo "Creating SQLite database..."

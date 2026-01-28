@@ -185,6 +185,18 @@ return [
             'server_key' => env('FCM_SERVER_KEY'),
         ],
 
+        /*
+        |--------------------------------------------------------------------------
+        | ntfy Push Notifications
+        |--------------------------------------------------------------------------
+        */
+
+        'ntfy' => [
+            'enabled' => env('NTFY_ENABLED', true),
+            'driver' => 'ntfy',
+            'server' => env('NTFY_SERVER', 'https://ntfy.sh'),
+        ],
+
     ],
 
     /*

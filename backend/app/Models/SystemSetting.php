@@ -77,13 +77,26 @@ class SystemSetting extends Model
 
     /**
      * Get all public settings.
+     * Ensures app_name always has a default value of 'Sourdough' if not set in database.
      */
     public static function getPublic(): array
     {
-        return static::where('is_public', true)
+        $settings = static::where('is_public', true)
             ->get()
             ->groupBy('group')
             ->map(fn ($group) => $group->pluck('value', 'key'))
             ->toArray();
+        
+        // Ensure general group exists
+        if (!isset($settings['general'])) {
+            $settings['general'] = [];
+        }
+        
+        // Ensure app_name always has a default value
+        if (!isset($settings['general']['app_name']) || empty($settings['general']['app_name'])) {
+            $settings['general']['app_name'] = 'Sourdough';
+        }
+        
+        return $settings;
     }
 }

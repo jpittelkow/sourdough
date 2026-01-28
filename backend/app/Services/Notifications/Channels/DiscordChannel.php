@@ -10,7 +10,7 @@ class DiscordChannel implements ChannelInterface
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
         // User-specific webhook or global webhook
-        $webhookUrl = $user->getSetting('discord_webhook_url')
+        $webhookUrl = $user->getSetting('notifications', 'discord_webhook_url')
             ?? config('notifications.channels.discord.webhook_url');
 
         if (!$webhookUrl) {
@@ -51,7 +51,11 @@ class DiscordChannel implements ChannelInterface
 
     public function isAvailableFor(User $user): bool
     {
-        return config('notifications.channels.discord.enabled', false);
+        // User-configurable channel: available if user has webhook OR global webhook exists
+        $userWebhook = $user->getSetting('notifications', 'discord_webhook_url');
+        $globalWebhook = config('notifications.channels.discord.webhook_url');
+
+        return !empty($userWebhook) || !empty($globalWebhook);
     }
 
     private function getColorForType(string $type): int

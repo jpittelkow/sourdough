@@ -2,6 +2,20 @@
 
 Which files to read first based on your task type.
 
+## Before Any Implementation
+
+**CRITICAL: Check for existing components first!**
+
+Before writing any code, search the codebase:
+
+1. **Search `frontend/components/`** - Does a similar component exist?
+2. **Search `frontend/lib/`** - Is there a utility for this task?
+3. **Search existing pages** - How is this solved elsewhere?
+
+**Never duplicate logic across pages.** If functionality exists, use it. If it should exist, create it as a global component.
+
+See: [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.mdc)
+
 ## Frontend UI Work
 
 **Read first:**
@@ -44,6 +58,7 @@ backend/database/migrations/                    # Database schema
 ```
 docs/adr/005-notification-system-architecture.md
 backend/app/Services/Notifications/NotificationOrchestrator.php
+backend/app/Services/Notifications/NotificationChannelMetadata.php  # Shared trait
 backend/app/Services/Notifications/Channels/    # Existing channels
 backend/config/notifications.php
 ```
@@ -51,9 +66,16 @@ backend/config/notifications.php
 **Also useful:**
 ```
 backend/app/Http/Controllers/Api/NotificationController.php
+backend/app/Http/Controllers/Api/NotificationChannelConfigController.php  # Admin API
+backend/app/Http/Controllers/Api/UserNotificationSettingsController.php   # User API
 backend/app/Models/Notification.php
-frontend/app/(dashboard)/settings/notifications/page.tsx
+frontend/app/(dashboard)/configuration/notifications/page.tsx  # Admin UI
+frontend/app/(dashboard)/user/preferences/page.tsx             # User UI
 ```
+
+**Recipes:**
+- [Trigger Notifications](recipes/trigger-notifications.md)
+- [Add Notification Channel](recipes/add-notification-channel.md)
 
 ## LLM Work
 
@@ -192,6 +214,28 @@ frontend/components/header.tsx          # Uses Logo component
 frontend/components/sidebar.tsx         # Uses Logo component
 .env.example                            # Branding environment variables
 ```
+
+## Mobile/Responsive Work
+
+**Read first:**
+```
+docs/adr/013-responsive-mobile-first-design.md    # Responsive design decisions
+docs/plans/mobile-responsive-roadmap.md           # Implementation roadmap
+frontend/lib/use-mobile.ts                        # Mobile detection hook
+frontend/components/ui/sheet.tsx                  # Drawer component for mobile nav
+```
+
+**Also useful:**
+```
+frontend/components/sidebar.tsx         # Responsive sidebar implementation
+frontend/components/app-shell.tsx       # Main layout with responsive structure
+frontend/components/header.tsx          # Header with mobile menu toggle
+frontend/tailwind.config.ts             # Tailwind breakpoint configuration
+frontend/app/globals.css                # Global responsive styles
+```
+
+**Cursor rule:** `.cursor/rules/responsive-mobile-first.mdc`
+**Recipe:** `docs/ai/recipes/make-component-responsive.md`
 
 ## Adding a New Feature (Full Stack)
 

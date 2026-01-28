@@ -3,11 +3,15 @@
 import * as React from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { APP_CONFIG } from "@/config/app";
+import { applyThemeColors } from "@/lib/theme-colors";
 
 interface AppConfigState {
   appName: string;
   logoUrl: string | null;
+  faviconUrl: string | null;
+  primaryColor: string | null;
+  secondaryColor: string | null;
+  customCss: string | null;
   isLoading: boolean;
   error: Error | null;
 }
@@ -32,16 +36,25 @@ function useAppConfigQuery() {
         const systemSettings = systemSettingsResponse?.data?.settings || {};
         const branding = brandingResponse?.data?.settings || {};
 
+        // Backend ensures app_name always has a default value, so it should always be present
         return {
-          // app_name is required in settings and has a default, so no need for env var fallback
-          appName: systemSettings.general?.app_name || APP_CONFIG.name,
+          appName: systemSettings.general?.app_name || '',
           logoUrl: branding.logo_url || null,
+          faviconUrl: branding.favicon_url || null,
+          primaryColor: branding.primary_color || null,
+          secondaryColor: branding.secondary_color || null,
+          customCss: branding.custom_css || null,
         };
       } catch (error) {
-        // Fallback to default on error (app_name always has a default in settings)
+        // If API fails, return empty values - components should handle loading/error states
+        // The backend should always return app_name, so this is a fallback for network issues
         return {
-          appName: APP_CONFIG.name,
+          appName: '',
           logoUrl: null,
+          faviconUrl: null,
+          primaryColor: null,
+          secondaryColor: null,
+          customCss: null,
         };
       }
     },
@@ -58,48 +71,78 @@ function useAppConfigQuery() {
 export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   const query = useAppConfigQuery();
 
-  // app_name is required in settings and has a default, so no need for env var fallback
-  const appName = query.data?.appName || APP_CONFIG.name;
+  // Backend ensures app_name always has a default value, so it should always be present
+  const appName = query.data?.appName || '';
   const logoUrl = query.data?.logoUrl || null;
+  const faviconUrl = query.data?.faviconUrl || null;
+  const primaryColor = query.data?.primaryColor || null;
+  const secondaryColor = query.data?.secondaryColor || null;
+  const customCss = query.data?.customCss || null;
+
+  // Apply theme colors when they're loaded
+  React.useEffect(() => {
+    if (query.data && !query.isLoading) {
+      applyThemeColors(primaryColor || undefined, secondaryColor || undefined);
+    }
+  }, [primaryColor, secondaryColor, query.data, query.isLoading]);
+
+  // Update favicon and related icons when they change
+  React.useEffect(() => {
+    if (faviconUrl) {
+      // Update favicon link
+      let faviconLink = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+      if (!faviconLink) {
+        faviconLink = document.createElement('link');
+        faviconLink.rel = 'icon';
+        document.head.appendChild(faviconLink);
+      }
+      faviconLink.href = faviconUrl;
+
+      // Update Apple touch icon (uses same favicon)
+      let appleLink = document.querySelector("link[rel~='apple-touch-icon']") as HTMLLinkElement;
+      if (!appleLink) {
+        appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        document.head.appendChild(appleLink);
+      }
+      appleLink.href = faviconUrl;
+
+      // Manifest is now dynamically generated via /api/manifest route
+      // which uses the uploaded favicon for PWA icons
+      // The manifest link in layout.tsx already points to /api/manifest
+    }
+  }, [faviconUrl]);
+
+  // Inject custom CSS when it changes
+  React.useEffect(() => {
+    if (query.data && !query.isLoading) {
+      let styleTag = document.getElementById('custom-branding-css');
+      if (customCss) {
+        if (!styleTag) {
+          styleTag = document.createElement('style');
+          styleTag.id = 'custom-branding-css';
+          document.head.appendChild(styleTag);
+        }
+        styleTag.textContent = customCss;
+      } else {
+        // Remove style tag if custom CSS is cleared
+        if (styleTag) {
+          styleTag.remove();
+        }
+      }
+    }
+  }, [customCss, query.data, query.isLoading]);
 
   const value: AppConfigState = {
     appName,
     logoUrl,
+    faviconUrl,
+    primaryColor,
+    secondaryColor,
+    customCss,
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
-
-  // Update page title when app name changes or query completes
-  // Use multiple attempts to ensure it overrides Next.js metadata
-  React.useEffect(() => {
-    const updateTitle = () => {
-      if (appName) {
-        document.title = appName;
-        // Also update the meta title tag if it exists
-        const titleTag = document.querySelector('title');
-        if (titleTag) {
-          titleTag.textContent = appName;
-        }
-      }
-    };
-    
-    // Update immediately
-    updateTitle();
-    
-    // Use requestAnimationFrame to ensure DOM is ready
-    requestAnimationFrame(() => {
-      updateTitle();
-    });
-    
-    // Also update after delays to ensure it overrides Next.js metadata
-    const timeoutId = setTimeout(updateTitle, 100);
-    const timeoutId2 = setTimeout(updateTitle, 500);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      clearTimeout(timeoutId2);
-    };
-  }, [appName, query.data]); // Also depend on query.data to update when query completes
 
   return React.createElement(
     AppConfigContext.Provider,
@@ -118,8 +161,12 @@ export function useAppConfig(): AppConfigState {
   if (context === undefined) {
     // Fallback if used outside provider (shouldn't happen, but safe fallback)
     return {
-      appName: APP_CONFIG.name,
+      appName: '',
       logoUrl: null,
+      faviconUrl: null,
+      primaryColor: null,
+      secondaryColor: null,
+      customCss: null,
       isLoading: false,
       error: null,
     };

@@ -1,0 +1,127 @@
+# Global Components & Shared Logic
+
+All reusable functionality must be implemented as global/shared components. Do NOT duplicate logic across pages.
+
+## Core Principle
+
+**One implementation, used everywhere.** If the same task is performed in multiple places, it must use a single shared component or utility.
+
+## When to Create Global Components
+
+Create a shared component when:
+
+- The same UI element appears on 2+ pages
+- The same logic/behavior is needed in multiple places
+- A pattern could reasonably be reused in the future
+- The functionality is not page-specific
+
+## Component Locations
+
+| Type | Location | Example |
+|------|----------|---------|
+| UI Components | `frontend/components/ui/` | `button.tsx`, `card.tsx` |
+| Feature Components | `frontend/components/` | `logo.tsx`, `sidebar.tsx` |
+| Hooks | `frontend/lib/` or `frontend/hooks/` | `use-page-title.ts` |
+| Utilities | `frontend/lib/` | `api.ts`, `utils.ts` |
+| Backend Services | `backend/app/Services/` | `NotificationOrchestrator.php` |
+
+## Before Creating Page-Specific Logic
+
+Ask these questions:
+
+1. **Does this functionality exist elsewhere?** Search the codebase first.
+2. **Could another page need this?** If yes, make it global.
+3. **Is this truly page-specific?** Only if the answer is definitively yes should it be local.
+
+## Examples
+
+### DO: Use Shared Components
+
+```tsx
+// GOOD - Using global component from frontend/components/
+import { Logo } from '@/components/logo';
+
+export default function LoginPage() {
+  return <Logo variant="full" size="lg" />;
+}
+```
+
+```tsx
+// GOOD - Using shared hook
+import { usePageTitle } from '@/lib/use-page-title';
+
+export default function SettingsPage() {
+  usePageTitle('Settings');
+  // ...
+}
+```
+
+### DON'T: Duplicate Logic
+
+```tsx
+// BAD - Logo logic duplicated in login page
+export default function LoginPage() {
+  const [logoError, setLogoError] = useState(false);
+  const logoUrl = config.logoUrl;
+  
+  return logoUrl && !logoError ? (
+    <Image src={logoUrl} onError={() => setLogoError(true)} />
+  ) : (
+    <span className="font-bold">AppName</span>
+  );
+}
+
+// This same pattern exists in sidebar.tsx, dashboard.tsx, etc.
+// Should use the shared Logo component instead!
+```
+
+### DON'T: Create Page-Specific Versions
+
+```tsx
+// BAD - Page-specific loading spinner
+function SettingsLoadingSpinner() {
+  return <div className="animate-spin">Loading...</div>;
+}
+
+// GOOD - Use existing component
+import { Loader2 } from 'lucide-react';
+
+function SettingsPage() {
+  if (loading) {
+    return <Loader2 className="h-8 w-8 animate-spin" />;
+  }
+}
+```
+
+## Exceptions
+
+Page-specific logic is acceptable when:
+
+1. **Explicitly specified** - User/requirements state it should be different
+2. **Truly unique** - The functionality has no parallel elsewhere
+3. **Tightly coupled** - The logic is inseparable from page-specific data/state
+
+**Document the exception** with a comment explaining why it's not shared:
+
+```tsx
+// Page-specific: This form layout is unique to onboarding flow
+// and intentionally differs from standard settings pages
+function OnboardingForm() {
+  // ...
+}
+```
+
+## Enforcement Checklist
+
+Before submitting code:
+
+- [ ] Searched for existing components/utilities that do this task
+- [ ] If creating new functionality, placed it in the appropriate global location
+- [ ] If duplicating logic, documented why it can't be shared
+- [ ] Updated component documentation if adding new global component
+
+## Related Documentation
+
+- `docs/ai/patterns.md` - Code patterns including reusable component pattern
+- `docs/ai/anti-patterns.md` - Anti-patterns including duplication issues
+- `docs/architecture.md` - Overall architecture decisions

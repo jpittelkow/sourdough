@@ -35,7 +35,7 @@ Architecture Decision Records (ADRs) document all significant design decisions:
 - [ADR-004: Two-Factor Authentication](adr/004-two-factor-authentication.md) - TOTP implementation with recovery codes
   - Key files: `backend/app/Http/Controllers/Api/TwoFactorController.php`, `backend/app/Services/Auth/TwoFactorService.php`, `frontend/components/auth/two-factor-form.tsx`
 - [ADR-005: Notification System Architecture](adr/005-notification-system-architecture.md) - Multi-channel notification orchestrator
-  - Key files: `backend/app/Services/Notifications/NotificationOrchestrator.php`, `backend/app/Services/Notifications/Channels/`, `backend/config/notifications.php`
+  - Key files: `backend/app/Services/Notifications/NotificationOrchestrator.php`, `backend/app/Services/Notifications/NotificationChannelMetadata.php`, `backend/app/Services/Notifications/Channels/`, `backend/app/Http/Controllers/Api/NotificationChannelConfigController.php`, `backend/app/Http/Controllers/Api/UserNotificationSettingsController.php`, `backend/config/notifications.php`
 - [ADR-006: LLM Orchestration Modes](adr/006-llm-orchestration-modes.md) - Single, Aggregation, Council mode designs
   - Key files: `backend/app/Services/LLM/LLMOrchestrator.php`, `backend/app/Services/LLM/Providers/`, `backend/config/llm.php`
 - [ADR-007: Backup System Design](adr/007-backup-system-design.md) - Backup format, scheduling, remote storage
@@ -50,6 +50,8 @@ Architecture Decision Records (ADRs) document all significant design decisions:
   - Key files: `frontend/components/sidebar.tsx`, `frontend/components/app-shell.tsx`, `frontend/components/header.tsx`, `frontend/components/logo.tsx`, `frontend/config/app.ts`
 - [ADR-012: Admin-Only Settings Access](adr/012-admin-only-settings.md) - Admin authorization for system settings
   - Key files: `frontend/app/(dashboard)/settings/layout.tsx`, `frontend/app/(dashboard)/admin/`, `frontend/components/admin/`
+- [ADR-013: Responsive Mobile-First Design](adr/013-responsive-mobile-first-design.md) - Mobile-first responsive design approach
+  - Key files: `frontend/lib/use-mobile.ts`, `frontend/components/sidebar.tsx`, `frontend/components/app-shell.tsx`, `frontend/components/header.tsx`, `frontend/components/ui/sheet.tsx`, `frontend/tailwind.config.ts`
 
 ## Settings Architecture
 

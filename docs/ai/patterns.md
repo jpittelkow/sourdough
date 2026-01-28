@@ -216,60 +216,70 @@ class ExampleService
 
 ### Channel/Provider Pattern (for pluggable implementations)
 
+Notification channels implement `ChannelInterface` and receive user-specific config from user settings:
+
 ```php
 <?php
 // backend/app/Services/Notifications/Channels/ExampleChannel.php
 
 namespace App\Services\Notifications\Channels;
 
-use App\Models\Notification;
-use App\Services\Notifications\Contracts\NotificationChannelInterface;
+use App\Models\User;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
-class ExampleChannel implements NotificationChannelInterface
+class ExampleChannel implements ChannelInterface
 {
-    public function send(Notification $notification, array $config): bool
+    public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
-        if (!$this->validateConfig($config)) {
-            Log::warning('ExampleChannel: Invalid config', ['config' => $config]);
-            return false;
+        // User-specific config from User Preferences
+        $webhookUrl = $user->getSetting('notifications', 'example_webhook_url');
+
+        if (!$webhookUrl) {
+            throw new \RuntimeException('Example webhook URL not configured');
         }
 
         try {
-            $response = Http::post($config['webhook_url'], [
-                'title' => $notification->title,
-                'message' => $notification->message,
-                'type' => $notification->type,
+            $response = Http::timeout(30)->post($webhookUrl, [
+                'title' => $title,
+                'message' => $message,
+                'type' => $type,
+                'data' => $data,
             ]);
 
-            return $response->successful();
+            if (!$response->successful()) {
+                throw new \RuntimeException('Webhook error: ' . $response->body());
+            }
+
+            return ['sent' => true];
         } catch (\Exception $e) {
             Log::error('ExampleChannel: Send failed', [
-                'notification_id' => $notification->id,
+                'user_id' => $user->id,
                 'error' => $e->getMessage(),
             ]);
-            return false;
+            throw $e;
         }
     }
 
-    public function validateConfig(array $config): bool
+    public function getName(): string
     {
-        return isset($config['webhook_url']) && filter_var($config['webhook_url'], FILTER_VALIDATE_URL);
+        return 'Example';
     }
 
-    public function getRequiredConfig(): array
+    public function isAvailableFor(User $user): bool
     {
-        return [
-            'webhook_url' => [
-                'type' => 'url',
-                'label' => 'Webhook URL',
-                'required' => true,
-            ],
-        ];
+        return config('notifications.channels.example.enabled', false);
     }
 }
 ```
+
+**Key points:**
+- User-specific settings (webhooks, phone numbers) come from `$user->getSetting('notifications', 'key')`
+- Global config (API keys, enabled status) comes from `config('notifications.channels.{channel}.*')`
+- Add channel name/description to `NotificationChannelMetadata` trait
+- Add user settings to `UserNotificationSettingsController::getRequiredSettings()`
+
+See [Recipe: Add Notification Channel](recipes/add-notification-channel.md) for full guide.
 
 ### Route Definition Pattern
 
@@ -303,6 +313,30 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 ```
 
 ## Frontend Patterns
+
+### Global Component Principle
+
+**CRITICAL: Never duplicate logic across pages.** All reusable functionality must be implemented as shared components or utilities.
+
+| Type | Location | When to Create |
+|------|----------|----------------|
+| UI Components | `frontend/components/ui/` | Generic UI elements (buttons, cards, inputs) |
+| Feature Components | `frontend/components/` | App-specific components used on 2+ pages |
+| Hooks | `frontend/lib/` or `frontend/hooks/` | Shared stateful logic |
+| Utilities | `frontend/lib/` | Pure functions, API client, helpers |
+
+**Before creating any component or utility:**
+1. Search the codebase for existing implementations
+2. If similar functionality exists, use or extend it
+3. Only create page-specific code when explicitly required and document why
+
+**Examples of global components:**
+- `Logo` - Used on auth pages, sidebar, dashboard
+- `usePageTitle` - Sets document title consistently
+- `api` - API client with auth handling
+- `formatDate` - Date formatting utility
+
+See [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.mdc) for full guidelines.
 
 ### Page Component Pattern
 
@@ -943,6 +977,183 @@ export class ErrorBoundary extends Component<Props, State> {
 | 422 | Unprocessable Entity | Validation failed |
 | 429 | Too Many Requests | Rate limit exceeded |
 | 500 | Internal Server Error | Unexpected backend error |
+
+## Responsive & Mobile-First Patterns
+
+### Mobile-First Class Order
+
+Always write base styles for mobile, then add breakpoint modifiers for larger screens:
+
+```tsx
+// ✅ CORRECT: Mobile-first (base → larger screens)
+<div className="flex flex-col md:flex-row lg:gap-6">
+<div className="w-full md:w-1/2 lg:w-1/3">
+<div className="p-4 md:p-6 lg:p-8">
+<h1 className="text-2xl md:text-3xl lg:text-4xl">
+
+// ❌ WRONG: Desktop-first (breaks mobile)
+<div className="flex-row md:flex-col">
+<div className="w-1/3 md:w-full">
+```
+
+### Responsive Grid Layout
+
+```tsx
+// Cards: 1 column on mobile → multi-column on larger screens
+<div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+  {items.map(item => (
+    <Card key={item.id}>...</Card>
+  ))}
+</div>
+
+// Form fields: stack on mobile, side-by-side on tablet+
+<div className="grid gap-4 md:grid-cols-2">
+  <FormField name="firstName" />
+  <FormField name="lastName" />
+</div>
+```
+
+### Mobile Detection Hook
+
+Use the `useIsMobile` hook for conditional rendering:
+
+```tsx
+import { useIsMobile } from "@/lib/use-mobile";
+
+export function ResponsiveComponent() {
+  const isMobile = useIsMobile();
+
+  // Fundamentally different UIs for mobile vs desktop
+  if (isMobile) {
+    return <MobileVersion />;
+  }
+  return <DesktopVersion />;
+}
+```
+
+**Key file**: `frontend/lib/use-mobile.ts`
+
+### Responsive Navigation Pattern
+
+```tsx
+// Mobile: Sheet (drawer) component
+// Desktop: Fixed sidebar
+
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/lib/use-mobile";
+
+export function ResponsiveSidebar({ children }: { children: React.ReactNode }) {
+  const isMobile = useIsMobile();
+  const [open, setOpen] = useState(false);
+
+  if (isMobile) {
+    return (
+      <>
+        <Button variant="ghost" size="icon" onClick={() => setOpen(true)}>
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Sheet open={open} onOpenChange={setOpen}>
+          <SheetContent side="left" className="w-64 p-0">
+            <nav onClick={() => setOpen(false)}>{children}</nav>
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+  }
+
+  return (
+    <aside className="hidden md:flex md:w-64 md:flex-col border-r">
+      {children}
+    </aside>
+  );
+}
+```
+
+### Responsive Table Pattern
+
+```tsx
+// Option 1: Horizontal scroll wrapper (simpler)
+<div className="overflow-x-auto rounded-md border">
+  <Table className="min-w-[600px]">
+    {/* table content */}
+  </Table>
+</div>
+
+// Option 2: Card view on mobile (better UX)
+import { useIsMobile } from "@/lib/use-mobile";
+
+export function DataView({ data }: { data: Item[] }) {
+  const isMobile = useIsMobile();
+
+  if (isMobile) {
+    return (
+      <div className="space-y-4">
+        {data.map(item => (
+          <Card key={item.id}>
+            <CardHeader>
+              <CardTitle className="text-base">{item.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="text-sm">
+              {/* Mobile-friendly card layout */}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    );
+  }
+
+  return <Table>{/* Desktop table view */}</Table>;
+}
+```
+
+### Touch Target Pattern
+
+Ensure all interactive elements have minimum 44x44px touch targets:
+
+```tsx
+// ✅ CORRECT: Adequate touch targets
+<Button className="min-h-[44px]">Submit</Button>
+
+<button className="p-3 hover:bg-accent rounded-md">
+  <Icon className="h-5 w-5" /> {/* 20px + 24px padding = 44px+ */}
+</button>
+
+// Icon button with explicit size
+<Button variant="ghost" size="icon" className="h-11 w-11">
+  <Settings className="h-5 w-5" />
+</Button>
+
+// ❌ WRONG: Too small for touch
+<button className="p-1"><Icon className="h-4 w-4" /></button>
+```
+
+### Responsive Typography Pattern
+
+```tsx
+// Page titles - scale up on larger screens
+<h1 className="text-2xl font-bold md:text-3xl lg:text-4xl">Dashboard</h1>
+
+// Section headers
+<h2 className="text-xl font-semibold md:text-2xl">Recent Activity</h2>
+
+// Body text
+<p className="text-sm md:text-base text-muted-foreground">
+  Description text.
+</p>
+```
+
+### Hide/Show by Breakpoint
+
+```tsx
+// Mobile only
+<div className="block md:hidden">Mobile content</div>
+
+// Desktop only  
+<div className="hidden md:block">Desktop content</div>
+
+// Tablet and up
+<div className="hidden sm:block">Tablet+ content</div>
+```
 
 ## Naming Conventions Summary
 

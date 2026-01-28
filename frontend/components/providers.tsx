@@ -6,6 +6,8 @@ import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { useAuth } from "@/lib/auth";
 import { AppConfigProvider } from "@/lib/app-config";
+import { VersionProvider } from "@/lib/version-provider";
+import { NotificationProvider } from "@/lib/notifications";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, isInitialized } = useAuth();
@@ -36,12 +38,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <AppConfigProvider>
-        <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
-          <AuthInitializer>
-            {children}
-          </AuthInitializer>
-          <Toaster richColors position="top-right" />
-        </ThemeProvider>
+        <VersionProvider>
+          <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
+            <AuthInitializer>
+              <NotificationProvider>{children}</NotificationProvider>
+            </AuthInitializer>
+            <Toaster richColors position="top-right" />
+          </ThemeProvider>
+        </VersionProvider>
       </AppConfigProvider>
     </QueryClientProvider>
   );

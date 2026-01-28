@@ -174,11 +174,19 @@ View and manage your login sessions:
 
 ## Notifications
 
-Access via **Settings > Notifications**
+### In-App Notifications
+
+View and manage notifications from the header and dedicated notifications page:
+
+- **Bell icon**: In the top bar. Shows an unread count badge. Click to open a dropdown with recent notifications.
+- **Dropdown**: Lists recent notifications, **Mark all read**, and **View all** to open the full list.
+- **Notifications page**: Go to **/notifications** (or click **View all**). Filter by **All** or **Unread**, mark items read, delete selected, and paginate through the list.
+
+When real-time updates are enabled (Pusher/broadcasting), new in-app notifications appear immediately without refreshing.
 
 ### Notification Channels
 
-Configure how you receive notifications:
+Configure how you receive notifications via **Configuration > Notifications** (admin) or your user settings.
 
 | Channel | Setup Required |
 |---------|----------------|

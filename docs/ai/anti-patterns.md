@@ -125,6 +125,76 @@ class NewLLMProvider implements LLMProviderInterface
 
 ## Frontend Anti-Patterns
 
+### Don't: Duplicate Logic Across Pages
+
+```tsx
+// BAD - Logo rendering duplicated in multiple pages
+// login/page.tsx
+export default function LoginPage() {
+  const [logoError, setLogoError] = useState(false);
+  const logoUrl = useAppConfig().logoUrl;
+  
+  return logoUrl && !logoError ? (
+    <Image src={logoUrl} onError={() => setLogoError(true)} />
+  ) : (
+    <span className="font-bold text-xl">AppName</span>
+  );
+}
+
+// register/page.tsx - SAME CODE DUPLICATED!
+export default function RegisterPage() {
+  const [logoError, setLogoError] = useState(false);
+  // ... same logic repeated
+}
+
+// GOOD - Use shared component
+// login/page.tsx
+import { Logo } from '@/components/logo';
+
+export default function LoginPage() {
+  return <Logo variant="full" size="lg" />;
+}
+
+// register/page.tsx
+import { Logo } from '@/components/logo';
+
+export default function RegisterPage() {
+  return <Logo variant="full" size="lg" />;
+}
+```
+
+**Before writing any logic, ask:**
+1. Does this functionality exist elsewhere in the codebase?
+2. Could another page need this same functionality?
+3. Should this be a shared component in `frontend/components/`?
+
+### Don't: Create Page-Specific Utilities
+
+```tsx
+// BAD - Utility function defined inside a page
+// settings/page.tsx
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString();
+}
+
+export default function SettingsPage() {
+  return <span>{formatDate(user.created_at)}</span>;
+}
+
+// GOOD - Put utilities in shared location
+// lib/utils.ts
+export function formatDate(date: string) {
+  return new Date(date).toLocaleDateString();
+}
+
+// settings/page.tsx
+import { formatDate } from '@/lib/utils';
+
+export default function SettingsPage() {
+  return <span>{formatDate(user.created_at)}</span>;
+}
+```
+
 ### Don't: Fetch Without Error Handling
 
 ```tsx
@@ -243,6 +313,100 @@ interface ExampleCardProps {
 function ExampleCard({ title, description, onClick }: ExampleCardProps) {
   return <Card>...</Card>;
 }
+```
+
+## Form Validation Anti-Patterns (react-hook-form + Zod)
+
+### Don't: Make Fields Required by Default
+
+```tsx
+// BAD - URL validation fails on empty string (blocks save)
+const schema = z.object({
+  webhook_url: z.string().url().optional(),  // Empty string fails URL validation!
+  api_key: z.string().min(1),  // Requires value even if optional
+});
+
+// GOOD - Allow empty strings explicitly for optional fields
+const schema = z.object({
+  webhook_url: z.string()
+    .refine((val) => !val || val === "" || isValidUrl(val), {
+      message: "Must be a valid URL",
+    })
+    .optional(),
+  api_key: z.string().optional(),  // Empty is fine
+});
+```
+
+### Don't: Use onChange Mode for Form Validation
+
+```tsx
+// BAD - Validates on every keystroke (blocks typing, shows errors too early)
+const form = useForm({
+  resolver: zodResolver(schema),
+  mode: "onChange",
+});
+
+// GOOD - Validates when user leaves field
+const form = useForm({
+  resolver: zodResolver(schema),
+  mode: "onBlur",
+});
+```
+
+### Don't: Use setValue for Initial Data Load
+
+```tsx
+// BAD - isDirty won't work correctly
+const fetchSettings = async () => {
+  const response = await api.get("/settings");
+  setValue("name", response.data.name);
+  setValue("enabled", response.data.enabled);
+  // Form thinks these are user changes, isDirty = true immediately!
+};
+
+// GOOD - Use reset() to establish clean state
+const fetchSettings = async () => {
+  const response = await api.get("/settings");
+  reset({
+    name: response.data.name || "",
+    enabled: response.data.enabled || false,
+  });
+  // Form knows this is the baseline, isDirty = false
+};
+```
+
+### Don't: Forget shouldDirty for Custom Inputs
+
+```tsx
+// BAD - Switch/ColorPicker changes don't enable save button
+<Switch
+  checked={watch("enabled")}
+  onCheckedChange={(checked) => setValue("enabled", checked)}
+/>
+
+// GOOD - Mark the form as dirty when value changes
+<Switch
+  checked={watch("enabled")}
+  onCheckedChange={(checked) => setValue("enabled", checked, { shouldDirty: true })}
+/>
+```
+
+### Don't: Send Empty Strings to Backend
+
+```tsx
+// BAD - Backend may store empty string instead of null
+const onSubmit = async (data) => {
+  await api.put("/settings", data);  // { webhook_url: "" }
+};
+
+// GOOD - Convert empty strings to null
+const onSubmit = async (data) => {
+  await api.put("/settings", {
+    ...data,
+    webhook_url: data.webhook_url || null,
+    api_key: data.api_key || null,
+  });
+};
 ```
 
 ## Database Anti-Patterns
@@ -376,10 +540,141 @@ it('only returns current user examples', function () {
 });
 ```
 
+## Responsive & Mobile Anti-Patterns
+
+### Don't: Use Desktop-First CSS
+
+```tsx
+// ❌ WRONG: Desktop-first (mobile breaks)
+<div className="flex-row md:flex-col">      // Mobile gets row, tablet gets column
+<div className="w-1/3 md:w-full">           // Mobile gets 1/3 width, too narrow!
+<div className="text-xl md:text-base">      // Mobile gets larger text than tablet
+
+// ✅ CORRECT: Mobile-first (base mobile, add larger)
+<div className="flex flex-col md:flex-row">  // Mobile stacks, tablet+ side-by-side
+<div className="w-full md:w-1/2 lg:w-1/3">   // Mobile full, progressively narrower
+<div className="text-base md:text-lg lg:text-xl">  // Progressive enhancement
+```
+
+### Don't: Ignore Touch Targets
+
+```tsx
+// ❌ WRONG: Touch targets too small
+<button className="p-1 text-xs">Click me</button>
+<Button size="sm" className="h-6">Tiny</Button>
+
+// ✅ CORRECT: Minimum 44px touch targets
+<button className="p-3 min-h-[44px]">Click me</button>
+<Button className="min-h-[44px]">Proper size</Button>
+
+// Icon buttons need explicit sizing
+<Button variant="ghost" size="icon" className="h-11 w-11">
+  <Icon className="h-5 w-5" />
+</Button>
+```
+
+### Don't: Use Fixed Widths Without Responsive Fallbacks
+
+```tsx
+// ❌ WRONG: Fixed width breaks mobile
+<div className="w-[800px]">Content</div>
+<div className="w-1/2">Always half width</div>
+
+// ✅ CORRECT: Full width on mobile, constrained on larger
+<div className="w-full max-w-[800px]">Content</div>
+<div className="w-full md:w-1/2">Full on mobile, half on tablet+</div>
+```
+
+### Don't: Forget Tables Need Horizontal Scroll
+
+```tsx
+// ❌ WRONG: Table overflows and breaks layout
+<Table>
+  <TableBody>{/* Wide content */}</TableBody>
+</Table>
+
+// ✅ CORRECT: Wrap tables in scroll container
+<div className="overflow-x-auto">
+  <Table className="min-w-[600px]">
+    <TableBody>{/* Wide content */}</TableBody>
+  </Table>
+</div>
+```
+
+### Don't: Duplicate Mobile/Desktop Without Hook
+
+```tsx
+// ❌ WRONG: Using CSS media queries for complex conditional logic
+// or duplicating entire component structures
+
+// ✅ CORRECT: Use useIsMobile hook for different UIs
+import { useIsMobile } from "@/lib/use-mobile";
+
+function MyComponent() {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return <MobileDrawerNav />;
+  }
+  return <DesktopSidebar />;
+}
+```
+
+### Don't: Hardcode Breakpoint Values
+
+```tsx
+// ❌ WRONG: Hardcoded breakpoint values
+useEffect(() => {
+  const handleResize = () => {
+    setIsMobile(window.innerWidth < 768);  // Magic number!
+  };
+}, []);
+
+// ✅ CORRECT: Use the useIsMobile hook (consistent breakpoint)
+import { useIsMobile } from "@/lib/use-mobile";
+
+function MyComponent() {
+  const isMobile = useIsMobile();  // Uses 768px breakpoint consistently
+}
+```
+
+### Don't: Forget Landscape Orientation
+
+```tsx
+// ❌ WRONG: Only testing portrait mode
+// Component works at 375px portrait but breaks at 667px landscape
+
+// ✅ CORRECT: Consider both orientations
+// Test at 667x375 (iPhone landscape)
+// Use min-height constraints where needed
+<div className="min-h-screen md:min-h-0">
+```
+
+### Don't: Create Hover-Only Interactions
+
+```tsx
+// ❌ WRONG: Hover-only (doesn't work on touch)
+<div className="opacity-0 hover:opacity-100">
+  Hidden until hover
+</div>
+
+// ✅ CORRECT: Visible by default or use touch-friendly alternative
+<div className="opacity-100 md:opacity-0 md:hover:opacity-100">
+  Visible on mobile, hover on desktop
+</div>
+
+// Or use explicit touch/click handlers
+<button onClick={handleToggle}>
+  {showOptions && <Options />}
+</button>
+```
+
 ## Summary Checklist
 
 Before submitting code, verify:
 
+- [ ] **No duplicated logic** - Searched for existing components/utilities first
+- [ ] **Shared components used** - New reusable functionality placed in `frontend/components/` or `frontend/lib/`
 - [ ] Business logic is in Services, not Controllers
 - [ ] All queries are user-scoped where appropriate
 - [ ] FormRequest classes used for validation
@@ -390,3 +685,9 @@ Before submitting code, verify:
 - [ ] No hardcoded URLs or secrets
 - [ ] Admin routes have proper middleware
 - [ ] Tests verify user isolation
+- [ ] Form fields are optional by default (use `.optional()`, `mode: "onBlur"`, `reset()`)
+- [ ] Custom inputs use `setValue(..., { shouldDirty: true })`
+- [ ] **Mobile-first CSS** - Base styles for mobile, breakpoints for larger screens
+- [ ] **Touch targets** - All interactive elements have minimum 44px touch targets
+- [ ] **Tables** - Wrapped in `overflow-x-auto` or have card view alternative
+- [ ] **Tested** - Verified at 320px, 375px, 768px, and 1024px+ widths

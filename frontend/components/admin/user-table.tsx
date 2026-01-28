@@ -126,7 +126,8 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
 
   return (
     <>
-      <Table>
+      <div className="overflow-x-auto rounded-md border">
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead>User</TableHead>
@@ -179,8 +180,12 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
               </TableCell>
               <TableCell className="text-right">
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" className="h-8 w-8 p-0">
+                    <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 min-h-11 min-w-11"
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -223,6 +228,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
           ))}
         </TableBody>
       </Table>
+      </div>
 
       <UserDialog
         user={editingUser}

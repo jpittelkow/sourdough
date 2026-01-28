@@ -91,6 +91,7 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 
 ## Gotchas
 
+- **Global components only** - Never duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Cursor rule: global-components.mdc](../.cursor/rules/global-components.mdc).
 - **SQLite is default** but code supports MySQL/PostgreSQL/Supabase (ADR-010)
 - **Single Docker container** with Supervisor, not microservices (ADR-009)
 - **Settings are user-scoped** (`user_id` column) - system settings use `SystemSetting` model

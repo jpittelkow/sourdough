@@ -3,8 +3,6 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -14,218 +12,124 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Loader2,
   Mail,
   MessageSquare,
   Phone,
   Bell,
-  Send,
   CheckCircle,
   XCircle,
 } from "lucide-react";
 
-interface NotificationChannel {
+interface AdminChannel {
   id: string;
   name: string;
   description: string;
-  icon: React.ReactNode;
-  enabled: boolean;
-  configured: boolean;
-  settings: {
-    key: string;
-    label: string;
-    type: "text" | "password" | "email";
-    value: string;
-    placeholder?: string;
-  }[];
+  provider_configured: boolean;
+  available: boolean;
+  admin_toggle: boolean;
+  sms_provider: boolean | null;
 }
 
 const channelIcons: Record<string, React.ReactNode> = {
+  database: <Bell className="h-5 w-5" />,
   email: <Mail className="h-5 w-5" />,
   telegram: <MessageSquare className="h-5 w-5" />,
   discord: <MessageSquare className="h-5 w-5" />,
   slack: <MessageSquare className="h-5 w-5" />,
+  signal: <Phone className="h-5 w-5" />,
+  matrix: <MessageSquare className="h-5 w-5" />,
   twilio: <Phone className="h-5 w-5" />,
-  database: <Bell className="h-5 w-5" />,
+  vonage: <Phone className="h-5 w-5" />,
+  sns: <Phone className="h-5 w-5" />,
+  webpush: <Bell className="h-5 w-5" />,
+  fcm: <Bell className="h-5 w-5" />,
+  ntfy: <Bell className="h-5 w-5" />,
+};
+
+const SMS_IDS = ["twilio", "vonage", "sns"] as const;
+const SMS_LABELS: Record<string, string> = {
+  twilio: "Twilio",
+  vonage: "Vonage",
+  sns: "AWS SNS",
 };
 
 export default function NotificationsPage() {
-  const [channels, setChannels] = useState<NotificationChannel[]>([]);
+  const [channels, setChannels] = useState<AdminChannel[]>([]);
+  const [smsProvider, setSmsProvider] = useState<string | null>(null);
+  const [smsProvidersConfigured, setSmsProvidersConfigured] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [savingChannels, setSavingChannels] = useState<Set<string>>(new Set());
-  const [testingChannels, setTestingChannels] = useState<Set<string>>(new Set());
-  const [channelSettings, setChannelSettings] = useState<Record<string, Record<string, string>>>({});
 
   useEffect(() => {
-    fetchNotificationSettings();
+    fetchConfig();
   }, []);
 
-  const fetchNotificationSettings = async () => {
+  const fetchConfig = async () => {
     try {
-      const response = await api.get("/settings/notifications");
-      const channelsData = response.data.channels || [];
-
-      // Add icons to channels
-      const channelsWithIcons = channelsData.map((channel: NotificationChannel) => ({
-        ...channel,
-        icon: channelIcons[channel.id] || <Bell className="h-5 w-5" />,
-      }));
-
-      setChannels(channelsWithIcons);
-
-      // Initialize settings state
-      const initialSettings: Record<string, Record<string, string>> = {};
-      channelsData.forEach((channel: NotificationChannel) => {
-        initialSettings[channel.id] = {};
-        channel.settings?.forEach((setting) => {
-          initialSettings[channel.id][setting.key] = setting.value || "";
-        });
-      });
-      setChannelSettings(initialSettings);
-    } catch (error) {
-      console.error("Failed to fetch notification settings:", error);
-      // Set default channels if API doesn't return data
-      setChannels([
-        {
-          id: "email",
-          name: "Email",
-          description: "Receive notifications via email",
-          icon: <Mail className="h-5 w-5" />,
-          enabled: false,
-          configured: false,
-          settings: [],
-        },
-        {
-          id: "telegram",
-          name: "Telegram",
-          description: "Receive notifications via Telegram bot",
-          icon: <MessageSquare className="h-5 w-5" />,
-          enabled: false,
-          configured: false,
-          settings: [
-            {
-              key: "chat_id",
-              label: "Chat ID",
-              type: "text",
-              value: "",
-              placeholder: "Your Telegram chat ID",
-            },
-          ],
-        },
-        {
-          id: "discord",
-          name: "Discord",
-          description: "Receive notifications via Discord webhook",
-          icon: <MessageSquare className="h-5 w-5" />,
-          enabled: false,
-          configured: false,
-          settings: [
-            {
-              key: "webhook_url",
-              label: "Webhook URL",
-              type: "text",
-              value: "",
-              placeholder: "https://discord.com/api/webhooks/...",
-            },
-          ],
-        },
-        {
-          id: "slack",
-          name: "Slack",
-          description: "Receive notifications via Slack webhook",
-          icon: <MessageSquare className="h-5 w-5" />,
-          enabled: false,
-          configured: false,
-          settings: [
-            {
-              key: "webhook_url",
-              label: "Webhook URL",
-              type: "text",
-              value: "",
-              placeholder: "https://hooks.slack.com/services/...",
-            },
-          ],
-        },
-      ]);
+      const res = await api.get("/admin/notification-channels");
+      const data = res.data;
+      setChannels(data.channels ?? []);
+      setSmsProvider(data.sms_provider ?? null);
+      setSmsProvidersConfigured(data.sms_providers_configured ?? []);
+    } catch (e) {
+      console.error("Failed to fetch notification channel config:", e);
+      toast.error("Failed to load notification configuration");
+      setChannels([]);
+      setSmsProvidersConfigured([]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleToggleChannel = async (channelId: string, enabled: boolean) => {
-    setChannels((prev) =>
-      prev.map((ch) => (ch.id === channelId ? { ...ch, enabled } : ch))
-    );
-
-    try {
-      await api.put(`/settings/notifications`, {
-        channel: channelId,
-        enabled,
-      });
-      toast.success(`${channelId} notifications ${enabled ? "enabled" : "disabled"}`);
-    } catch (error: any) {
-      // Revert on error
-      setChannels((prev) =>
-        prev.map((ch) => (ch.id === channelId ? { ...ch, enabled: !enabled } : ch))
-      );
-      toast.error(error.message || "Failed to update channel");
-    }
-  };
-
-  const handleSettingChange = (channelId: string, key: string, value: string) => {
-    setChannelSettings((prev) => ({
-      ...prev,
-      [channelId]: {
-        ...prev[channelId],
-        [key]: value,
-      },
-    }));
-  };
-
-  const handleSaveChannelSettings = async (channelId: string) => {
+  const handleToggleAvailable = async (channelId: string, available: boolean) => {
     setSavingChannels((prev) => new Set(prev).add(channelId));
-
+    setChannels((prev) =>
+      prev.map((ch) => (ch.id === channelId ? { ...ch, available } : ch))
+    );
     try {
-      await api.put(`/settings/notifications`, {
-        channel: channelId,
-        settings: channelSettings[channelId],
+      const current = channels.find((c) => c.id === channelId);
+      await api.put("/admin/notification-channels", {
+        channels: [{ id: channelId, available }],
       });
-      toast.success("Settings saved");
-
-      // Update configured status
+      toast.success(`${current?.name ?? channelId} ${available ? "available" : "unavailable"} to users`);
+    } catch (err: unknown) {
       setChannels((prev) =>
-        prev.map((ch) =>
-          ch.id === channelId ? { ...ch, configured: true } : ch
-        )
+        prev.map((ch) => (ch.id === channelId ? { ...ch, available: !available } : ch))
       );
-    } catch (error: any) {
-      toast.error(error.message || "Failed to save settings");
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to update channel");
     } finally {
       setSavingChannels((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(channelId);
-        return newSet;
+        const next = new Set(prev);
+        next.delete(channelId);
+        return next;
       });
     }
   };
 
-  const handleTestChannel = async (channelId: string) => {
-    setTestingChannels((prev) => new Set(prev).add(channelId));
-
+  const handleSmsProviderChange = async (value: string) => {
+    const next = value === "__none__" ? null : value;
+    setSmsProvider(next);
     try {
-      await api.post(`/notifications/test/${channelId}`);
-      toast.success("Test notification sent!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send test notification");
-    } finally {
-      setTestingChannels((prev) => {
-        const newSet = new Set(prev);
-        newSet.delete(channelId);
-        return newSet;
-      });
+      await api.put("/admin/notification-channels", { sms_provider: next });
+      toast.success("SMS provider updated");
+    } catch (err: unknown) {
+      setSmsProvider(smsProvider);
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to update SMS provider");
     }
   };
 
@@ -242,108 +146,97 @@ export default function NotificationsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
         <p className="text-muted-foreground">
-          Configure how and where you receive notifications.
+          Enable which notification channels are available to users. Users configure their own webhooks and phone numbers in Preferences.
         </p>
       </div>
 
-      {channels.map((channel) => (
-        <Card key={channel.id}>
+      {smsProvidersConfigured.length > 0 && (
+        <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className={`p-2 rounded-full ${
-                    channel.enabled
-                      ? "bg-primary/10 text-primary"
-                      : "bg-muted text-muted-foreground"
-                  }`}
-                >
-                  {channel.icon}
-                </div>
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    {channel.name}
-                    {channel.configured ? (
-                      <Badge variant="success" className="text-xs">
-                        <CheckCircle className="mr-1 h-3 w-3" />
-                        Configured
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-xs">
-                        <XCircle className="mr-1 h-3 w-3" />
-                        Not configured
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  <CardDescription>{channel.description}</CardDescription>
-                </div>
-              </div>
-              <Switch
-                checked={channel.enabled}
-                onCheckedChange={(checked) =>
-                  handleToggleChannel(channel.id, checked)
-                }
-              />
-            </div>
+            <CardTitle>SMS provider</CardTitle>
+            <CardDescription>
+              Choose the preferred SMS provider. Users enter their phone number and test in Preferences.
+            </CardDescription>
           </CardHeader>
-          {channel.settings && channel.settings.length > 0 && (
-            <CardContent>
-              <Separator className="mb-4" />
-              <div className="space-y-4">
-                {channel.settings.map((setting) => (
-                  <div key={setting.key} className="space-y-2">
-                    <Label htmlFor={`${channel.id}-${setting.key}`}>
-                      {setting.label}
-                    </Label>
-                    <Input
-                      id={`${channel.id}-${setting.key}`}
-                      type={setting.type}
-                      value={channelSettings[channel.id]?.[setting.key] || ""}
-                      onChange={(e) =>
-                        handleSettingChange(channel.id, setting.key, e.target.value)
-                      }
-                      placeholder={setting.placeholder}
-                    />
-                  </div>
-                ))}
-                <div className="flex gap-2 pt-2">
-                  <Button
-                    onClick={() => handleSaveChannelSettings(channel.id)}
-                    disabled={savingChannels.has(channel.id)}
-                  >
-                    {savingChannels.has(channel.id) && (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    )}
-                    Save Settings
-                  </Button>
-                  {channel.configured && (
-                    <Button
-                      variant="outline"
-                      onClick={() => handleTestChannel(channel.id)}
-                      disabled={testingChannels.has(channel.id)}
-                    >
-                      {testingChannels.has(channel.id) ? (
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      ) : (
-                        <Send className="mr-2 h-4 w-4" />
-                      )}
-                      Send Test
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          )}
-          {channel.id === "email" && (
-            <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Email notifications use the system SMTP configuration. Contact
-                your administrator to set up email delivery.
-              </p>
-            </CardContent>
-          )}
+          <CardContent>
+            <div className="space-y-2 max-w-xs">
+              <Label>Preferred SMS provider</Label>
+              <Select
+                value={smsProvider ?? "__none__"}
+                onValueChange={handleSmsProviderChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">None</SelectItem>
+                  {smsProvidersConfigured.map((id) => (
+                    <SelectItem key={id} value={id}>
+                      {SMS_LABELS[id] ?? id}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
         </Card>
-      ))}
+      )}
+
+      <div className="space-y-4">
+        <h2 className="text-lg font-semibold">Channels</h2>
+        {channels.map((ch) => (
+          <Card key={ch.id}>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div
+                    className={`p-2 rounded-full ${
+                      ch.available ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {channelIcons[ch.id] ?? <Bell className="h-5 w-5" />}
+                  </div>
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      {ch.name}
+                      {ch.provider_configured ? (
+                        <span className="inline-flex items-center rounded-md bg-green-100 dark:bg-green-900/30 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-400">
+                          <CheckCircle className="mr-1 h-3 w-3" />
+                          Configured
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                          <XCircle className="mr-1 h-3 w-3" />
+                          Not configured
+                        </span>
+                      )}
+                      {!ch.admin_toggle && (
+                        <span className="text-xs font-normal text-muted-foreground">(always available)</span>
+                      )}
+                    </CardTitle>
+                    <CardDescription>{ch.description}</CardDescription>
+                  </div>
+                </div>
+                {ch.admin_toggle ? (
+                  <div className="flex items-center gap-2">
+                    {savingChannels.has(ch.id) && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    <Switch
+                      checked={ch.available}
+                      onCheckedChange={(checked) => handleToggleAvailable(ch.id, checked)}
+                      disabled={!ch.provider_configured || savingChannels.has(ch.id)}
+                    />
+                    <Label className="text-sm text-muted-foreground">Available to users</Label>
+                  </div>
+                ) : (
+                  <span className="text-sm text-muted-foreground">Always available</span>
+                )}
+              </div>
+            </CardHeader>
+          </Card>
+        ))}
+      </div>
     </div>
   );
 }

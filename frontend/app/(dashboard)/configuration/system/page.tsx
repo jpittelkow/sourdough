@@ -119,7 +119,7 @@ export default function SystemSettingsPage() {
     resolver: zodResolver(systemSchema),
     defaultValues: {
       general: {
-        app_name: "Sourdough",
+        app_name: "",
         app_url: "",
         default_timezone: "UTC",
         default_locale: "en",
@@ -154,7 +154,7 @@ export default function SystemSettingsPage() {
 
       const formData: SystemForm = {
         general: {
-          app_name: data.general?.app_name || "Sourdough",
+          app_name: data.general?.app_name || "",
           app_url: data.general?.app_url || "",
           default_timezone: data.general?.default_timezone || "UTC",
           default_locale: data.general?.default_locale || "en",

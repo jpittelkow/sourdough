@@ -1,0 +1,166 @@
+# Responsive & Mobile-First Development
+
+All UI components must be responsive and work well on mobile devices. Follow mobile-first design principles.
+
+## Core Principles
+
+1. **Mobile-first CSS** - Write base styles for mobile, add breakpoint modifiers for larger screens
+2. **Touch-friendly** - All interactive elements must have minimum 44px touch targets
+3. **Fluid layouts** - Use relative units and flexible grids, avoid fixed widths
+4. **Content priority** - Most important content should be visible first on mobile
+
+## Tailwind Breakpoints
+
+| Prefix | Min Width | Typical Devices |
+|--------|-----------|-----------------|
+| (none) | 0px | Mobile phones |
+| `sm` | 640px | Large phones (landscape) |
+| `md` | 768px | Tablets |
+| `lg` | 1024px | Small laptops |
+| `xl` | 1280px | Desktops |
+| `2xl` | 1536px | Large desktops |
+
+## Required Patterns
+
+### Mobile-First Class Order
+
+```tsx
+// ✅ CORRECT: Mobile-first (base → larger screens)
+<div className="flex flex-col md:flex-row lg:flex-row">
+<div className="w-full md:w-1/2 lg:w-1/3">
+<div className="p-4 md:p-6 lg:p-8">
+
+// ❌ WRONG: Desktop-first (breaks mobile)
+<div className="flex-row md:flex-col">
+<div className="w-1/3 md:w-full">
+```
+
+### Grid Layouts
+
+```tsx
+// ✅ CORRECT: Single column on mobile, multi-column on larger screens
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+
+// Cards stack vertically on mobile
+<div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+```
+
+### Touch Targets
+
+```tsx
+// ✅ CORRECT: Minimum 44px touch target
+<Button className="min-h-[44px] min-w-[44px]">
+<button className="p-3"> {/* 12px * 2 + icon = 44px+ */}
+
+// ❌ WRONG: Too small for touch
+<button className="p-1 text-xs">
+```
+
+### Sidebar/Navigation
+
+```tsx
+// Use the useIsMobile hook for conditional rendering
+import { useIsMobile } from '@/lib/use-mobile';
+
+function Navigation() {
+  const isMobile = useIsMobile();
+  
+  if (isMobile) {
+    return <MobileDrawer />;  // Sheet component
+  }
+  return <DesktopSidebar />;
+}
+```
+
+### Tables on Mobile
+
+```tsx
+// ✅ CORRECT: Horizontal scroll wrapper for tables
+<div className="overflow-x-auto">
+  <Table className="min-w-[600px]">
+    {/* table content */}
+  </Table>
+</div>
+
+// Or consider card view for mobile
+{isMobile ? <CardList data={data} /> : <DataTable data={data} />}
+```
+
+### Forms
+
+```tsx
+// ✅ CORRECT: Full-width inputs on mobile
+<Input className="w-full" />
+
+// Form layouts that stack on mobile
+<div className="grid gap-4 md:grid-cols-2">
+  <FormField name="firstName" />
+  <FormField name="lastName" />
+</div>
+```
+
+### Typography
+
+```tsx
+// ✅ CORRECT: Responsive text sizes
+<h1 className="text-2xl md:text-3xl lg:text-4xl">
+<p className="text-sm md:text-base">
+
+// ❌ WRONG: Fixed large text that breaks mobile
+<h1 className="text-5xl">
+```
+
+### Spacing
+
+```tsx
+// ✅ CORRECT: Responsive padding/margins
+<div className="p-4 md:p-6 lg:p-8">
+<div className="space-y-4 md:space-y-6">
+
+// ❌ WRONG: Excessive fixed spacing
+<div className="p-12">
+```
+
+## Use the Mobile Hook
+
+Always use `useIsMobile()` from `@/lib/use-mobile` for programmatic mobile detection:
+
+```tsx
+import { useIsMobile } from '@/lib/use-mobile';
+
+export function MyComponent() {
+  const isMobile = useIsMobile();
+  
+  return isMobile ? <MobileVersion /> : <DesktopVersion />;
+}
+```
+
+## Testing Checklist
+
+Before submitting UI changes:
+
+- [ ] Tested at 320px width (small mobile)
+- [ ] Tested at 375px width (common mobile)
+- [ ] Tested at 768px width (tablet)
+- [ ] Tested at 1024px+ width (desktop)
+- [ ] All buttons/links have 44px+ touch targets
+- [ ] No horizontal scroll on mobile (except intentional table wrappers)
+- [ ] Text is readable without zooming
+- [ ] Forms are usable on mobile keyboards
+
+## Common Components
+
+| Component | Mobile Behavior | Files |
+|-----------|----------------|-------|
+| Sidebar | Sheet drawer | `frontend/components/sidebar.tsx` |
+| Header | Hamburger menu | `frontend/components/header.tsx` |
+| Tables | Horizontal scroll | Wrap in `overflow-x-auto` |
+| Dialogs | Full-screen on mobile | Use Sheet component |
+| Cards | Stack vertically | Grid with `grid-cols-1 md:grid-cols-*` |
+
+## Related Documentation
+
+- [ADR-013: Responsive Mobile-First Design](../../docs/adr/013-responsive-mobile-first-design.md)
+- [Mobile Responsiveness Roadmap](../../docs/plans/mobile-responsive-roadmap.md)
+- [Recipe: Make Component Responsive](../../docs/ai/recipes/make-component-responsive.md)
+- `frontend/lib/use-mobile.ts` - Mobile detection hook

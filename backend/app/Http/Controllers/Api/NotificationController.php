@@ -21,9 +21,13 @@ class NotificationController extends Controller
     {
         $user = $request->user();
 
-        $notifications = $user->notifications()
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', 20));
+        $query = $user->notifications()->orderBy('created_at', 'desc');
+
+        if ($request->boolean('unread')) {
+            $query->unread();
+        }
+
+        $notifications = $query->paginate($request->input('per_page', 20));
 
         return response()->json($notifications);
     }
