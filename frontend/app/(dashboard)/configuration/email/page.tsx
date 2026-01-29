@@ -25,6 +25,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { SaveButton } from "@/components/ui/save-button";
 import { Loader2, Mail } from "lucide-react";
 
 const mailSchema = z.object({
@@ -53,8 +55,9 @@ export default function EmailSettingsPage() {
   const [isTesting, setIsTesting] = useState(false);
   const [testEmail, setTestEmail] = useState("");
 
-  const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<MailForm>({
+  const { register, handleSubmit, formState: { errors, isDirty }, setValue, reset, watch } = useForm<MailForm>({
     resolver: zodResolver(mailSchema),
+    mode: "onBlur",
     defaultValues: {
       provider: "smtp",
       from_address: "",
@@ -73,13 +76,22 @@ export default function EmailSettingsPage() {
     try {
       const response = await api.get("/mail-settings");
       const settings = response.data.settings || {};
-
-      Object.keys(settings).forEach((key) => {
-        if (key === "port") {
-          setValue(key as any, settings[key] ? parseInt(settings[key]) : undefined);
-        } else {
-          setValue(key as any, settings[key] || "");
-        }
+      reset({
+        provider: (settings.provider as MailForm["provider"]) || "smtp",
+        from_address: settings.from_address || "",
+        from_name: settings.from_name || "",
+        host: settings.host || "",
+        port: settings.port ? parseInt(settings.port) : undefined,
+        encryption: settings.encryption as MailForm["encryption"] | undefined,
+        username: settings.username || "",
+        password: settings.password || "",
+        mailgun_domain: settings.mailgun_domain || "",
+        mailgun_secret: settings.mailgun_secret || "",
+        sendgrid_api_key: settings.sendgrid_api_key || "",
+        ses_key: settings.ses_key || "",
+        ses_secret: settings.ses_secret || "",
+        ses_region: settings.ses_region || "",
+        postmark_token: settings.postmark_token || "",
       });
     } catch (error: any) {
       toast.error(error.message || "Failed to load mail settings");
@@ -120,11 +132,7 @@ export default function EmailSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -344,10 +352,7 @@ export default function EmailSettingsPage() {
             </div>
           </CardContent>
           <CardFooter className="flex justify-end">
-            <Button type="submit" disabled={!isDirty || isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>
       </form>

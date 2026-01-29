@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -34,6 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { SaveButton } from "@/components/ui/save-button";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -53,13 +54,24 @@ export default function ProfilePage() {
     register,
     handleSubmit,
     formState: { errors, isDirty },
+    reset,
   } = useForm<ProfileForm>({
     resolver: zodResolver(profileSchema),
+    mode: "onBlur",
     defaultValues: {
-      name: user?.name || "",
-      email: user?.email || "",
+      name: "",
+      email: "",
     },
   });
+
+  useEffect(() => {
+    if (user) {
+      reset({
+        name: user.name,
+        email: user.email,
+      });
+    }
+  }, [user, reset]);
 
   const onSubmit = async (data: ProfileForm) => {
     setIsLoading(true);
@@ -168,10 +180,7 @@ export default function ProfilePage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={isLoading || !isDirty}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <SaveButton isDirty={isDirty} isSaving={isLoading} />
           </CardFooter>
         </form>
       </Card>
