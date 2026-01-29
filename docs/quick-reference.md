@@ -83,7 +83,10 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 | 2FA | `TwoFactorService.php`, `two-factor-form.tsx` | ADR-004 |
 | Notifications | `NotificationOrchestrator.php`, `Channels/` | ADR-005 |
 | LLM calls | `LLMOrchestrator.php`, `Providers/` | ADR-006 |
-| Backups | `BackupService.php`, `Destinations/` | ADR-007 |
+| Backups | `BackupService.php`, `Destinations/`, `BackupSettingController.php`, `config/settings-schema.php` (backup group) | ADR-007, [Backup hub](backup.md) |
+| Backup UI | `frontend/app/(dashboard)/configuration/backup/page.tsx` (Backups + Settings tabs) | [Backup hub](backup.md) |
+| Add backup destination | [Recipe: add-backup-destination](ai/recipes/add-backup-destination.md) | ADR-007 |
+| Extend backup/restore | [Recipe: extend-backup-restore](ai/recipes/extend-backup-restore.md), [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) | [Backup hub](backup.md) |
 | Docker config | `docker/`, `docker-compose.yml` | ADR-009 |
 | Add settings page | `frontend/app/(dashboard)/settings/` | ADR-012 |
 | Add admin page | `frontend/app/(dashboard)/admin/` | ADR-012 |

@@ -14,7 +14,8 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Mobile/Responsive | [ADR-013](../adr/013-responsive-mobile-first-design.md), `frontend/lib/use-mobile.ts`, [responsive recipe](recipes/make-component-responsive.md) |
 | Notifications | [ADR-005](../adr/005-notification-system-architecture.md), `backend/app/Services/Notifications/` |
 | LLM | [ADR-006](../adr/006-llm-orchestration-modes.md), `backend/app/Services/LLM/` |
-| Settings | [ADR-012](../adr/012-admin-only-settings.md), `frontend/app/(dashboard)/settings/` |
+| Settings | [ADR-012](../adr/012-admin-only-settings.md), [ADR-014](../adr/014-database-settings-env-fallback.md), `backend/app/Services/SettingService.php`, `backend/config/settings-schema.php`, `frontend/app/(dashboard)/configuration/` |
+| Backup & Restore | [ADR-007](../adr/007-backup-system-design.md), `backend/app/Services/Backup/BackupService.php`, `backend/config/settings-schema.php` (backup group), [add-backup-destination](recipes/add-backup-destination.md), [extend-backup-restore](recipes/extend-backup-restore.md) |
 | Auth | [ADR-002](../adr/002-authentication-architecture.md), `backend/app/Http/Controllers/Api/AuthController.php` |
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
@@ -44,7 +45,9 @@ Quick-start guide for AI assistants developing on Sourdough.
 
 | Task | Recipe |
 |------|--------|
+| Code Review | [code-review.md](recipes/code-review.md) |
 | Add API Endpoint | [add-api-endpoint.md](recipes/add-api-endpoint.md) |
+| Add Admin-Protected Action | [add-admin-protected-action.md](recipes/add-admin-protected-action.md) |
 | Add Config Page | [add-config-page.md](recipes/add-config-page.md) |
 | Add Settings Page | [add-settings-page.md](recipes/add-settings-page.md) |
 | Add UI Component | [add-ui-component.md](recipes/add-ui-component.md) |
@@ -52,7 +55,9 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Trigger Notifications | [trigger-notifications.md](recipes/trigger-notifications.md) |
 | Add Dashboard Widget | [add-dashboard-widget.md](recipes/add-dashboard-widget.md) |
 | Add LLM Provider | [add-llm-provider.md](recipes/add-llm-provider.md) |
+| Add SSO Provider | [add-sso-provider.md](recipes/add-sso-provider.md) |
 | Add Backup Destination | [add-backup-destination.md](recipes/add-backup-destination.md) |
+| Extend Backup & Restore | [extend-backup-restore.md](recipes/extend-backup-restore.md) |
 | Add Tests | [add-tests.md](recipes/add-tests.md) |
 | Make Responsive | [make-component-responsive.md](recipes/make-component-responsive.md) |
 
@@ -60,9 +65,11 @@ Quick-start guide for AI assistants developing on Sourdough.
 
 - **Global components** - NEVER duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Cursor rule](../../.cursor/rules/global-components.mdc).
 - **User scoping** - Most tables have `user_id`. Always filter by `$request->user()->id`
+- **User password** - The User model uses the `hashed` cast. Pass plaintext when creating/updating; do not use `Hash::make()` in controllers or you will double-hash.
 - **SQLite default** - Dev uses SQLite but code supports MySQL/PostgreSQL. Test array/JSON columns carefully.
 - **API prefix** - All backend routes are under `/api/`. Frontend calls go through Nginx proxy.
 - **Settings models** - User settings use `Setting` model; system settings use `SystemSetting` model
+- **Schema-backed settings** - For settings in `backend/config/settings-schema.php` (e.g. mail), use **SettingService** (env fallback, encryption, cache); do not use `SystemSetting::get`/`set` directly. See [ADR-014](adr/014-database-settings-env-fallback.md) and [SettingService pattern](patterns.md#settingservice-pattern).
 - **Sanctum cookies** - Auth uses session cookies, not Bearer tokens. Include `credentials: 'include'` in fetch.
 - **shadcn/ui** - Components in `frontend/components/ui/` are CLI-managed. Use `npx shadcn@latest add <component>` from `frontend/`; config in `frontend/components.json`. See [Quick Reference](../quick-reference.md) for commands.
 - **Service layer** - Business logic goes in `Services/`, not controllers. Controllers just validate and route.

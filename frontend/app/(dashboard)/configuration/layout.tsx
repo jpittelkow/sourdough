@@ -22,6 +22,7 @@ import {
   Users,
   Bell,
   Brain,
+  Cpu,
   Mail,
   HardDrive,
   Key,
@@ -30,6 +31,7 @@ import {
   Clock,
   Database,
   Menu,
+  LogIn,
 } from "lucide-react";
 
 const navigation = [
@@ -58,10 +60,22 @@ const navigation = [
     description: "LLM providers and modes",
   },
   {
+    name: "LLM system",
+    href: "/configuration/llm-system",
+    icon: Cpu,
+    description: "System-wide LLM defaults",
+  },
+  {
     name: "Email",
     href: "/configuration/email",
     icon: Mail,
     description: "Email delivery configuration",
+  },
+  {
+    name: "SSO",
+    href: "/configuration/sso",
+    icon: LogIn,
+    description: "Single sign-on providers",
   },
   {
     name: "Storage",

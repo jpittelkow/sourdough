@@ -7,23 +7,10 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Mail,
-  ArrowRight,
-} from "lucide-react";
-import { Logo } from "@/components/logo";
+import { Loader2, XCircle, Mail, ArrowRight } from "lucide-react";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { AuthStateCard } from "@/components/auth/auth-state-card";
 
 function VerifyEmailContent() {
   const router = useRouter();
@@ -74,149 +61,102 @@ function VerifyEmailContent() {
   // Loading state
   if (status === "loading") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Logo variant="full" size="lg" />
-            </div>
-            <div className="mx-auto">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-            </div>
-            <CardTitle className="mt-4">Verifying Email</CardTitle>
-            <CardDescription>
-              Please wait while we verify your email address...
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
+      <AuthStateCard
+        variant="loading"
+        title="Verifying Email"
+        description="Please wait while we verify your email address..."
+      />
     );
   }
 
   // Success state
   if (status === "success") {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Logo variant="full" size="lg" />
-            </div>
-            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle>Email Verified</CardTitle>
-            <CardDescription>
-              Your email address has been verified successfully.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground text-center">
-              You now have full access to all features of your account.
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/dashboard" className="w-full">
-              <Button className="w-full">
-                Go to Dashboard
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+      <AuthStateCard
+        variant="success"
+        title="Email Verified"
+        description="Your email address has been verified successfully."
+        footer={
+          <Link href="/dashboard" className="w-full">
+            <Button className="w-full">
+              Go to Dashboard
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        }
+      >
+        <p className="text-sm text-muted-foreground text-center">
+          You now have full access to all features of your account.
+        </p>
+      </AuthStateCard>
     );
   }
 
   // Pending verification state (user is logged in but not verified)
   if (status === "pending" && user && !user.email_verified_at) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Logo variant="full" size="lg" />
-            </div>
-            <div className="mx-auto w-12 h-12 bg-yellow-100 dark:bg-yellow-900/20 rounded-full flex items-center justify-center mb-4">
-              <Mail className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
-            </div>
-            <CardTitle>Verify Your Email</CardTitle>
-            <CardDescription>
-              We've sent a verification link to{" "}
-              <span className="font-medium text-foreground">{user.email}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Mail className="h-4 w-4" />
-              <AlertDescription>
-                Please check your email and click the verification link to
-                activate your account. The link will expire in 24 hours.
-              </AlertDescription>
-            </Alert>
-            <p className="text-sm text-muted-foreground text-center">
-              Didn't receive the email? Check your spam folder or click below to
-              resend.
-            </p>
-          </CardContent>
-          <CardFooter className="flex flex-col gap-2">
-            <Button
+      <AuthStateCard
+        variant="warning"
+        icon={Mail}
+        title="Verify Your Email"
+        description={
+          <>
+            We've sent a verification link to{" "}
+            <span className="font-medium text-foreground">{user.email}</span>
+          </>
+        }
+        footer={
+          <div className="flex flex-col gap-2 w-full">
+            <LoadingButton
               onClick={handleResendVerification}
-              disabled={isResending}
+              isLoading={isResending}
               className="w-full"
             >
-              {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Resend Verification Email
-            </Button>
+            </LoadingButton>
             <Link href="/dashboard" className="w-full">
               <Button variant="ghost" className="w-full">
                 Continue to Dashboard
               </Button>
             </Link>
-          </CardFooter>
-        </Card>
-      </div>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <Alert>
+            <Mail className="h-4 w-4" />
+            <AlertDescription>
+              Please check your email and click the verification link to
+              activate your account. The link will expire in 24 hours.
+            </AlertDescription>
+          </Alert>
+          <p className="text-sm text-muted-foreground text-center">
+            Didn't receive the email? Check your spam folder or click below to
+            resend.
+          </p>
+        </div>
+      </AuthStateCard>
     );
   }
 
   // Error state
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo variant="full" size="lg" />
-          </div>
-          <div className="mx-auto w-12 h-12 bg-destructive/10 rounded-full flex items-center justify-center mb-4">
-            <XCircle className="h-6 w-6 text-destructive" />
-          </div>
-          <CardTitle>Verification Failed</CardTitle>
-          <CardDescription>
-            We couldn't verify your email address.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Alert variant="destructive">
-            <XCircle className="h-4 w-4" />
-            <AlertTitle>Error</AlertTitle>
-            <AlertDescription>
-              {errorMessage || "The verification link is invalid or has expired."}
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-        <CardFooter className="flex flex-col gap-2">
+    <AuthStateCard
+      variant="error"
+      icon={XCircle}
+      title="Verification Failed"
+      description="We couldn't verify your email address."
+      footer={
+        <div className="flex flex-col gap-2 w-full">
           {user ? (
             <>
-              <Button
+              <LoadingButton
                 onClick={handleResendVerification}
-                disabled={isResending}
+                isLoading={isResending}
                 className="w-full"
               >
-                {isResending && (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                )}
                 Request New Verification Email
-              </Button>
+              </LoadingButton>
               <Link href="/dashboard" className="w-full">
                 <Button variant="ghost" className="w-full">
                   Continue to Dashboard
@@ -228,9 +168,17 @@ function VerifyEmailContent() {
               <Button className="w-full">Sign In</Button>
             </Link>
           )}
-        </CardFooter>
-      </Card>
-    </div>
+        </div>
+      }
+    >
+      <Alert variant="destructive">
+        <XCircle className="h-4 w-4" />
+        <AlertTitle>Error</AlertTitle>
+        <AlertDescription>
+          {errorMessage || "The verification link is invalid or has expired."}
+        </AlertDescription>
+      </Alert>
+    </AuthStateCard>
   );
 }
 

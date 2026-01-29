@@ -2,9 +2,9 @@
 
 Move application configuration from environment variables to database-stored settings for UI-based management.
 
-**Priority**: MEDIUM  
-**Status**: Planned (waiting on Settings Restructure)  
-**Last Updated**: 2026-01-27
+**Priority**: HIGH  
+**Status**: Complete (2026-01-29)  
+**Last Updated**: 2026-01-29
 
 **Dependencies**:
 - [Settings Restructure](settings-restructure-roadmap.md) - Configuration page structure and settings table
@@ -13,16 +13,16 @@ Move application configuration from environment variables to database-stored set
 
 ## Task Checklist
 
-- [ ] Create settings table and migration
-- [ ] Create SettingService with env fallback
-- [ ] Migrate mail configuration to database
-- [ ] Migrate notification channel configuration to database
-- [ ] Migrate LLM provider configuration to database
-- [ ] Migrate SSO provider configuration to database
-- [ ] Migrate backup configuration to database
-- [ ] Create admin settings UI for each category
-- [ ] Add settings caching layer
-- [ ] Document which settings remain env-only
+- [x] Create settings table and migration (existing; added `is_encrypted` column)
+- [x] Create SettingService with env fallback
+- [x] Migrate mail configuration to database (Phase 2 complete)
+- [x] Migrate notification channel configuration to database (Phase 3 complete)
+- [x] Migrate LLM system-wide settings to database (Phase 4 complete)
+- [x] Migrate SSO provider configuration to database (Phase 5 complete)
+- [x] Migrate backup configuration to database
+- [x] Create admin settings UI for each category (mail, notification credentials, LLM system, SSO, backup)
+- [x] Add settings caching layer (file cache in SettingService)
+- [x] Document which settings remain env-only (ADR-015)
 
 ---
 

@@ -291,45 +291,64 @@ View your AI usage:
 
 ## Backup & Restore
 
-Access via **Admin > Backup** (admin users only)
+Access via **Configuration > Backup** (admin users only). Full backup documentation: [Backup & Restore (docs hub)](../backup.md).
+
+The Backup page has two tabs:
+
+- **Backups** – Create, download, restore, and delete backups.
+- **Settings** – Configure retention, schedule, and remote destinations (S3, SFTP, Google Drive). Admins with **manage-settings** can edit these; changes take effect without restart.
 
 ### Creating a Backup
 
-1. Go to **Admin > Backup**
-2. Click **Create Backup**
-3. Wait for backup to complete
-4. Download the backup file
+1. Go to **Configuration > Backup**
+2. Open the **Backups** tab
+3. Click **Create Backup**
+4. Wait for the backup to complete
+5. Download the backup file if desired
 
 ### What's Included in Backups
 
-- Database (all tables)
-- Uploaded files
-- Application settings (encrypted)
+- **Database** – All application data (users, settings, notifications, etc.)
+- **Uploaded files** – Everything under storage (avatars, attachments, etc.)
+- **Application settings** – Stored in the database (sensitive values handled securely)
+
+Backups are ZIP archives with a manifest (version 2.0). See [ADR-007: Backup System Design](../adr/007-backup-system-design.md) for format details.
 
 ### Downloading Backups
 
-1. Go to **Admin > Backup**
-2. Find the backup in the list
-3. Click the download icon
+1. Go to **Configuration > Backup** > **Backups** tab
+2. Find the backup in the list (filename, size, date)
+3. Click **Download**
 4. Save the `.zip` file securely
 
 ### Restoring from Backup
 
-1. Go to **Admin > Backup**
-2. Click **Upload Backup**
-3. Select your backup `.zip` file
-4. Click **Restore**
-5. Confirm the restoration
+1. Go to **Configuration > Backup** > **Backups** tab
+2. Either choose an existing backup and click **Restore**, or use **Upload Backup** to select a `.zip` file
+3. In the restore dialog, type **RESTORE** to confirm
+4. Click **Restore Backup**
 
-> **Warning**: Restoring will replace all current data!
+> **Warning**: Restoring replaces all current data (database, files, settings). This action cannot be undone.
+
+### Backup Settings (Admins)
+
+Under **Configuration > Backup** > **Settings** tab you can configure:
+
+- **Retention** – How long to keep backups and how many to keep
+- **Schedule** – Enable scheduled backups; set frequency (daily/weekly/monthly), time, and destinations
+- **S3 / SFTP / Google Drive** – Remote storage credentials; use **Test Connection** after saving to verify
+- **Encryption** – Optional password-based encryption for backup files
+- **Notifications** – Notify on backup success or failure (when notifications are configured)
+
+Save changes with **Save Changes**. Test Connection uses the saved settings; save before testing if you just edited credentials.
 
 ### Scheduled Backups
 
-If enabled by your administrator:
+If enabled by your administrator in **Configuration > Backup** > **Settings**:
 
-- Backups run automatically (daily/weekly)
-- Old backups are automatically cleaned up
-- Backups may be stored remotely (S3, etc.)
+- Backups run automatically (daily, weekly, or monthly)
+- Retention rules clean up old backups
+- Backups can be stored locally and/or remotely (S3, SFTP, Google Drive)
 
 ---
 

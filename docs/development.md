@@ -54,9 +54,23 @@ APP_PORT=8081
 CONTAINER_NAME=sourdough-project-name
 ```
 
+## Settings Import (Env to Database)
+
+To copy current environment variables into the database (e.g. after adding new schema keys or migrating from env-only):
+
+```bash
+# Import all groups defined in settings-schema
+php artisan settings:import-env
+
+# Import only mail settings
+php artisan settings:import-env --group=mail
+```
+
+Imported values are stored in `system_settings`; sensitive keys are encrypted. Config is applied at next boot via ConfigServiceProvider.
+
 ## Configuration
 
-Sourdough is configured via environment variables. See `.env.example` for all options.
+Sourdough is configured via environment variables. See `.env.example` for all options. Many settings can also be managed in the database (see [ADR-014](adr/014-database-settings-env-fallback.md)); database values override env when present. **Settings that must stay in env** (bootstrap/security): `APP_KEY`, `APP_ENV`, `APP_DEBUG`, `DB_*`, `LOG_*`, `CACHE_STORE`. See [Env to Database Roadmap](plans/env-to-database-roadmap.md#23-settings-that-must-stay-in-env).
 
 ### Required Variables
 

@@ -187,14 +187,36 @@ return [
 
 ### API Endpoints
 
+**Backup operations** (admin; requires `manage-backups`):
+
 ```
-GET  /api/backup              - List available backups
-POST /api/backup/create       - Create new backup
-GET  /api/backup/{id}/download - Download backup file
-POST /api/backup/upload       - Upload backup for restore
-POST /api/backup/restore      - Restore from uploaded backup
-DELETE /api/backup/{id}       - Delete a backup
+GET    /api/backup                    - List available backups
+POST   /api/backup/create             - Create new backup (body: include_database, include_files, include_settings)
+GET    /api/backup/download/{filename} - Download backup file
+POST   /api/backup/restore            - Restore (body: filename or multipart backup file)
+DELETE /api/backup/{filename}         - Delete a backup
 ```
+
+**Backup settings** (admin; requires `manage-settings`):
+
+```
+GET    /api/backup-settings           - Get all backup settings (retention, schedule, S3/SFTP/Google Drive, encryption, notifications)
+PUT    /api/backup-settings           - Update backup settings
+POST   /api/backup-settings/reset/{key} - Reset one setting to env default
+POST   /api/backup-settings/test/{destination} - Test connection (destination: s3, sftp, google_drive)
+```
+
+Backup configuration is stored in the database with environment fallback ([ADR-014](014-database-settings-env-fallback.md)). Sensitive values (passwords, keys) are encrypted at rest.
+
+## Current Implementation (Key Files)
+
+- **BackupService**: `backend/app/Services/Backup/BackupService.php` – create, list, download, restore, delete. Restore logic lives in the same service (no separate RestoreService).
+- **Destinations**: `backend/app/Services/Backup/Destinations/DestinationInterface.php` – contract. Implementations: `LocalDestination`, `S3Destination`, `SFTPDestination`, `GoogleDriveDestination`. Each reads `config('backup.destinations.{id}.*')`; config is injected at boot from DB via ConfigServiceProvider.
+- **Backup config**: `backend/config/backup.php` (structure and env defaults), `backend/config/settings-schema.php` (backup group – flat keys), `backend/app/Providers/ConfigServiceProvider.php` (`injectBackupConfig()`).
+- **Controllers**: `BackupController.php` (operations), `BackupSettingController.php` (settings API and Test Connection).
+- **UI**: `frontend/app/(dashboard)/configuration/backup/page.tsx` – two tabs: **Backups** (list, create, download, restore, delete), **Settings** (retention, schedule, S3/SFTP/Google Drive, encryption, notifications).
+
+**Documentation:** [Backup & Restore (docs hub)](../backup.md), [Add backup destination (recipe)](../ai/recipes/add-backup-destination.md), [Extend backup/restore (recipe)](../ai/recipes/extend-backup-restore.md), [Backup patterns](../ai/patterns.md#backup--restore-patterns). Settings that must remain in `.env` only: [ADR-015](015-env-only-settings.md).
 
 ## Consequences
 
@@ -222,6 +244,8 @@ DELETE /api/backup/{id}       - Delete a backup
 ## Related Decisions
 
 - [ADR-010: Database Abstraction Strategy](./010-database-abstraction.md)
+- [ADR-014: Database Settings with Environment Fallback](./014-database-settings-env-fallback.md) – Backup settings stored in DB with env fallback
+- [ADR-015: Environment-Only Settings](./015-env-only-settings.md) – Which settings must stay in `.env`
 
 ## Notes
 

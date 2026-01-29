@@ -3,11 +3,11 @@
 Multiple database backend support with configuration UI in settings.
 
 **Priority**: LOW  
-**Status**: Planned (waiting on foundation work)  
-**Last Updated**: 2026-01-27
+**Status**: Ready  
+**Last Updated**: 2026-01-29
 
 **Dependencies**:
-- [Env to Database Migration](env-to-database-roadmap.md) - Settings infrastructure for database storage
+- ~~[Env to Database Migration](env-to-database-roadmap.md)~~ - Complete
 
 ---
 

@@ -3,23 +3,76 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\SystemSetting;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Validator;
 
 class MailSettingController extends Controller
 {
+    private const GROUP = 'mail';
+
+    /**
+     * Map schema keys to frontend/API keys for response.
+     */
+    private const SCHEMA_TO_FRONTEND = [
+        'mailer' => 'provider',
+        'smtp_host' => 'host',
+        'smtp_port' => 'port',
+        'smtp_encryption' => 'encryption',
+        'smtp_username' => 'username',
+        'smtp_password' => 'password',
+        'from_address' => 'from_address',
+        'from_name' => 'from_name',
+        'mailgun_domain' => 'mailgun_domain',
+        'mailgun_secret' => 'mailgun_secret',
+        'sendgrid_api_key' => 'sendgrid_api_key',
+        'ses_key' => 'ses_key',
+        'ses_secret' => 'ses_secret',
+        'ses_region' => 'ses_region',
+        'postmark_token' => 'postmark_token',
+    ];
+
+    /**
+     * Map frontend/API keys to schema keys for storage.
+     */
+    private const FRONTEND_TO_SCHEMA = [
+        'provider' => 'mailer',
+        'host' => 'smtp_host',
+        'port' => 'smtp_port',
+        'encryption' => 'smtp_encryption',
+        'username' => 'smtp_username',
+        'password' => 'smtp_password',
+        'from_address' => 'from_address',
+        'from_name' => 'from_name',
+        'mailgun_domain' => 'mailgun_domain',
+        'mailgun_secret' => 'mailgun_secret',
+        'sendgrid_api_key' => 'sendgrid_api_key',
+        'ses_key' => 'ses_key',
+        'ses_secret' => 'ses_secret',
+        'ses_region' => 'ses_region',
+        'postmark_token' => 'postmark_token',
+    ];
+
+    public function __construct(
+        private SettingService $settingService
+    ) {}
+
     /**
      * Get mail settings.
      */
     public function show(): JsonResponse
     {
-        $settings = SystemSetting::getGroup('mail');
+        $settings = $this->settingService->getGroup(self::GROUP);
+        $mapped = [];
+        foreach (self::SCHEMA_TO_FRONTEND as $schemaKey => $frontendKey) {
+            if (array_key_exists($schemaKey, $settings)) {
+                $mapped[$frontendKey] = $settings[$schemaKey];
+            }
+        }
 
         return response()->json([
-            'settings' => $settings,
+            'settings' => $mapped,
         ]);
     }
 
@@ -46,18 +99,30 @@ class MailSettingController extends Controller
             'postmark_token' => ['required_if:provider,postmark', 'nullable', 'string'],
         ]);
 
-        $user = $request->user();
+        $userId = $request->user()->id;
 
-        foreach ($validated as $key => $value) {
-            SystemSetting::set($key, $value, 'mail', $user->id, false);
+        foreach ($validated as $frontendKey => $value) {
+            $schemaKey = self::FRONTEND_TO_SCHEMA[$frontendKey] ?? $frontendKey;
+            $this->settingService->set(self::GROUP, $schemaKey, $value, $userId);
         }
-
-        // Update Laravel mail config cache
-        $this->updateMailConfig($validated);
 
         return response()->json([
             'message' => 'Mail settings updated successfully',
         ]);
+    }
+
+    /**
+     * Reset a mail setting to env default.
+     */
+    public function reset(Request $request, string $key): JsonResponse
+    {
+        $schemaKey = $key;
+        $schema = config('settings-schema.mail', []);
+        if (!array_key_exists($schemaKey, $schema)) {
+            return response()->json(['message' => 'Unknown setting key'], 422);
+        }
+        $this->settingService->reset(self::GROUP, $schemaKey);
+        return response()->json(['message' => 'Setting reset to default']);
     }
 
     /**
@@ -69,15 +134,17 @@ class MailSettingController extends Controller
             'to' => ['required', 'email'],
         ]);
 
-        try {
-            // Update config temporarily for test
-            $settings = SystemSetting::getGroup('mail');
-            $this->updateMailConfig($settings);
+        $settings = $this->settingService->getGroup(self::GROUP);
+        $this->applyMailConfigForRequest($settings);
 
+        try {
             Mail::raw('This is a test email from your application.', function ($message) use ($validated, $settings) {
                 $message->to($validated['to'])
                     ->subject('Test Email')
-                    ->from($settings['from_address'] ?? config('mail.from.address'), $settings['from_name'] ?? config('mail.from.name'));
+                    ->from(
+                        $settings['from_address'] ?? config('mail.from.address'),
+                        $settings['from_name'] ?? config('mail.from.name')
+                    );
             });
 
             return response()->json([
@@ -91,57 +158,25 @@ class MailSettingController extends Controller
     }
 
     /**
-     * Update Laravel mail configuration.
+     * Apply mail settings to config for the current request (e.g. test email).
      */
-    private function updateMailConfig(array $settings): void
+    private function applyMailConfigForRequest(array $settings): void
     {
-        $config = config('mail');
-
-        if (isset($settings['provider'])) {
-            $config['default'] = $settings['provider'];
+        if (isset($settings['mailer'])) {
+            config(['mail.default' => $settings['mailer']]);
         }
-
-        if ($settings['provider'] === 'smtp') {
-            $config['mailers']['smtp'] = [
-                'transport' => 'smtp',
-                'host' => $settings['host'] ?? env('MAIL_HOST'),
-                'port' => $settings['port'] ?? env('MAIL_PORT', 587),
-                'encryption' => $settings['encryption'] ?? env('MAIL_ENCRYPTION'),
-                'username' => $settings['username'] ?? env('MAIL_USERNAME'),
-                'password' => $settings['password'] ?? env('MAIL_PASSWORD'),
-            ];
-        } elseif ($settings['provider'] === 'mailgun') {
-            $config['mailers']['mailgun'] = [
-                'transport' => 'mailgun',
-                'domain' => $settings['mailgun_domain'] ?? env('MAILGUN_DOMAIN'),
-                'secret' => $settings['mailgun_secret'] ?? env('MAILGUN_SECRET'),
-            ];
-        } elseif ($settings['provider'] === 'sendgrid') {
-            $config['mailers']['sendgrid'] = [
-                'transport' => 'sendgrid',
-                'api_key' => $settings['sendgrid_api_key'] ?? env('SENDGRID_API_KEY'),
-            ];
-        } elseif ($settings['provider'] === 'ses') {
-            $config['mailers']['ses'] = [
-                'transport' => 'ses',
-                'key' => $settings['ses_key'] ?? env('AWS_ACCESS_KEY_ID'),
-                'secret' => $settings['ses_secret'] ?? env('AWS_SECRET_ACCESS_KEY'),
-                'region' => $settings['ses_region'] ?? env('AWS_DEFAULT_REGION', 'us-east-1'),
-            ];
-        } elseif ($settings['provider'] === 'postmark') {
-            $config['mailers']['postmark'] = [
-                'transport' => 'postmark',
-                'token' => $settings['postmark_token'] ?? env('POSTMARK_TOKEN'),
-            ];
-        }
-
+        config([
+            'mail.mailers.smtp.host' => $settings['smtp_host'] ?? config('mail.mailers.smtp.host'),
+            'mail.mailers.smtp.port' => $settings['smtp_port'] ?? config('mail.mailers.smtp.port'),
+            'mail.mailers.smtp.encryption' => $settings['smtp_encryption'] ?? config('mail.mailers.smtp.encryption'),
+            'mail.mailers.smtp.username' => $settings['smtp_username'] ?? config('mail.mailers.smtp.username'),
+            'mail.mailers.smtp.password' => $settings['smtp_password'] ?? config('mail.mailers.smtp.password'),
+        ]);
         if (isset($settings['from_address'])) {
-            $config['from']['address'] = $settings['from_address'];
+            config(['mail.from.address' => $settings['from_address']]);
         }
         if (isset($settings['from_name'])) {
-            $config['from']['name'] = $settings['from_name'];
+            config(['mail.from.name' => $settings['from_name']]);
         }
-
-        config(['mail' => $config]);
     }
 }

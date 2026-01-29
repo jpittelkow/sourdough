@@ -18,6 +18,18 @@ Step-by-step guide to add a new configuration page in the dashboard using react-
 | `backend/routes/api.php` | Modify | Add config endpoints |
 | `backend/app/Http/Controllers/Api/{Name}Controller.php` | Create | Handle requests |
 
+## When Config Uses Database + Env Fallback (SettingService)
+
+If the config is stored in the database with environment fallback (see [ADR-014](../../adr/014-database-settings-env-fallback.md)):
+
+1. **Add keys to** `backend/config/settings-schema.php` for the group (e.g. `mail`) with `env`, `default`, and `encrypted` where needed.
+2. **Backend controller** should use **SettingService** (inject it), not `SystemSetting::get`/`set` directly. Use `$this->settingService->getGroup('group')` and `$this->settingService->set('group', $key, $value, $userId)`.
+3. **Boot-time injection**: Add an `injectXxxConfig(array $settings)` method in `ConfigServiceProvider` and call it from `boot()` when the group is present in loaded settings.
+4. **Reset to default**: Expose `DELETE /api/.../keys/{key}` where `{key}` is the **schema key** (e.g. `smtp_password`), not the frontend key. Validate that the key exists in `config('settings-schema.{group}')` before calling `$this->settingService->reset($group, $key)`.
+5. **Frontend**: Reset button can call `api.delete(\`/mail-settings/keys/${schemaKey}\`)`. Schema keys for mail are e.g. `mailer`, `smtp_host`, `smtp_port`, `smtp_password`, `from_address`, `from_name`.
+
+See [SettingService pattern](../../patterns.md#settingservice-pattern) and `backend/app/Http/Controllers/Api/MailSettingController.php` for key mapping (schema ↔ frontend) and validation.
+
 ## Step 1: Define the Zod Schema (Optional by Default)
 
 ```tsx

@@ -55,6 +55,7 @@ We will restrict all settings pages to admin users only:
 ## Related Decisions
 
 - [ADR-011: Global Navigation Architecture](./011-global-navigation-architecture.md)
+- [ADR-014: Database Settings with Environment Fallback](./014-database-settings-env-fallback.md) – Mail and other schema-backed settings are stored in the database with env fallback (SettingService); access remains admin-only per this ADR.
 
 ## Notes
 

@@ -12,14 +12,18 @@ use App\Http\Controllers\Api\SystemSettingController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\MailSettingController;
+use App\Http\Controllers\Api\NotificationSettingController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\StorageSettingController;
 use App\Http\Controllers\Api\ApiTokenController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\BackupController;
+use App\Http\Controllers\Api\BackupSettingController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\LLMController;
+use App\Http\Controllers\Api\LLMSettingController;
+use App\Http\Controllers\Api\SSOSettingController;
 use App\Http\Controllers\Api\UserSettingController;
 use App\Http\Controllers\Api\UserNotificationSettingsController;
 use Illuminate\Support\Facades\Route;
@@ -199,8 +203,39 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [MailSettingController::class, 'show']);
         Route::put('/', [MailSettingController::class, 'update']);
         Route::post('/test', [MailSettingController::class, 'sendTestEmail']);
+        Route::delete('/keys/{key}', [MailSettingController::class, 'reset']);
     });
-    
+
+    // Notification Channel Settings (Admin only - credentials for channels)
+    Route::prefix('notification-settings')->middleware('can:manage-settings')->group(function () {
+        Route::get('/', [NotificationSettingController::class, 'show']);
+        Route::put('/', [NotificationSettingController::class, 'update']);
+        Route::post('/test/{channel}', [NotificationSettingController::class, 'testChannel']);
+        Route::delete('/keys/{key}', [NotificationSettingController::class, 'reset']);
+    });
+
+    // LLM System-Wide Settings (Admin only)
+    Route::prefix('llm-settings')->middleware('can:manage-settings')->group(function () {
+        Route::get('/', [LLMSettingController::class, 'show']);
+        Route::put('/', [LLMSettingController::class, 'update']);
+        Route::delete('/keys/{key}', [LLMSettingController::class, 'reset']);
+    });
+
+    // SSO Settings (Admin only)
+    Route::prefix('sso-settings')->middleware('can:manage-settings')->group(function () {
+        Route::get('/', [SSOSettingController::class, 'show']);
+        Route::put('/', [SSOSettingController::class, 'update']);
+        Route::delete('/keys/{key}', [SSOSettingController::class, 'reset']);
+    });
+
+    // Backup Settings (Admin only)
+    Route::prefix('backup-settings')->middleware('can:manage-settings')->group(function () {
+        Route::get('/', [BackupSettingController::class, 'show']);
+        Route::put('/', [BackupSettingController::class, 'update']);
+        Route::post('/reset/{key}', [BackupSettingController::class, 'reset']);
+        Route::post('/test/{destination}', [BackupSettingController::class, 'testDestination']);
+    });
+
     // Jobs (Admin only)
     Route::prefix('jobs')->middleware('can:admin')->group(function () {
         Route::get('/scheduled', [JobController::class, 'scheduled']);

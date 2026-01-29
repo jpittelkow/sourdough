@@ -78,6 +78,17 @@ const response = await fetch('/api/auth/user', {
 | GET | `/settings/{group}` | Get settings by group |
 | PUT | `/settings/{group}` | Update settings group |
 
+### Mail Settings (Admin)
+
+Settings are stored in the database with env fallback (see [ADR-014](../adr/014-database-settings-env-fallback.md)). Response/request keys use frontend names (e.g. `provider`, `host`, `port`); storage uses schema keys (e.g. `mailer`, `smtp_host`, `smtp_port`).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/mail-settings` | Get mail settings (provider, host, port, from_address, etc.) |
+| PUT | `/mail-settings` | Update mail settings (same keys as GET) |
+| POST | `/mail-settings/test` | Send test email (body: `{ "to": "email@example.com" }`) |
+| DELETE | `/mail-settings/keys/{key}` | Reset one setting to env default. `{key}` must be the **schema key** (e.g. `smtp_password`, `mailer`, `from_address`), not the frontend key. |
+
 ### Notifications
 
 | Method | Endpoint | Description |
@@ -109,13 +120,26 @@ const response = await fetch('/api/auth/user', {
 
 ### Backup & Restore (Admin)
 
+Requires `manage-backups` ability. See [Backup & Restore documentation](../backup.md) for full context.
+
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| GET | `/backup` | List backups |
-| POST | `/backup/create` | Create backup |
-| GET | `/backup/download/{filename}` | Download backup |
-| POST | `/backup/restore` | Restore from backup |
-| DELETE | `/backup/{filename}` | Delete backup |
+| GET | `/backup` | List backups (response: `backups` array with `filename`, `size`, `created_at`) |
+| POST | `/backup/create` | Create backup. Body (optional): `include_database`, `include_files`, `include_settings` (all default true). Response: `filename`, `size`, `manifest` |
+| GET | `/backup/download/{filename}` | Download backup file (stream) |
+| POST | `/backup/restore` | Restore. Body: either `{ "filename": "sourdough-backup-....zip" }` (restore from existing) or multipart form with backup file (restore from upload) |
+| DELETE | `/backup/{filename}` | Delete a backup |
+
+### Backup Settings (Admin)
+
+Requires `manage-settings` ability. Backup configuration is stored in the database with env fallback ([ADR-014](../adr/014-database-settings-env-fallback.md)). Keys match the `backup` group in `backend/config/settings-schema.php` (e.g. `disk`, `retention_enabled`, `retention_days`, `schedule_enabled`, `s3_enabled`, `s3_bucket`, `s3_access_key_id`, `s3_secret_access_key`, …). Sensitive fields are encrypted at rest.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/backup-settings` | Get all backup settings (response: `settings` object) |
+| PUT | `/backup-settings` | Update backup settings (body: subset of setting keys) |
+| POST | `/backup-settings/reset/{key}` | Reset one setting to env default. `{key}` must be a schema key (e.g. `s3_bucket`, `retention_days`) |
+| POST | `/backup-settings/test/{destination}` | Test connection. `{destination}`: `s3`, `sftp`, or `google_drive`. Uses currently saved settings. |
 
 ### System
 

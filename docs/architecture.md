@@ -39,7 +39,8 @@ Architecture Decision Records (ADRs) document all significant design decisions:
 - [ADR-006: LLM Orchestration Modes](adr/006-llm-orchestration-modes.md) - Single, Aggregation, Council mode designs
   - Key files: `backend/app/Services/LLM/LLMOrchestrator.php`, `backend/app/Services/LLM/Providers/`, `backend/config/llm.php`
 - [ADR-007: Backup System Design](adr/007-backup-system-design.md) - Backup format, scheduling, remote storage
-  - Key files: `backend/app/Services/Backup/BackupService.php`, `backend/app/Services/Backup/Destinations/`, `backend/config/backup.php`
+  - Key files: `backend/app/Services/Backup/BackupService.php`, `backend/app/Services/Backup/Destinations/`, `backend/config/backup.php`, `backend/app/Http/Controllers/Api/BackupSettingController.php`, `backend/config/settings-schema.php` (backup group)
+  - **Full backup documentation:** [Backup & Restore](backup.md) (user, admin, developer guides; key files; recipes and patterns)
 - [ADR-008: Testing Strategy](adr/008-testing-strategy.md) - Pest PHP, Vitest, Playwright testing approach
   - Key files: `playwright.config.ts`, `frontend/vitest.config.ts`, `backend/phpunit.xml`, `e2e/`, `backend/tests/`, `frontend/__tests__/`
 - [ADR-009: Docker Single-Container Architecture](adr/009-docker-single-container.md) - Single container with Supervisor process management
@@ -52,47 +53,32 @@ Architecture Decision Records (ADRs) document all significant design decisions:
   - Key files: `frontend/app/(dashboard)/settings/layout.tsx`, `frontend/app/(dashboard)/admin/`, `frontend/components/admin/`
 - [ADR-013: Responsive Mobile-First Design](adr/013-responsive-mobile-first-design.md) - Mobile-first responsive design approach
   - Key files: `frontend/lib/use-mobile.ts`, `frontend/components/sidebar.tsx`, `frontend/components/app-shell.tsx`, `frontend/components/header.tsx`, `frontend/components/ui/sheet.tsx`, `frontend/tailwind.config.ts`
+- [ADR-014: Database Settings with Environment Fallback](adr/014-database-settings-env-fallback.md) - Database-stored settings with env fallback and boot-time config injection
+  - Key files: `backend/app/Services/SettingService.php`, `backend/app/Providers/ConfigServiceProvider.php`, `backend/config/settings-schema.php`, `backend/app/Models/SystemSetting.php`
+- [ADR-015: Environment-Only Settings](adr/015-env-only-settings.md) - Settings that must remain in .env (APP_KEY, DB_*, CACHE_STORE, LOG_*, APP_ENV, APP_DEBUG)
+  - Key files: `backend/config/settings-schema.php`, `.env.example`
 
 ## Settings Architecture
 
-### Settings Storage Pattern
+### Database Settings with Env Fallback (ADR-014)
 
-Current implementation uses user-scoped settings (`user_id`, `group`, `key`, `value`). For system-wide settings, consider:
+System-wide configurable settings are stored in `system_settings` with environment fallback:
 
-```
-settings table (existing - user settings)
-├── user_id (nullable for system settings)
-├── group
-├── key  
-└── value (JSON)
+- **SettingService**: `get()`, `getGroup()`, `set()`, `reset()`, `all()` with file-based caching and env fallback per `backend/config/settings-schema.php`
+- **ConfigServiceProvider**: Injects database settings into Laravel config at boot (skips when DB not ready)
+- **Encryption**: Sensitive values stored with `is_encrypted`; model decrypts on read
 
-OR
-
-system_settings table (new)
-├── group
-├── key
-├── value (JSON)
-├── is_public (visible to non-admins?)
-└── updated_by
-```
-
-**Key files**: `backend/app/Http/Controllers/Api/SettingController.php`, `backend/database/migrations/`
+**Key files**: `backend/app/Services/SettingService.php`, `backend/app/Providers/ConfigServiceProvider.php`, `backend/config/settings-schema.php`, `backend/app/Models/SystemSetting.php`, `backend/app/Http/Controllers/Api/MailSettingController.php`
 
 ### Settings Caching Strategy
 
-For performance with system settings:
-- Cache system settings on boot
-- Clear cache on setting update
-- Consider Redis for multi-instance deployments
+- Settings cached via SettingService (file store, not DB) with TTL; cache cleared on any `set()` or `reset()`
+- In-memory cache for same-request performance
 
-**Key files**: `backend/config/cache.php`, `backend/app/Http/Controllers/Api/SettingController.php`
+**Key files**: `backend/app/Services/SettingService.php`, `backend/config/cache.php`
 
 ### Settings Validation
 
-Implement validation rules per setting type:
-- Type coercion (string to boolean, etc.)
-- Range validation for numeric settings
-- Enum validation for select fields
-- Dependency validation (setting A requires setting B)
+Validation rules per setting type in controllers; schema defines env keys and defaults in `backend/config/settings-schema.php`.
 
-**Key files**: `backend/app/Http/Requests/`, `backend/app/Http/Controllers/Api/SettingController.php`
+**Key files**: `backend/config/settings-schema.php`, `backend/app/Http/Controllers/Api/MailSettingController.php`, `backend/app/Http/Controllers/Api/SettingController.php`

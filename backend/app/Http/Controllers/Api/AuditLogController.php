@@ -15,7 +15,7 @@ class AuditLogController extends Controller
      */
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 50);
+        $perPage = $request->input('per_page', config('app.pagination.audit_log'));
         $userId = $request->input('user_id');
         $action = $request->input('action');
         $dateFrom = $request->input('date_from');

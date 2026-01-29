@@ -93,6 +93,10 @@ Before starting any task, consult these documentation files:
    - Architecture decisions
    - Major refactoring
 
+## Before Finishing Work
+
+- Before finishing work, run a code review using the [Code Review recipe](docs/ai/recipes/code-review.md) (or the quick checks in the code-review rule).
+
 ## Documentation Structure
 
 The documentation is organized into focused files:

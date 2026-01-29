@@ -20,6 +20,8 @@ import {
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { SaveButton } from "@/components/ui/save-button";
 import { Loader2, Upload, RotateCcw, Trash2 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandingPreview } from "@/components/branding-preview";
@@ -255,11 +257,7 @@ export default function BrandingSettingsPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -483,10 +481,7 @@ export default function BrandingSettingsPage() {
               <RotateCcw className="mr-2 h-4 w-4" />
               Reset to Defaults
             </Button>
-            <Button type="submit" disabled={!isDirty || isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>
       </form>

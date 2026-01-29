@@ -4,9 +4,7 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Support\Facades\Config;
 use App\Models\User;
-use App\Models\SystemSetting;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -55,14 +53,5 @@ class AppServiceProvider extends ServiceProvider
         Gate::define('manage-settings', function (User $user) {
             return $user->isAdmin();
         });
-
-        // Set mail from name from database (fallback to env or default)
-        try {
-            $appName = SystemSetting::get('app_name', null, 'general') ?? env('MAIL_FROM_NAME', 'Sourdough');
-            Config::set('mail.from.name', $appName);
-        } catch (\Exception $e) {
-            // If database isn't ready yet (e.g., during migrations), use env fallback
-            Config::set('mail.from.name', env('MAIL_FROM_NAME', 'Sourdough'));
-        }
     }
 }

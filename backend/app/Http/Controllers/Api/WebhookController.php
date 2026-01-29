@@ -84,7 +84,7 @@ class WebhookController extends Controller
      */
     public function deliveries(Webhook $webhook, Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 20);
+        $perPage = $request->input('per_page', config('app.pagination.default'));
 
         $deliveries = $webhook->deliveries()
             ->orderBy('created_at', 'desc')

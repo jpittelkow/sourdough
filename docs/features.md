@@ -60,15 +60,37 @@ Core functionality and feature documentation:
 - AWS Bedrock
 - Azure OpenAI
 
-## Backup & Restore
+## Configuration Management
 
-- [ADR-007: Backup System Design](adr/007-backup-system-design.md) - ZIP-based backup with manifest, scheduled automation
-- [API Backup Endpoints](api/README.md#backup--restore-admin) - Admin backup management
+- [ADR-014: Database Settings with Environment Fallback](adr/014-database-settings-env-fallback.md) - Database-stored settings with env fallback
+- Mail settings: Configuration > Email (`/configuration/email`); SMTP and provider credentials stored in DB with encryption for secrets
+- SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC
 
 **Capabilities:**
-- ZIP-based backup format with manifest
-- Database backup (SQLite copy, MySQL/PG dump)
-- File backup (all uploaded files)
-- Configuration backup (encrypted settings)
-- Scheduled automatic backups
-- Remote backup destinations (S3, SFTP)
+- System-wide settings stored in `system_settings` with environment fallback (no restart for changes)
+- SettingService with file-based caching; ConfigServiceProvider injects settings into Laravel config at boot
+- Mail configuration (provider, SMTP, from address) editable via admin UI; sensitive values encrypted at rest
+- SSO configuration (global options and per-provider credentials) editable via admin UI; client secrets encrypted at rest
+- Artisan command `php artisan settings:import-env` to import current env values into the database
+- Reset-to-default per setting (revert to env value)
+
+## Backup & Restore
+
+**Documentation hub:** [Backup & Restore](backup.md) – user guide, admin settings, developer docs, key files, and how to extend.
+
+- [ADR-007: Backup System Design](adr/007-backup-system-design.md) – ZIP-based backup with manifest, destinations, security
+- [ADR-014](adr/014-database-settings-env-fallback.md) / [ADR-015](adr/015-env-only-settings.md) – Backup settings in DB with env fallback; env-only settings
+- [API: Backup operations](api/README.md#backup--restore-admin) – List, create, download, restore, delete
+- [API: Backup settings](api/README.md#backup-settings-admin) – Get/update settings, reset key, test destination
+- [Recipe: Add backup destination](ai/recipes/add-backup-destination.md) – Add a new storage destination
+- [Recipe: Extend backup/restore](ai/recipes/extend-backup-restore.md) – New settings, restore behavior, scheduling, notifications
+- [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) – Settings flow, destination interface, UI structure
+
+**Capabilities:**
+- ZIP-based backup format with manifest (version 2.0)
+- Database backup (SQLite copy or export; MySQL/PostgreSQL export)
+- File backup (uploaded files under `storage/app/public`)
+- Settings backup (database-stored settings; sensitive values handled securely)
+- Scheduled backups (daily/weekly/monthly; configurable time and destinations)
+- Remote destinations: local disk, S3, SFTP, Google Drive (pluggable via `DestinationInterface`)
+- **Backup settings UI**: Configuration > Backup – **Backups** tab (create, download, restore, delete); **Settings** tab (retention, schedule, S3/SFTP/Google Drive credentials, encryption, notifications). All backup configuration stored in DB with env fallback; Test Connection for each remote destination.

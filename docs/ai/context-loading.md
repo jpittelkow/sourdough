@@ -44,6 +44,9 @@ backend/routes/api.php                          # Existing routes
 backend/app/Http/Controllers/Api/               # Controller patterns
 backend/app/Http/Requests/                      # Validation patterns
 backend/app/Http/Resources/                     # Response formatting
+backend/app/Http/Traits/                        # Shared controller traits
+  AdminAuthorizationTrait.php                   # Last admin protection
+  ApiResponseTrait.php                          # Standardized responses
 ```
 
 **Also useful:**
@@ -51,6 +54,10 @@ backend/app/Http/Resources/                     # Response formatting
 backend/app/Models/                             # Data models
 backend/database/migrations/                    # Database schema
 ```
+
+**Recipes:**
+- [Add API endpoint](recipes/add-api-endpoint.md)
+- [Add admin-protected action](recipes/add-admin-protected-action.md)
 
 ## Notifications Work
 
@@ -97,16 +104,21 @@ backend/app/Http/Controllers/Api/LLMController.php
 **Read first:**
 ```
 docs/adr/012-admin-only-settings.md
-docs/plans/settings-restructure-roadmap.md      # Future direction
-frontend/app/(dashboard)/settings/              # Existing pages
-frontend/app/(dashboard)/settings/layout.tsx    # Settings nav
+docs/adr/014-database-settings-env-fallback.md  # Database settings with env fallback
+backend/app/Services/SettingService.php         # Core settings service
+backend/config/settings-schema.php              # Migratable settings definition
+backend/app/Providers/ConfigServiceProvider.php # Boot-time config injection
+frontend/app/(dashboard)/configuration/         # Configuration pages
 backend/app/Http/Controllers/Api/SettingController.php
+backend/app/Http/Controllers/Api/MailSettingController.php
+backend/app/Http/Controllers/Api/SSOSettingController.php
 ```
 
 **Also useful:**
 ```
 backend/app/Models/Setting.php
 backend/app/Models/SystemSetting.php
+docs/plans/env-to-database-roadmap.md
 ```
 
 ## Authentication Work
@@ -127,6 +139,12 @@ backend/app/Services/Auth/SSOService.php
 backend/app/Services/Auth/TwoFactorService.php
 frontend/app/(auth)/                            # Auth pages
 frontend/components/auth/                       # Auth components
+  - auth-page-layout.tsx                        # Layout wrapper
+  - auth-divider.tsx                            # SSO/email divider
+  - auth-state-card.tsx                         # Success/error states
+frontend/components/ui/
+  - form-field.tsx                              # Label + Input + error
+  - loading-button.tsx                           # Button with spinner
 ```
 
 ## Backup System Work
@@ -135,14 +153,22 @@ frontend/components/auth/                       # Auth components
 ```
 docs/adr/007-backup-system-design.md
 backend/app/Services/Backup/BackupService.php
-backend/app/Services/Backup/Destinations/       # Existing destinations
+backend/app/Services/Backup/Destinations/         # Existing destinations (DestinationInterface)
+backend/config/settings-schema.php              # backup group (flat keys)
+backend/app/Providers/ConfigServiceProvider.php # injectBackupConfig()
 ```
 
 **Also useful:**
 ```
-backend/app/Http/Controllers/Api/BackupController.php
-frontend/app/(dashboard)/admin/backup/page.tsx
+backend/app/Http/Controllers/Api/BackupController.php       # List, create, download, restore, delete
+backend/app/Http/Controllers/Api/BackupSettingController.php # Settings API + Test Connection
+backend/config/backup.php
+frontend/app/(dashboard)/configuration/backup/page.tsx       # Backups tab + Settings tab
 ```
+
+**Recipes:**
+- [Add backup destination](recipes/add-backup-destination.md)
+- [Extend backup and restore features](recipes/extend-backup-restore.md)
 
 ## Docker/Infrastructure Work
 

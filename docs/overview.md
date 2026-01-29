@@ -13,6 +13,7 @@ Sourdough is a starter application framework designed for AI as a starter to dev
 ### Architecture & Features
 - [Architecture](architecture.md) - Architecture Decision Records (ADRs) with key file references
 - [Features](features.md) - Core functionality (auth, notifications, LLM, backup)
+- [Backup & Restore](backup.md) - **Backup hub**: user guide, admin settings, developer docs, key files, recipes, patterns
 - [Roadmaps & Plans](roadmaps.md) - Development roadmaps and journal entries
 
 ### Technical Reference

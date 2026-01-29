@@ -14,6 +14,7 @@ class SystemSetting extends Model
         'group',
         'key',
         'value',
+        'is_encrypted',
         'is_public',
         'updated_by',
     ];
@@ -21,9 +22,39 @@ class SystemSetting extends Model
     protected function casts(): array
     {
         return [
-            'value' => 'json', // Use 'json' instead of 'array' to support all JSON-serializable types
+            'is_encrypted' => 'boolean',
             'is_public' => 'boolean',
         ];
+    }
+
+    /**
+     * Value attribute: JSON decode and optionally decrypt when is_encrypted.
+     */
+    protected function value(): \Illuminate\Database\Eloquent\Casts\Attribute
+    {
+        return \Illuminate\Database\Eloquent\Casts\Attribute::make(
+            get: function (mixed $value): mixed {
+                if ($value === null || $value === '') {
+                    return $value;
+                }
+                if ($this->is_encrypted) {
+                    try {
+                        $decoded = is_string($value) ? json_decode($value, true) : $value;
+                        $toDecrypt = is_string($decoded) ? $decoded : $value;
+                        return decrypt($toDecrypt);
+                    } catch (\Throwable $e) {
+                        return is_string($value) ? json_decode($value, true) ?? $value : $value;
+                    }
+                }
+                return is_string($value) ? json_decode($value, true) ?? $value : $value;
+            },
+            set: function (mixed $value): string {
+                if ($value === null) {
+                    return json_encode(null);
+                }
+                return is_string($value) ? $value : json_encode($value);
+            },
+        );
     }
 
     /**

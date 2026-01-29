@@ -101,6 +101,58 @@ class ExampleController extends Controller
 }
 ```
 
+### SettingService Pattern
+
+Use `SettingService` for system-wide settings that can be stored in the database with environment fallback. Do not use `SystemSetting` directly for migratable settings; use the service so env fallback and caching apply.
+
+```php
+<?php
+// Inject SettingService in controller or service
+use App\Services\SettingService;
+
+public function __construct(private SettingService $settingService) {}
+
+// Get a single setting (env fallback)
+$value = $this->settingService->get('mail', 'smtp_host', '127.0.0.1');
+
+// Get all settings for a group (env fallback)
+$mailSettings = $this->settingService->getGroup('mail');
+
+// Set a setting (encryption applied per settings-schema; cache cleared)
+$this->settingService->set('mail', 'smtp_password', $password, $request->user()->id);
+
+// Check if value is overridden in DB (vs env)
+if ($this->settingService->isOverridden('mail', 'smtp_host')) { ... }
+
+// Reset to env default (delete from DB, clear cache)
+$this->settingService->reset('mail', 'smtp_password');
+
+// Get all settings (for boot-time config injection; cached)
+$all = $this->settingService->all();
+```
+
+- Define new migratable settings in `backend/config/settings-schema.php` with `env`, `default`, and `encrypted` keys.
+- Add boot-time injection in `ConfigServiceProvider::boot()` for new groups.
+- Use file cache only for settings (not DB) to avoid circular dependency.
+
+### Backup & Restore Patterns
+
+**Documentation:** Full backup docs (user, admin, developer; key files; recipes): [Backup & Restore](../backup.md).
+
+**Backup settings (database with env fallback):** Backup configuration is stored in the `backup` group in `backend/config/settings-schema.php`. ConfigServiceProvider injects flat keys into nested `config('backup.*')` at boot; BackupService and destination classes read only from `config()`. Do not read SettingService inside BackupService or destinations; keep config as the single source at runtime.
+
+**Destination interface:** New storage destinations implement `App\Services\Backup\Destinations\DestinationInterface`: `upload(localPath, filename): array`, `download(filename, localPath): array`, `list(): array`, `delete(filename): bool`, `isAvailable(): bool`, `getName(): string`. Destinations read `config('backup.destinations.{id}.*')` in `__construct()`; config is populated from DB by ConfigServiceProvider.
+
+**Settings API and Test Connection:** BackupSettingController exposes `GET/PUT /backup-settings` and `POST /backup-settings/test/{destination}`. For Test Connection, the controller builds nested backup config from SettingService (via `injectBackupConfigFromSettings()`), injects it into config, then instantiates the destination and calls `isAvailable()`. Validation rules in `update()` must cover every backup schema key you expose in the UI.
+
+**Backup UI:** The backup page has two tabs: **Backups** (list, create, download, restore, delete) and **Settings** (form for retention, schedule, S3/SFTP/Google Drive, encryption, notifications). Settings are fetched when the user opens the Settings tab; form uses react-hook-form + zod; SaveButton submits to `PUT /backup-settings`; Test Connection calls `POST /backup-settings/test/{destination}`. Add new settings by extending the schema, defaultBackupSettings, fetch mapping, and a Card in the Settings tab.
+
+**Adding a new backup setting:** (1) Add flat key to `backup` group in settings-schema.php (use `encrypted` for secrets). (2) Add env default in backup.php if needed. (3) Map flat → nested in ConfigServiceProvider::injectBackupConfig(). (4) Add validation and injectBackupConfigFromSettings() in BackupSettingController. (5) Add field to frontend schema, defaults, fetch mapping, and a FormField/SettingsSwitchRow in the right Card.
+
+**Adding a new destination:** See [Add backup destination](recipes/add-backup-destination.md). Summary: implement DestinationInterface, add flat keys to backup schema and backup.php destinations, map in ConfigServiceProvider and BackupSettingController, add Card and Test Connection in Settings tab.
+
+**Extending backup/restore behavior:** See [Extend backup and restore features](recipes/extend-backup-restore.md) for new restore logic, scheduling, notifications, new backup content, or UI-only changes.
+
 ### Form Request Pattern
 
 ```php
@@ -312,6 +364,96 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 });
 ```
 
+## Backend Traits
+
+Use shared traits for consistent controller behavior. Location: `backend/app/Http/Traits/`.
+
+### AdminAuthorizationTrait
+
+Prevents modifying or deleting the last admin. Use `ensureNotLastAdmin(User $user, string $action)` before delete/disable/demote actions on admin users.
+
+```php
+use App\Http\Traits\AdminAuthorizationTrait;
+
+class UserController extends Controller
+{
+    use AdminAuthorizationTrait;
+
+    public function destroy(User $user): JsonResponse
+    {
+        if ($error = $this->ensureNotLastAdmin($user, 'delete')) {
+            return $error;
+        }
+        // ... prevent self-delete, then delete
+        return $this->successResponse('User deleted successfully');
+    }
+
+    public function toggleAdmin(User $user): JsonResponse
+    {
+        if ($error = $this->ensureNotLastAdmin($user, 'remove admin status from')) {
+            return $error;
+        }
+        // ...
+    }
+}
+```
+
+Common action verbs: `'delete'`, `'disable'`, `'remove admin status from'`. See [Add admin-protected action](recipes/add-admin-protected-action.md).
+
+### ApiResponseTrait
+
+Standardized JSON response helpers:
+
+| Method | Use |
+|--------|-----|
+| `successResponse($message, $data = [], $status = 200)` | Success with message and optional data |
+| `createdResponse($message, $data = [])` | 201 created |
+| `errorResponse($message, $status = 400)` | Error with message |
+| `dataResponse($data, $status = 200)` | Raw data (e.g. paginated list) |
+
+```php
+use App\Http\Traits\ApiResponseTrait;
+
+class ExampleController extends Controller
+{
+    use ApiResponseTrait;
+
+    public function index(Request $request): JsonResponse
+    {
+        $items = Example::paginate($request->input('per_page', config('app.pagination.default')));
+        return $this->dataResponse($items);
+    }
+
+    public function store(StoreRequest $request): JsonResponse
+    {
+        $example = Example::create($request->validated());
+        return $this->createdResponse('Example created', ['example' => $example]);
+    }
+}
+```
+
+### Pagination config
+
+Use `config('app.pagination.default')` (default 20) for list endpoints. Audit logs use `config('app.pagination.audit_log')` (50).
+
+```php
+$perPage = $request->input('per_page', config('app.pagination.default'));
+$logs = AuditLog::paginate($request->input('per_page', config('app.pagination.audit_log')));
+```
+
+### User password (hashed cast)
+
+The `User` model uses Laravel's `hashed` cast for `password`. Pass **plaintext** when creating or updating users; the cast hashes automatically. Do not use `Hash::make()` in controllers for User password fields, or you will double-hash.
+
+```php
+// Good – plaintext, cast hashes
+User::create(['name' => $n, 'email' => $e, 'password' => $validated['password']]);
+$user->update(['password' => $validated['password']]);
+
+// Bad – double-hash when User has hashed cast
+User::create(['password' => Hash::make($validated['password'])]);
+```
+
 ## Frontend Patterns
 
 ### Global Component Principle
@@ -337,6 +479,242 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 - `formatDate` - Date formatting utility
 
 See [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.mdc) for full guidelines.
+
+### Settings Page Components
+
+Use these shared components for consistent settings/configuration page UX.
+
+#### SettingsPageSkeleton
+
+Loading state component for settings pages:
+
+```tsx
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+
+export default function MySettingsPage() {
+  const [isLoading, setIsLoading] = useState(true);
+
+  if (isLoading) {
+    return <SettingsPageSkeleton />;
+  }
+
+  return <div>...</div>;
+}
+```
+
+**Props:**
+- `minHeight?: string` - Custom min-height (default: "400px")
+
+**Key file:** `frontend/components/ui/settings-page-skeleton.tsx`
+
+#### SaveButton
+
+Form save button with built-in dirty/saving state handling:
+
+```tsx
+import { SaveButton } from "@/components/ui/save-button";
+
+export default function MySettingsPage() {
+  const { formState: { isDirty } } = useForm();
+  const [isSaving, setIsSaving] = useState(false);
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {/* form fields */}
+      <SaveButton isDirty={isDirty} isSaving={isSaving} />
+    </form>
+  );
+}
+```
+
+**Props:**
+- `isDirty: boolean` - Whether form has unsaved changes
+- `isSaving: boolean` - Whether form is currently submitting
+- `children?: ReactNode` - Custom button text (default: "Save Changes")
+- Extends all `ButtonProps` except `type`
+
+**Key file:** `frontend/components/ui/save-button.tsx`
+
+#### SettingsSwitchRow
+
+Settings row with label (and optional description) on the left and a switch on the right. The switch keeps its natural size; the row provides a 44px touch target for accessibility. Use for configuration toggles (e.g. "Enable SSO", "Allow account linking").
+
+```tsx
+import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
+
+<SettingsSwitchRow
+  label="Enable feature"
+  description="Optional description below the label"
+  checked={watch("enabled")}
+  onCheckedChange={(checked) => setValue("enabled", checked, { shouldDirty: true })}
+/>
+```
+
+**Props:**
+- `label: string` - Label shown on the left
+- `description?: string` - Optional description below the label
+- `checked: boolean` - Controlled checked state
+- `onCheckedChange: (checked: boolean) => void` - Called when toggled
+- `disabled?: boolean` - Disable the switch
+- `className?: string` - Additional class for the row container
+
+**Key file:** `frontend/components/ui/settings-switch-row.tsx`
+
+### Auth Page Components
+
+Use these shared components for consistent authentication page UX.
+
+#### AuthPageLayout
+
+Layout wrapper for auth pages with Logo, title, and description:
+
+```tsx
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+
+export default function LoginPage() {
+  return (
+    <AuthPageLayout
+      title="Sign In"
+      description="Enter your credentials to access your account"
+    >
+      {/* Form content */}
+    </AuthPageLayout>
+  );
+}
+```
+
+**Props:**
+- `title: string` - Page title
+- `description?: string` - Optional description text
+- `children: ReactNode` - Page content
+
+**Key file:** `frontend/components/auth/auth-page-layout.tsx`
+
+#### FormField
+
+Label + Input + error message combo for form fields:
+
+```tsx
+import { FormField } from "@/components/ui/form-field";
+import { Input } from "@/components/ui/input";
+
+export default function MyForm() {
+  const { register, formState: { errors } } = useForm();
+
+  return (
+    <FormField
+      id="email"
+      label="Email"
+      error={errors.email?.message}
+    >
+      <Input
+        id="email"
+        type="email"
+        {...register("email")}
+      />
+    </FormField>
+  );
+}
+```
+
+**Props:**
+- `id: string` - Field ID (for label htmlFor)
+- `label: string | ReactNode` - Label text or custom label element
+- `error?: string` - Error message to display
+- `children: ReactNode` - Input component
+- `className?: string` - Additional CSS classes
+
+**Key file:** `frontend/components/ui/form-field.tsx`
+
+#### LoadingButton
+
+Button with loading spinner support:
+
+```tsx
+import { LoadingButton } from "@/components/ui/loading-button";
+
+export default function MyForm() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  return (
+    <LoadingButton
+      type="submit"
+      isLoading={isLoading}
+      loadingText="Signing in..."
+    >
+      Sign In
+    </LoadingButton>
+  );
+}
+```
+
+**Props:**
+- `isLoading: boolean` - Whether button is in loading state
+- `loadingText?: string` - Text to show when loading (defaults to children)
+- `children: ReactNode` - Button text
+- Extends all `ButtonProps`
+
+**Key file:** `frontend/components/ui/loading-button.tsx`
+
+#### AuthDivider
+
+"Or continue with" divider for separating SSO and email auth:
+
+```tsx
+import { AuthDivider } from "@/components/auth/auth-divider";
+
+export default function LoginPage() {
+  return (
+    <>
+      <SSOButtons />
+      <AuthDivider />
+      <EmailForm />
+    </>
+  );
+}
+```
+
+**Props:**
+- `text?: string` - Divider text (default: "Or continue with email")
+
+**Key file:** `frontend/components/auth/auth-divider.tsx`
+
+#### AuthStateCard
+
+State card for success/error/warning/loading states on auth pages:
+
+```tsx
+import { AuthStateCard } from "@/components/auth/auth-state-card";
+import { CheckCircle } from "lucide-react";
+
+export default function SuccessPage() {
+  return (
+    <AuthStateCard
+      variant="success"
+      icon={CheckCircle}
+      title="Email Verified"
+      description="Your email has been verified successfully."
+      footer={
+        <Link href="/dashboard">
+          <Button>Go to Dashboard</Button>
+        </Link>
+      }
+    >
+      <p>Additional content here</p>
+    </AuthStateCard>
+  );
+}
+```
+
+**Props:**
+- `variant: "success" | "error" | "warning" | "loading"` - State variant
+- `icon?: LucideIcon` - Custom icon (defaults to variant icon)
+- `title: string` - Card title
+- `description?: string | ReactNode` - Card description
+- `children?: ReactNode` - Card content
+- `footer?: ReactNode` - Footer actions
+
+**Key file:** `frontend/components/auth/auth-state-card.tsx`
 
 ### Page Component Pattern
 

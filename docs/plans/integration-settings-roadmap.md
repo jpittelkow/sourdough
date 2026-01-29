@@ -3,18 +3,18 @@
 Integration and configuration settings for external services and customization.
 
 **Priority**: MEDIUM  
-**Status**: Planned (waiting on foundation work)  
-**Last Updated**: 2026-01-27
+**Status**: Planned  
+**Last Updated**: 2026-01-29
 
 **Dependencies**:
-- [Settings Restructure](settings-restructure-roadmap.md) - Configuration page structure
-- [Env to Database Migration](env-to-database-roadmap.md) - Database-stored settings for credentials
+- ~~[Settings Restructure](settings-restructure-roadmap.md)~~ - Complete
+- ~~[Env to Database Migration](env-to-database-roadmap.md)~~ - Complete
 
 ---
 
 ## Task Checklist
 
-- [ ] Add SSO/Authentication provider configuration UI
+- [x] Add SSO/Authentication provider configuration UI - See [SSO Settings Enhancement](sso-settings-enhancement-roadmap.md)
 - [ ] Add Email/SMTP configuration settings UI
 - [ ] Add Storage Settings for upload policies and stats
 - [ ] Create API tokens and webhook management settings
@@ -22,120 +22,11 @@ Integration and configuration settings for external services and customization.
 
 ---
 
-## 1. SSO/Authentication Configuration (HIGH VALUE)
+## 1. SSO/Authentication Configuration
 
-**Purpose**: Configure Single Sign-On providers through the UI without requiring environment variable changes and redeploy.
+**See [SSO Settings Enhancement Roadmap](sso-settings-enhancement-roadmap.md)** for the complete SSO configuration implementation plan.
 
-**Features**:
-- Enable/disable individual SSO providers
-- Configure OAuth credentials per provider
-- Test connection functionality
-- Callback URL display/copy for easy provider setup
-- Provider status indicators (configured, enabled, disabled)
-
-### Supported SSO Providers
-
-| Provider | Type | Required Fields |
-|----------|------|-----------------|
-| **Google** | OAuth 2.0 | Client ID, Client Secret |
-| **GitHub** | OAuth 2.0 | Client ID, Client Secret |
-| **Microsoft** | OAuth 2.0 / Azure AD | Client ID, Client Secret, Tenant ID (optional) |
-| **Apple** | OAuth 2.0 | Client ID, Team ID, Key ID, Private Key |
-| **Discord** | OAuth 2.0 | Client ID, Client Secret |
-| **GitLab** | OAuth 2.0 | Client ID, Client Secret, GitLab URL (for self-hosted) |
-| **Generic OIDC** | OpenID Connect | Client ID, Client Secret, Issuer URL, Scopes |
-
-### Provider Configuration Fields
-
-**Standard OAuth Providers** (Google, GitHub, Discord):
-- Client ID
-- Client Secret (encrypted storage)
-- Enabled toggle
-- Callback URL (auto-generated, read-only display)
-
-**Microsoft/Azure AD**:
-- Client ID
-- Client Secret (encrypted storage)
-- Tenant ID (optional - for single-tenant apps)
-- Enabled toggle
-- Callback URL
-
-**Apple Sign-In**:
-- Client ID (Services ID)
-- Team ID
-- Key ID
-- Private Key (.p8 file content, encrypted)
-- Enabled toggle
-- Callback URL
-
-**GitLab** (supports self-hosted):
-- Client ID
-- Client Secret (encrypted storage)
-- GitLab URL (default: https://gitlab.com)
-- Enabled toggle
-- Callback URL
-
-**Generic OIDC** (for any OIDC-compliant provider):
-- Provider Name (display name)
-- Client ID
-- Client Secret (encrypted storage)
-- Issuer URL (e.g., https://auth.example.com)
-- Scopes (default: openid profile email)
-- Enabled toggle
-- Callback URL
-
-### UI Components
-
-**Provider List View**:
-- Card or table for each supported provider
-- Status badge: Configured ✓, Not Configured, Disabled
-- Quick enable/disable toggle
-- Configure button → opens modal/drawer
-
-**Provider Configuration Modal**:
-- Form fields based on provider type
-- Callback URL with copy button
-- Test Connection button
-- Save / Cancel actions
-- Delete configuration option
-
-**Callback URL Helper**:
-- Auto-generate correct callback URL based on APP_URL
-- Format: `{APP_URL}/api/auth/callback/{provider}`
-- Copy button for easy pasting into provider console
-
-### Implementation Scope
-
-**Route**: `/configuration/sso` or `/configuration/authentication`
-
-**Backend**:
-- `SsoProviderController.php` - CRUD for SSO configs
-- `SsoProviderService.php` - Provider configuration service
-- Store configs in `settings` table with encryption for secrets
-- Update `config/sso.php` to read from database with env fallback
-
-**Frontend**:
-- Provider list component with status indicators
-- Provider configuration forms (dynamic based on type)
-- Callback URL display with copy functionality
-
-**Database Storage**:
-```
-settings table:
-- group: 'sso'
-- key: '{provider}_client_id', '{provider}_client_secret', '{provider}_enabled', etc.
-- value: encrypted for secrets
-```
-
-### Security Considerations
-
-- All secrets (client secrets, private keys) stored encrypted
-- Admin-only access to SSO configuration
-- Audit log for SSO config changes
-- Never expose full secrets in API responses (mask as `****...****`)
-- Validate callback URLs match configured APP_URL
-
-**Current state**: SSO is env-only via `config/sso.php` and individual provider env vars.
+SSO settings page already exists at `/configuration/sso`. The SSO Settings Enhancement roadmap covers additional improvements like setup instructions, test connection buttons, and per-provider save.
 
 ---
 
@@ -296,34 +187,28 @@ webhooks:
 
 ## Implementation Priority
 
-| Feature | Priority | Effort | Value | Recommended Order |
-|---------|----------|--------|-------|-------------------|
-| SSO Configuration | HIGH | Medium | High | 1 |
-| Email Configuration | MEDIUM | Medium | Medium | 2 |
-| Storage Settings | LOW-MEDIUM | Medium | Medium | 3 |
-| API/Webhooks | LOW-MEDIUM | High | Medium | 4 |
-| Theme/Branding | LOW | Low | Low | 5 |
+| Feature | Priority | Effort | Value | Status |
+|---------|----------|--------|-------|--------|
+| SSO Configuration | HIGH | Medium | High | ✅ Done - See [SSO Settings Enhancement](sso-settings-enhancement-roadmap.md) |
+| Email Configuration | MEDIUM | Medium | Medium | Planned |
+| Storage Settings | LOW-MEDIUM | Medium | Medium | Planned |
+| API/Webhooks | LOW-MEDIUM | High | Medium | Planned |
+| Theme/Branding | LOW | Low | Low | Planned |
 
 ---
 
 ## Files Reference
 
-**Backend**:
-- `backend/config/sso.php` - Current SSO configuration
-- `backend/config/mail.php` - Current email configuration
+**Backend** (existing):
+- `backend/config/mail.php` - Email configuration
 - `backend/config/filesystems.php` - Storage configuration
 - `backend/app/Http/Controllers/Api/SettingController.php` - Generic settings
+- `backend/app/Http/Controllers/Api/SSOSettingController.php` - SSO settings (exists)
 
-**Backend** (to be created):
-- `backend/app/Http/Controllers/Api/SsoProviderController.php` - SSO provider CRUD
-- `backend/app/Services/SsoProviderService.php` - SSO configuration service
-
-**Frontend**:
-- `frontend/app/(dashboard)/settings/` - Settings pages structure
-
-**Frontend** (to be created):
-- `frontend/app/(dashboard)/configuration/sso/page.tsx` - SSO settings page
-- `frontend/components/configuration/SsoProviderCard.tsx` - Provider configuration card
+**Frontend** (existing):
+- `frontend/app/(dashboard)/configuration/sso/page.tsx` - SSO settings page (exists)
+- `frontend/app/(dashboard)/configuration/email/page.tsx` - Email settings page (exists)
 
 **Documentation**:
 - `docs/adr/012-admin-only-settings.md` - Admin-only settings decision
+- [SSO Settings Enhancement Roadmap](sso-settings-enhancement-roadmap.md) - SSO enhancements

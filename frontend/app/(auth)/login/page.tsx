@@ -8,12 +8,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { TwoFactorForm } from "@/components/auth/two-factor-form";
-import { Logo } from "@/components/logo";
+import { AuthPageLayout } from "@/components/auth/auth-page-layout";
+import { AuthDivider } from "@/components/auth/auth-divider";
+import { FormField } from "@/components/ui/form-field";
+import { LoadingButton } from "@/components/ui/loading-button";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -61,68 +63,45 @@ export default function LoginPage() {
 
   if (requires2FA) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-6">
-          <div className="text-center">
-            <div className="flex justify-center mb-4">
-              <Logo variant="full" size="lg" />
-            </div>
-            <h1 className="text-2xl font-bold">Two-Factor Authentication</h1>
-            <p className="text-muted-foreground mt-2">
-              Enter the code from your authenticator app
-            </p>
-          </div>
-          <TwoFactorForm
-            onSuccess={() => router.push("/dashboard")}
-            onCancel={() => setRequires2FA(false)}
-          />
-        </div>
-      </div>
+      <AuthPageLayout
+        title="Two-Factor Authentication"
+        description="Enter the code from your authenticator app"
+      >
+        <TwoFactorForm
+          onSuccess={() => router.push("/dashboard")}
+          onCancel={() => setRequires2FA(false)}
+        />
+      </AuthPageLayout>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-6">
-        <div className="text-center">
-          <div className="flex justify-center mb-4">
-            <Logo variant="full" size="lg" />
-          </div>
-          <h1 className="text-2xl font-bold">Sign In</h1>
-          <p className="text-muted-foreground mt-2">
-            Enter your credentials to access your account
-          </p>
-        </div>
+    <AuthPageLayout
+      title="Sign In"
+      description="Enter your credentials to access your account"
+    >
+      <SSOButtons />
 
-        <SSOButtons />
+      <AuthDivider />
 
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <span className="w-full border-t" />
-          </div>
-          <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-background px-2 text-muted-foreground">
-              Or continue with email
-            </span>
-          </div>
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          id="email"
+          label="Email"
+          error={errors.email?.message}
+        >
+          <Input
+            id="email"
+            type="email"
+            placeholder="you@example.com"
+            {...register("email")}
+            disabled={isLoading}
+          />
+        </FormField>
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              {...register("email")}
-              disabled={isLoading}
-            />
-            {errors.email && (
-              <p className="text-sm text-destructive">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
+        <FormField
+          id="password"
+          label={
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
               <Link
@@ -132,42 +111,46 @@ export default function LoginPage() {
                 Forgot password?
               </Link>
             </div>
-            <Input
-              id="password"
-              type="password"
-              placeholder="••••••••"
-              {...register("password")}
-              disabled={isLoading}
-            />
-            {errors.password && (
-              <p className="text-sm text-destructive">{errors.password.message}</p>
-            )}
-          </div>
+          }
+          error={errors.password?.message}
+        >
+          <Input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            {...register("password")}
+            disabled={isLoading}
+          />
+        </FormField>
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="remember"
-              {...register("remember")}
-              className="h-4 w-4 rounded border-gray-300"
-            />
-            <Label htmlFor="remember" className="text-sm font-normal">
-              Remember me
-            </Label>
-          </div>
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="remember"
+            {...register("remember")}
+            className="h-4 w-4 rounded border-gray-300"
+          />
+          <Label htmlFor="remember" className="text-sm font-normal">
+            Remember me
+          </Label>
+        </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
-            {isLoading ? "Signing in..." : "Sign In"}
-          </Button>
-        </form>
+        <LoadingButton
+          type="submit"
+          className="w-full"
+          isLoading={isLoading}
+          loadingText="Signing in..."
+        >
+          Sign In
+        </LoadingButton>
+      </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          Don&apos;t have an account?{" "}
-          <Link href="/register" className="text-primary hover:underline">
-            Create one
-          </Link>
-        </p>
-      </div>
-    </div>
+      <p className="text-center text-sm text-muted-foreground">
+        Don&apos;t have an account?{" "}
+        <Link href="/register" className="text-primary hover:underline">
+          Create one
+        </Link>
+      </p>
+    </AuthPageLayout>
   );
 }

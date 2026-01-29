@@ -9,7 +9,6 @@ import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -19,8 +18,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Loader2, Mail, CheckCircle } from "lucide-react";
+import { ArrowLeft, Mail } from "lucide-react";
 import { Logo } from "@/components/logo";
+import { FormField } from "@/components/ui/form-field";
+import { LoadingButton } from "@/components/ui/loading-button";
+import { AuthStateCard } from "@/components/auth/auth-state-card";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -59,49 +61,43 @@ export default function ForgotPasswordPage() {
 
   if (isEmailSent) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <Logo variant="full" size="lg" />
-            </div>
-            <div className="mx-auto w-12 h-12 bg-green-100 dark:bg-green-900/20 rounded-full flex items-center justify-center mb-4">
-              <CheckCircle className="h-6 w-6 text-green-600 dark:text-green-400" />
-            </div>
-            <CardTitle>Check Your Email</CardTitle>
-            <CardDescription>
-              We've sent a password reset link to{" "}
-              <span className="font-medium text-foreground">{submittedEmail}</span>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <Alert>
-              <Mail className="h-4 w-4" />
-              <AlertDescription>
-                If an account exists with this email, you'll receive a password
-                reset link shortly. The link will expire in 60 minutes.
-              </AlertDescription>
-            </Alert>
-            <p className="text-sm text-muted-foreground text-center">
-              Didn't receive the email? Check your spam folder or{" "}
-              <button
-                onClick={() => setIsEmailSent(false)}
-                className="text-primary hover:underline"
-              >
-                try again
-              </button>
-            </p>
-          </CardContent>
-          <CardFooter>
-            <Link href="/login" className="w-full">
-              <Button variant="outline" className="w-full">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to Sign In
-              </Button>
-            </Link>
-          </CardFooter>
-        </Card>
-      </div>
+      <AuthStateCard
+        variant="success"
+        title="Check Your Email"
+        description={
+          <>
+            We've sent a password reset link to{" "}
+            <span className="font-medium text-foreground">{submittedEmail}</span>
+          </>
+        }
+        footer={
+          <Link href="/login" className="w-full">
+            <Button variant="outline" className="w-full">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Sign In
+            </Button>
+          </Link>
+        }
+      >
+        <div className="space-y-4">
+          <Alert>
+            <Mail className="h-4 w-4" />
+            <AlertDescription>
+              If an account exists with this email, you'll receive a password
+              reset link shortly. The link will expire in 60 minutes.
+            </AlertDescription>
+          </Alert>
+          <p className="text-sm text-muted-foreground text-center">
+            Didn't receive the email? Check your spam folder or{" "}
+            <button
+              onClick={() => setIsEmailSent(false)}
+              className="text-primary hover:underline"
+            >
+              try again
+            </button>
+          </p>
+        </div>
+      </AuthStateCard>
     );
   }
 
@@ -120,8 +116,11 @@ export default function ForgotPasswordPage() {
         </CardHeader>
         <form onSubmit={handleSubmit(onSubmit)}>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email Address</Label>
+            <FormField
+              id="email"
+              label="Email Address"
+              error={errors.email?.message}
+            >
               <Input
                 id="email"
                 type="email"
@@ -129,16 +128,17 @@ export default function ForgotPasswordPage() {
                 {...register("email")}
                 disabled={isLoading}
               />
-              {errors.email && (
-                <p className="text-sm text-destructive">{errors.email.message}</p>
-              )}
-            </div>
+            </FormField>
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            <LoadingButton
+              type="submit"
+              className="w-full"
+              isLoading={isLoading}
+              loadingText="Sending..."
+            >
               Send Reset Link
-            </Button>
+            </LoadingButton>
             <Link href="/login" className="w-full">
               <Button variant="ghost" className="w-full">
                 <ArrowLeft className="mr-2 h-4 w-4" />

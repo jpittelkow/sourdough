@@ -283,6 +283,45 @@ docker-compose exec app php /var/www/html/backend/artisan route:list --path=exam
 - [ ] Routes verified with `route:list`
 - [ ] Tested with API client (Postman, curl, etc.)
 
+## Using Shared Traits
+
+Use `ApiResponseTrait` and `config('app.pagination.default')` for consistent responses and pagination.
+
+```php
+use App\Http\Traits\ApiResponseTrait;
+
+class ExampleController extends Controller
+{
+    use ApiResponseTrait;
+
+    public function index(Request $request): JsonResponse
+    {
+        $examples = Example::where('user_id', $request->user()->id)
+            ->orderBy('created_at', 'desc')
+            ->paginate($request->input('per_page', config('app.pagination.default')));
+
+        return $this->dataResponse($examples);
+    }
+
+    public function store(StoreExampleRequest $request): JsonResponse
+    {
+        $example = Example::create([...$request->validated(), 'user_id' => $request->user()->id]);
+        return $this->createdResponse('Example created successfully.', ['data' => $example]);
+    }
+
+    public function destroy(Request $request, Example $example): JsonResponse
+    {
+        if ($example->user_id !== $request->user()->id) {
+            return $this->errorResponse('Not found.', 404);
+        }
+        $example->delete();
+        return $this->successResponse('Example deleted successfully.');
+    }
+}
+```
+
+For admin endpoints that modify or delete users (e.g. delete user, toggle admin, disable user), use `AdminAuthorizationTrait` to prevent removing the last admin. See [Add admin-protected action](add-admin-protected-action.md).
+
 ## Common Variations
 
 ### Admin-Only Endpoint

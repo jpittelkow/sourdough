@@ -84,6 +84,48 @@ return response()->json([
 ], 201);
 ```
 
+### Don't: Duplicate "Last Admin" Checks
+
+```php
+// BAD - duplicated logic (UserController, ProfileController, etc.)
+if ($user->isAdmin() && User::where('is_admin', true)->count() === 1) {
+    return response()->json(['message' => 'Cannot delete the last admin account'], 400);
+}
+
+// GOOD - use AdminAuthorizationTrait
+use App\Http\Traits\AdminAuthorizationTrait;
+
+if ($error = $this->ensureNotLastAdmin($user, 'delete')) {
+    return $error;
+}
+```
+
+### Don't: Hardcode Pagination Defaults
+
+```php
+// BAD - magic numbers, inconsistent across controllers
+$perPage = $request->input('per_page', 15);
+$perPage = $request->input('per_page', 20);
+
+// GOOD - use config
+$perPage = $request->input('per_page', config('app.pagination.default'));
+// Audit logs: config('app.pagination.audit_log')
+```
+
+### Don't: Double-hash User Passwords
+
+The `User` model uses the `hashed` cast. Pass plaintext; the cast hashes automatically.
+
+```php
+// BAD - double-hash when User has hashed cast
+User::create(['password' => Hash::make($validated['password'])]);
+$user->update(['password' => Hash::make($validated['password'])]);
+
+// GOOD - plaintext, cast hashes
+User::create(['password' => $validated['password']]);
+$user->update(['password' => $validated['password']]);
+```
+
 ### Don't: Forget to Add Indexes on Foreign Keys
 
 ```php
@@ -232,8 +274,21 @@ useEffect(() => {
 // BAD - no loading indicator (confusing UX)
 return <div>{examples.map(e => <Card key={e.id}>{e.name}</Card>)}</div>;
 
-// GOOD - show loading state
+// GOOD - show loading state using shared component
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+
 if (loading) {
+  return <SettingsPageSkeleton />;
+}
+
+return <div>{examples.map(e => <Card key={e.id}>{e.name}</Card>)}</div>;
+```
+
+### Don't: Duplicate Loading Spinners
+
+```tsx
+// BAD - inline loading spinner (duplicated across pages)
+if (isLoading) {
   return (
     <div className="flex items-center justify-center min-h-[400px]">
       <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -241,7 +296,27 @@ if (loading) {
   );
 }
 
-return <div>{examples.map(e => <Card key={e.id}>{e.name}</Card>)}</div>;
+// GOOD - use the shared component
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+
+if (isLoading) {
+  return <SettingsPageSkeleton />;
+}
+```
+
+### Don't: Duplicate Save Button Logic
+
+```tsx
+// BAD - save button logic repeated in every form
+<Button type="submit" disabled={!isDirty || isSaving}>
+  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+  Save Changes
+</Button>
+
+// GOOD - use the shared component
+import { SaveButton } from "@/components/ui/save-button";
+
+<SaveButton isDirty={isDirty} isSaving={isSaving} />
 ```
 
 ### Don't: Hardcode API URLs
@@ -490,6 +565,36 @@ $userSetting = Setting::where('user_id', $userId)
     ->first();
 ```
 
+### Don't: Use SystemSetting Directly for Schema-Backed Settings
+
+Settings that are defined in `backend/config/settings-schema.php` (e.g. mail, future groups) should go through **SettingService** so env fallback and encryption apply. Using `SystemSetting::get()` / `SystemSetting::set()` directly for those keys bypasses cache, env fallback, and encryption.
+
+```php
+// BAD - no env fallback, no encryption, bypasses cache
+$host = SystemSetting::get('smtp_host', null, 'mail');
+SystemSetting::set('smtp_password', $password, 'mail', $user->id, false);
+
+// GOOD - use SettingService for schema-backed groups
+$host = $this->settingService->get('mail', 'smtp_host', '127.0.0.1');
+$this->settingService->set('mail', 'smtp_password', $password, $user->id);
+```
+
+For groups **not** in settings-schema (e.g. notifications toggles, branding), `SystemSetting` directly is still correct.
+
+### Don't: Read SettingService Inside BackupService or Destinations
+
+Backup configuration is injected into Laravel config at boot by ConfigServiceProvider (from the `backup` group in settings-schema). BackupService and destination classes should read only from `config('backup.*')`, not from SettingService. Reading SettingService inside those classes bypasses the injected config and can cause inconsistent or uncached values.
+
+```php
+// BAD - bypasses config injection, may not reflect DB values at boot
+$disk = $this->settingService->get('backup', 'disk', 'backups');
+
+// GOOD - read from config (injected at boot from DB)
+$disk = config('backup.disk', 'backups');
+```
+
+See [Backup & Restore patterns](patterns.md#backup--restore-patterns) and [Backup documentation](../backup.md).
+
 ## Testing Anti-Patterns
 
 ### Don't: Test Without Authentication
@@ -679,6 +784,8 @@ Before submitting code, verify:
 - [ ] All queries are user-scoped where appropriate
 - [ ] FormRequest classes used for validation
 - [ ] Response format is consistent (`data`, `message`, `meta`)
+- [ ] Last-admin checks use `AdminAuthorizationTrait`; pagination uses `config('app.pagination.default')`
+- [ ] User password: plaintext when User has `hashed` cast; no `Hash::make()` in controllers
 - [ ] Foreign keys have indexes
 - [ ] Frontend has loading and error states
 - [ ] Using `api` utility, not raw fetch

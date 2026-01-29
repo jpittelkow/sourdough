@@ -33,9 +33,19 @@ LLM:
   POST   /api/llm/query/vision
 
 Backup (Admin):
-  GET    /api/backup
-  POST   /api/backup/create
-  POST   /api/backup/restore
+  GET    /api/backup                      List backups
+  POST   /api/backup/create               Create backup (body: include_database, include_files, include_settings)
+  GET    /api/backup/download/{filename}  Download backup file
+  POST   /api/backup/restore              Restore (body: filename or multipart backup file)
+  DELETE /api/backup/{filename}           Delete backup
+
+Backup Settings (Admin):
+  GET    /api/backup-settings             Get all backup settings
+  PUT    /api/backup-settings             Update backup settings
+  POST   /api/backup-settings/reset/{key} Reset one setting to env default
+  POST   /api/backup-settings/test/{dest} Test connection (dest: s3, sftp, google_drive)
+
+Full backup API and developer docs: [Backup & Restore](backup.md), [API README – Backup](api/README.md#backup--restore-admin).
 
 Version:
   GET    /api/version

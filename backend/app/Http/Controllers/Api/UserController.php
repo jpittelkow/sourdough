@@ -3,21 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AdminAuthorizationTrait;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
+    use AdminAuthorizationTrait;
+    use ApiResponseTrait;
+
     /**
      * List all users with pagination.
      */
     public function index(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 15);
+        $perPage = $request->input('per_page', config('app.pagination.default'));
         $search = $request->input('search');
 
         $query = User::query();
@@ -32,7 +35,7 @@ class UserController extends Controller
         $users = $query->orderBy('created_at', 'desc')
             ->paginate($perPage);
 
-        return response()->json($users);
+        return $this->dataResponse($users);
     }
 
     /**
@@ -40,7 +43,7 @@ class UserController extends Controller
      */
     public function show(User $user): JsonResponse
     {
-        return response()->json([
+        return $this->dataResponse([
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
         ]);
     }
@@ -60,14 +63,13 @@ class UserController extends Controller
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
             'is_admin' => $validated['is_admin'] ?? false,
         ]);
 
-        return response()->json([
-            'message' => 'User created successfully',
+        return $this->createdResponse('User created successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
-        ], 201);
+        ]);
     }
 
     /**
@@ -82,14 +84,9 @@ class UserController extends Controller
             'is_admin' => ['sometimes', 'boolean'],
         ]);
 
-        if (isset($validated['password'])) {
-            $validated['password'] = Hash::make($validated['password']);
-        }
-
         $user->update($validated);
 
-        return response()->json([
-            'message' => 'User updated successfully',
+        return $this->successResponse('User updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
         ]);
     }
@@ -99,25 +96,17 @@ class UserController extends Controller
      */
     public function destroy(User $user): JsonResponse
     {
-        // Prevent deleting the last admin
-        if ($user->isAdmin() && User::where('is_admin', true)->count() === 1) {
-            return response()->json([
-                'message' => 'Cannot delete the last admin account',
-            ], 400);
+        if ($error = $this->ensureNotLastAdmin($user, 'delete')) {
+            return $error;
         }
 
-        // Prevent deleting yourself
         if ($user->id === auth()->id()) {
-            return response()->json([
-                'message' => 'Cannot delete your own account',
-            ], 400);
+            return $this->errorResponse('Cannot delete your own account', 400);
         }
 
         $user->delete();
 
-        return response()->json([
-            'message' => 'User deleted successfully',
-        ]);
+        return $this->successResponse('User deleted successfully');
     }
 
     /**
@@ -125,24 +114,17 @@ class UserController extends Controller
      */
     public function toggleAdmin(User $user): JsonResponse
     {
-        // Prevent removing admin from the last admin
-        if ($user->isAdmin() && User::where('is_admin', true)->count() === 1) {
-            return response()->json([
-                'message' => 'Cannot remove admin status from the last admin account',
-            ], 400);
+        if ($error = $this->ensureNotLastAdmin($user, 'remove admin status from')) {
+            return $error;
         }
 
-        // Prevent removing admin from yourself
         if ($user->id === auth()->id()) {
-            return response()->json([
-                'message' => 'Cannot remove admin status from your own account',
-            ], 400);
+            return $this->errorResponse('Cannot remove admin status from your own account', 400);
         }
 
         $user->update(['is_admin' => !$user->is_admin]);
 
-        return response()->json([
-            'message' => 'Admin status updated successfully',
+        return $this->successResponse('Admin status updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
         ]);
     }
@@ -157,12 +139,10 @@ class UserController extends Controller
         ]);
 
         $user->update([
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
         ]);
 
-        return response()->json([
-            'message' => 'Password reset successfully',
-        ]);
+        return $this->successResponse('Password reset successfully');
     }
 
     /**
@@ -170,24 +150,14 @@ class UserController extends Controller
      */
     public function toggleDisabled(User $user): JsonResponse
     {
-        // Prevent disabling the last admin
-        if ($user->isAdmin() && User::where('is_admin', true)->count() === 1) {
-            return response()->json([
-                'message' => 'Cannot disable the last admin account',
-            ], 400);
+        if ($error = $this->ensureNotLastAdmin($user, 'disable')) {
+            return $error;
         }
 
-        // Prevent disabling yourself
         if ($user->id === auth()->id()) {
-            return response()->json([
-                'message' => 'Cannot disable your own account',
-            ], 400);
+            return $this->errorResponse('Cannot disable your own account', 400);
         }
 
-        // Note: This is a placeholder. You may want to add a 'disabled_at' or 'is_disabled' field
-        // For now, we'll just return a message indicating this feature needs implementation
-        return response()->json([
-            'message' => 'User disable feature requires additional database field',
-        ], 501);
+        return $this->errorResponse('User disable feature requires additional database field', 501);
     }
 }

@@ -21,7 +21,7 @@ Connect to multiple AI services (Claude, OpenAI, Gemini, Ollama) and use them in
 Works with SQLite by default (perfect for getting started), but can easily switch to MySQL, PostgreSQL, or Supabase for larger applications.
 
 ### Backup & Restore
-Built-in backup system with automated scheduling to keep your data safe. Restore your entire system with a single command.
+Built-in backup and restore to protect your data. Create full backups (database, files, settings) from the UI; download, restore, or delete them. Configure retention, scheduling, and remote destinations (S3, SFTP, Google Drive) and optional encryption. All backup settings are manageable in the admin UI (no restart required). See [Backup & Restore documentation](docs/backup.md) for user, admin, and developer guides.
 
 ### Simple Deployment
 Everything runs in one Docker container, making it easy to deploy anywhere—from your local machine to production servers.
@@ -51,6 +51,7 @@ For more information, check out our documentation:
 - [User Guide](docs/user/) - Learn how to use Sourdough
 - [Developer Guide](docs/dev/) - Technical documentation for developers
 - [API Reference](docs/api/) - API endpoints and integration details
+- [Backup & Restore](docs/backup.md) - Backup and restore: user guide, admin settings, developer docs, key files, and how to extend
 
 ## License
 

@@ -3,12 +3,12 @@
 Admin-focused settings expansions for comprehensive application management.
 
 **Priority**: HIGH  
-**Status**: Planned (waiting on foundation work)  
-**Last Updated**: 2026-01-27
+**Status**: Ready  
+**Last Updated**: 2026-01-29
 
 **Dependencies**:
-- [Settings Restructure](settings-restructure-roadmap.md) - Configuration page structure for admin pages
-- [Env to Database Migration](env-to-database-roadmap.md) - Database-stored settings infrastructure
+- ~~[Settings Restructure](settings-restructure-roadmap.md)~~ - Complete
+- ~~[Env to Database Migration](env-to-database-roadmap.md)~~ - Complete
 
 ---
 
@@ -38,7 +38,7 @@ Admin-focused settings expansions for comprehensive application management.
 - [ ] Add notification digest settings
 
 ### Audit Log (MEDIUM Priority)
-- [ ] Implement Audit/Activity Log feature
+- [ ] Implement Audit/Activity Log feature - See [Audit Logs & Logging Roadmap](audit-logs-roadmap.md)
 - [ ] Track user logins and admin actions
 - [ ] Add log viewer with filtering
 
@@ -174,35 +174,13 @@ This sets the default for new users; users can override in their preferences.
 
 ## 4. Audit/Activity Log (MEDIUM VALUE)
 
-**Purpose**: Security and compliance tracking for admin actions.
+**See [Audit Logs & Logging Roadmap](audit-logs-roadmap.md)** for the complete audit logging implementation plan.
 
-**Features**:
-- Track user logins (success/failure)
-- Track setting changes
-- Track admin actions
-- Configurable retention period
-- Export capability
-
-**Implementation scope**:
-- New `AuditLog` model and migration
-- Event listeners for trackable actions
-- Admin UI for viewing/filtering logs
-
-**Database schema**:
-
-```
-audit_logs table:
-- id
-- user_id (nullable - for system actions)
-- action (string - e.g., "user.login", "settings.update")
-- model_type (nullable)
-- model_id (nullable)
-- old_values (JSON, nullable)
-- new_values (JSON, nullable)
-- ip_address
-- user_agent
-- created_at
-```
+This section integrates with the Audit Logs roadmap for:
+- Audit log UI improvements
+- User login tracking
+- Admin action tracking
+- Log filtering and export
 
 ---
 

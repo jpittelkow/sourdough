@@ -90,7 +90,7 @@ class JobController extends Controller
      */
     public function failedJobs(Request $request): JsonResponse
     {
-        $perPage = $request->input('per_page', 20);
+        $perPage = $request->input('per_page', config('app.pagination.default'));
 
         $jobs = DB::table('failed_jobs')
             ->orderBy('failed_at', 'desc')

@@ -3,11 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password as PasswordRule;
@@ -17,6 +17,8 @@ use Illuminate\Auth\Events\Verified;
 
 class AuthController extends Controller
 {
+    use ApiResponseTrait;
+
     /**
      * Register a new user.
      */
@@ -39,10 +41,7 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return response()->json([
-            'message' => 'Registration successful',
-            'user' => $user,
-        ], 201);
+        return $this->createdResponse('Registration successful', ['user' => $user]);
     }
 
     /**
@@ -56,9 +55,7 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
-            return response()->json([
-                'message' => 'Invalid credentials',
-            ], 401);
+            return $this->errorResponse('Invalid credentials', 401);
         }
 
         $user = Auth::user();
@@ -69,18 +66,12 @@ class AuthController extends Controller
             $request->session()->put('2fa:user_id', $user->id);
             Auth::logout();
 
-            return response()->json([
-                'message' => 'Two-factor authentication required',
-                'requires_2fa' => true,
-            ]);
+            return $this->successResponse('Two-factor authentication required', ['requires_2fa' => true]);
         }
 
         $request->session()->regenerate();
 
-        return response()->json([
-            'message' => 'Login successful',
-            'user' => $user,
-        ]);
+        return $this->successResponse('Login successful', ['user' => $user]);
     }
 
     /**
@@ -93,9 +84,7 @@ class AuthController extends Controller
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return response()->json([
-            'message' => 'Logged out successfully',
-        ]);
+        return $this->successResponse('Logged out successfully');
     }
 
     /**
@@ -106,7 +95,7 @@ class AuthController extends Controller
         $user = $request->user();
         $user->load(['socialAccounts:id,user_id,provider,nickname,avatar']);
 
-        return response()->json([
+        return $this->dataResponse([
             'user' => $user,
             'sso_accounts' => $user->socialAccounts->pluck('provider'),
             'two_factor_enabled' => $user->hasTwoFactorEnabled(),
@@ -129,9 +118,7 @@ class AuthController extends Controller
         Password::sendResetLink($request->only('email'));
 
         // Always return success message to prevent user enumeration
-        return response()->json([
-            'message' => 'If an account exists with this email, a password reset link has been sent.',
-        ]);
+        return $this->successResponse('If an account exists with this email, a password reset link has been sent.');
     }
 
     /**
@@ -149,7 +136,7 @@ class AuthController extends Controller
             $request->only('email', 'password', 'password_confirmation', 'token'),
             function (User $user, string $password) {
                 $user->forceFill([
-                    'password' => Hash::make($password),
+                    'password' => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
 
@@ -158,9 +145,7 @@ class AuthController extends Controller
         );
 
         if ($status === Password::PASSWORD_RESET) {
-            return response()->json([
-                'message' => 'Password reset successful',
-            ]);
+            return $this->successResponse('Password reset successful');
         }
 
         return response()->json([
@@ -182,23 +167,17 @@ class AuthController extends Controller
         $user = User::findOrFail($request->id);
 
         if (!hash_equals(sha1($user->getEmailForVerification()), $request->hash)) {
-            return response()->json([
-                'message' => 'Invalid verification link',
-            ], 400);
+            return $this->errorResponse('Invalid verification link', 400);
         }
 
         if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Email already verified',
-            ]);
+            return $this->successResponse('Email already verified');
         }
 
         $user->markEmailAsVerified();
         event(new Verified($user));
 
-        return response()->json([
-            'message' => 'Email verified successfully',
-        ]);
+        return $this->successResponse('Email verified successfully');
     }
 
     /**
@@ -209,15 +188,11 @@ class AuthController extends Controller
         $user = $request->user();
 
         if ($user->hasVerifiedEmail()) {
-            return response()->json([
-                'message' => 'Email already verified',
-            ]);
+            return $this->successResponse('Email already verified');
         }
 
         $user->sendEmailVerificationNotification();
 
-        return response()->json([
-            'message' => 'Verification link sent',
-        ]);
+        return $this->successResponse('Verification link sent');
     }
 }

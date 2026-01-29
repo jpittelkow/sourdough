@@ -3,13 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\AdminAuthorizationTrait;
+use App\Http\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules\Password;
 
 class ProfileController extends Controller
 {
+    use AdminAuthorizationTrait;
+    use ApiResponseTrait;
+
     /**
      * Get user profile.
      */
@@ -18,9 +22,7 @@ class ProfileController extends Controller
         $user = $request->user();
         $user->load(['socialAccounts:id,user_id,provider,nickname,avatar']);
 
-        return response()->json([
-            'user' => $user,
-        ]);
+        return $this->dataResponse(['user' => $user]);
     }
 
     /**
@@ -49,8 +51,7 @@ class ProfileController extends Controller
             $user->sendEmailVerificationNotification();
         }
 
-        return response()->json([
-            'message' => 'Profile updated successfully',
+        return $this->successResponse('Profile updated successfully', [
             'user' => $user,
             'email_verification_sent' => $emailChanged,
         ]);
@@ -67,12 +68,10 @@ class ProfileController extends Controller
         ]);
 
         $request->user()->update([
-            'password' => Hash::make($validated['password']),
+            'password' => $validated['password'],
         ]);
 
-        return response()->json([
-            'message' => 'Password updated successfully',
-        ]);
+        return $this->successResponse('Password updated successfully');
     }
 
     /**
@@ -86,11 +85,8 @@ class ProfileController extends Controller
 
         $user = $request->user();
 
-        // Prevent deleting the last admin
-        if ($user->isAdmin() && \App\Models\User::where('is_admin', true)->count() === 1) {
-            return response()->json([
-                'message' => 'Cannot delete the last admin account',
-            ], 400);
+        if ($error = $this->ensureNotLastAdmin($user, 'delete')) {
+            return $error;
         }
 
         // Delete related data
@@ -101,8 +97,6 @@ class ProfileController extends Controller
 
         $user->delete();
 
-        return response()->json([
-            'message' => 'Account deleted successfully',
-        ]);
+        return $this->successResponse('Account deleted successfully');
     }
 }

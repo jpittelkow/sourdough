@@ -24,6 +24,7 @@ const routeTitles: Record<string, string> = {
   "/configuration/branding": "Theme & Branding",
   "/configuration/notifications": "Notifications",
   "/configuration/ai": "AI Settings",
+  "/configuration/llm-system": "LLM system settings",
   "/configuration/backup": "Backup & Restore",
   "/configuration/email": "Email Settings",
   "/configuration/storage": "Storage",
