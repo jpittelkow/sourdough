@@ -27,6 +27,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { ProviderIcon } from "@/components/provider-icons";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -752,91 +754,120 @@ export default function AISettingsPage() {
           ) : (
             <div className="space-y-4">
               {providers.map((provider) => (
-                <div
+                <CollapsibleCard
                   key={provider.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
-                >
-                  <div className="flex items-center gap-4">
-                    <div
-                      className={`p-2 rounded-full ${
-                        provider.is_enabled
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
-                      }`}
-                    >
-                      <Brain className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium capitalize">
-                          {provider.provider}
-                        </span>
-                        {provider.is_primary && (
-                          <Badge variant="default" className="text-xs">
-                            <Star className="mr-1 h-3 w-3" />
-                            Primary
-                          </Badge>
-                        )}
-                        {provider.api_key_set ? (
-                          <Badge variant="success" className="text-xs">
-                            <CheckCircle className="mr-1 h-3 w-3" />
-                            API Key Set
-                          </Badge>
+                  title={provider.provider.charAt(0).toUpperCase() + provider.provider.slice(1)}
+                  description={provider.model}
+                  icon={
+                    <ProviderIcon provider={provider.provider} size="sm" style="mono" />
+                  }
+                  status={{
+                    label: provider.is_primary
+                      ? "Primary"
+                      : provider.api_key_set
+                        ? "API Key Set"
+                        : "No API Key",
+                    variant: provider.is_primary
+                      ? "default"
+                      : provider.api_key_set
+                        ? "success"
+                        : "warning",
+                  }}
+                  defaultOpen={provider.is_primary}
+                  headerActions={
+                    <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() =>
+                          handleTestProvider(provider.id, provider.provider)
+                        }
+                        disabled={testingProviders.has(provider.id)}
+                      >
+                        {testingProviders.has(provider.id) ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
                         ) : (
-                          <Badge variant="outline" className="text-xs">
-                            <XCircle className="mr-1 h-3 w-3" />
-                            No API Key
-                          </Badge>
+                          <Play className="h-4 w-4" />
                         )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {provider.model}
-                      </p>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleSetPrimary(provider.id)}
+                        disabled={provider.is_primary}
+                      >
+                        {provider.is_primary ? (
+                          <Star className="h-4 w-4 fill-current" />
+                        ) : (
+                          <StarOff className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Switch
+                        checked={provider.is_enabled}
+                        onCheckedChange={(checked) =>
+                          handleToggleProvider(provider.id, checked)
+                        }
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteProvider(provider.id)}
+                        className="text-destructive hover:text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2">
+                  }
+                >
+                  <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() =>
                         handleTestProvider(provider.id, provider.provider)
                       }
                       disabled={testingProviders.has(provider.id)}
                     >
                       {testingProviders.has(provider.id) ? (
-                        <Loader2 className="h-4 w-4 animate-spin" />
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <Play className="h-4 w-4" />
+                        <Play className="mr-2 h-4 w-4" />
                       )}
+                      Test connection
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleSetPrimary(provider.id)}
                       disabled={provider.is_primary}
                     >
                       {provider.is_primary ? (
-                        <Star className="h-4 w-4 fill-current" />
+                        <Star className="mr-2 h-4 w-4 fill-current" />
                       ) : (
-                        <StarOff className="h-4 w-4" />
+                        <StarOff className="mr-2 h-4 w-4" />
                       )}
+                      {provider.is_primary ? "Primary" : "Set as primary"}
                     </Button>
-                    <Switch
-                      checked={provider.is_enabled}
-                      onCheckedChange={(checked) =>
-                        handleToggleProvider(provider.id, checked)
-                      }
-                    />
+                    <div className="flex items-center gap-2">
+                      <Label className="text-sm text-muted-foreground">Enabled</Label>
+                      <Switch
+                        checked={provider.is_enabled}
+                        onCheckedChange={(checked) =>
+                          handleToggleProvider(provider.id, checked)
+                        }
+                      />
+                    </div>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleDeleteProvider(provider.id)}
                       className="text-destructive hover:text-destructive"
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Remove provider
                     </Button>
                   </div>
-                </div>
+                </CollapsibleCard>
               ))}
             </div>
           )}

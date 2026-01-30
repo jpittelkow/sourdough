@@ -27,6 +27,21 @@ class AuthController extends Controller
     ) {}
 
     /**
+     * Check if an email is available for registration.
+     * Rate limited to prevent enumeration. Returns constant structure for timing consistency.
+     */
+    public function checkEmail(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'email' => ['required', 'string', 'email', 'max:255'],
+        ]);
+
+        $exists = User::where('email', $validated['email'])->exists();
+
+        return $this->dataResponse(['available' => !$exists]);
+    }
+
+    /**
      * Register a new user.
      */
     public function register(Request $request, EmailConfigService $emailConfigService): JsonResponse

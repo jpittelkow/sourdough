@@ -3,7 +3,7 @@
 Add consistent branded icons/logos for third-party providers across the application.
 
 **Priority**: LOW  
-**Status**: Planned  
+**Status**: Completed (2026-01-29)  
 **Dependencies**: None
 
 ---
@@ -14,21 +14,22 @@ Multiple areas of the application reference third-party providers that would ben
 
 ## Areas Requiring Provider Icons
 
-### 1. SSO Providers (Configuration > SSO)
+### 1. SSO Providers (Configuration > SSO) ✅
 
 | Provider | Icon Status | Notes |
 |----------|-------------|-------|
-| Google | Exists (inline in `sso-buttons.tsx`) | Google "G" logo |
-| GitHub | Exists (inline) | Octocat mark |
-| Microsoft | Exists (inline) | Square logo |
-| Apple | Exists (inline) | Apple logo |
-| Discord | Exists (inline) | Clyde logo |
-| GitLab | **Missing** | Tanuki logo needed |
-| OIDC/Enterprise | Exists (inline) | Generic key icon |
+| Google | In `provider-icons.tsx` | Google "G" logo |
+| GitHub | In `provider-icons.tsx` | Octocat mark |
+| Microsoft | In `provider-icons.tsx` | Square logo |
+| Apple | In `provider-icons.tsx` | Apple logo |
+| Discord | In `provider-icons.tsx` | Clyde logo |
+| GitLab | In `provider-icons.tsx` | Tanuki logo |
+| OIDC/Enterprise | In `provider-icons.tsx` | Generic key icon |
 
 **Files:**
-- `frontend/components/auth/sso-buttons.tsx` - Login page SSO buttons
-- `frontend/app/(dashboard)/configuration/sso/page.tsx` - SSO settings page
+- `frontend/components/provider-icons.tsx` - Shared icon map (SSO, LLM, backup, etc.)
+- `frontend/components/auth/sso-buttons.tsx` - Login/register (uses ProviderIcon)
+- `frontend/app/(dashboard)/configuration/sso/page.tsx` - SSO settings (CollapsibleCard + ProviderIcon)
 
 ### 2. Notification Channels (Configuration > Notifications, User Preferences)
 
@@ -90,26 +91,26 @@ Multiple areas of the application reference third-party providers that would ben
 
 ## Implementation Plan
 
-### Phase 1: Create Shared Icon Infrastructure
+### Phase 1: Create Shared Icon Infrastructure ✅
 
-- [ ] Create `frontend/components/provider-icons.tsx` with all provider icons
-- [ ] Use inline SVGs for flexibility (no external image files needed)
-- [ ] Support size prop (sm, md, lg)
-- [ ] Ensure icons work in both light and dark themes
-- [ ] Use official brand colors where appropriate
-- [ ] Export individual icon components and a generic `ProviderIcon` lookup component
+- [x] Create `frontend/components/provider-icons.tsx` with all provider icons
+- [x] Use inline SVGs for flexibility (no external image files needed)
+- [x] Support size prop (sm, md, lg)
+- [x] Ensure icons work in both light and dark themes (currentColor / mono)
+- [x] Style prop (mono | branded); branded reserved for future official colors
+- [x] Export `ProviderIcon` lookup component. See [Patterns: ProviderIcon](../ai/patterns.md#providericon-pattern) and [Recipe: Add provider icon](../ai/recipes/add-provider-icon.md).
 
-### Phase 2: Consolidate Existing Icons
+### Phase 2: Consolidate Existing Icons ✅
 
-- [ ] Extract icons from `sso-buttons.tsx` into shared component
-- [ ] Add missing GitLab icon
-- [ ] Refactor `sso-buttons.tsx` to use shared icons
-- [ ] Test SSO login buttons still display correctly
+- [x] Extract icons from `sso-buttons.tsx` into shared `provider-icons.tsx`
+- [x] GitLab icon in shared component
+- [x] Refactor `sso-buttons.tsx` to use `ProviderIcon` from `provider-icons.tsx`
+- [x] SSO login buttons use shared icons
 
-### Phase 3: SSO Settings Page
+### Phase 3: SSO Settings Page ✅
 
-- [ ] Add provider icons to SSO settings page card headers
-- [ ] Display icon alongside provider name in each card
+- [x] Add provider icons to SSO settings page (CollapsibleCard headers)
+- [x] Display icon alongside provider name in each card
 
 ### Phase 4: Notification Settings
 
@@ -153,21 +154,11 @@ The project already uses Lucide React icons. Check if any needed icons exist the
 
 ---
 
-## Files to Create
+## Files Created/Modified
 
-```
-frontend/components/provider-icons.tsx  (shared icon component)
-```
+**Created:** `frontend/components/provider-icons.tsx` (shared icon component).
 
-## Files to Modify
-
-```
-frontend/components/auth/sso-buttons.tsx
-frontend/app/(dashboard)/configuration/sso/page.tsx
-frontend/app/(dashboard)/configuration/notifications/page.tsx
-frontend/app/(dashboard)/configuration/llm-system/page.tsx
-frontend/app/(dashboard)/configuration/email/page.tsx
-```
+**Modified:** `frontend/components/auth/sso-buttons.tsx`, `frontend/app/(dashboard)/configuration/sso/page.tsx`, `frontend/app/(dashboard)/configuration/notifications/page.tsx` (Lucide icons in CollapsibleCard), `frontend/app/(dashboard)/configuration/ai/page.tsx` (ProviderIcon in headers), `frontend/app/(dashboard)/configuration/backup/page.tsx` (ProviderIcon for S3, Google Drive).
 
 ---
 

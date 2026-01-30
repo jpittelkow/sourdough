@@ -143,6 +143,7 @@ Use this combined checklist for a full pass. For detailed examples, see [anti-pa
 - [ ] Mobile-first CSS; touch targets ≥ 44px; tables in `overflow-x-auto`
 - [ ] No debug code left in changes
 - [ ] No deprecated patterns (see [Deprecated Patterns to Flag](#deprecated-patterns-to-flag))
+- [ ] **Logging** – PHI access routes have `log.access`; services use `Log::` with structured context; frontend uses `errorLogger` (not `console.error`/`console.warn`). See [logging-compliance](../../../.cursor/rules/logging-compliance.mdc).
 
 ## References
 
@@ -150,3 +151,4 @@ Use this combined checklist for a full pass. For detailed examples, see [anti-pa
 - [anti-patterns.md](../anti-patterns.md) – What to flag and avoid
 - [global-components.mdc](../../.cursor/rules/global-components.mdc) – Component rules
 - [architecture.md](../../architecture.md) – ADRs and key files
+- [logging-compliance.mdc](../../../.cursor/rules/logging-compliance.mdc) – Logging checklist (access, application, audit, frontend)

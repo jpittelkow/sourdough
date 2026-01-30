@@ -10,3 +10,7 @@ Broadcast::channel('user.{id}', function (User $user, $id) {
 Broadcast::channel('audit-logs', function (User $user) {
     return $user->is_admin;
 });
+
+Broadcast::channel('app-logs', function (User $user) {
+    return $user->is_admin;
+});

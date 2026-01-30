@@ -37,15 +37,15 @@ Improve the audit logs page UI/UX and enhance general console/application loggin
 - [x] Document logging standards and best practices
 
 ### Log Storage & Performance (MEDIUM Priority)
-- [ ] Evaluate log storage options (file, database, external service)
+- [x] Evaluate log storage options (file, database, external service) — see [Log Storage Evaluation](log-storage-evaluation.md)
 - [ ] Implement log archival for old entries
-- [ ] Add indexes for common query patterns
+- [x] Add indexes for common query patterns (severity+created_at on audit_logs; action+created_at on access_logs)
 - [ ] Consider log aggregation service integration (optional)
 
 ### Dashboard & Analytics (LOW Priority)
 - [x] Add audit log summary to admin dashboard
 - [x] Create charts for activity trends
-- [ ] Add alerting for suspicious activity patterns
+- [x] Add alerting for suspicious activity patterns — log:check-suspicious (every 15 min), in-app/email to admins, dashboard banner; GET /api/suspicious-activity
 
 ---
 

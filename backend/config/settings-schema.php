@@ -146,4 +146,11 @@ return [
         'notify_success' => ['env' => 'BACKUP_NOTIFY_SUCCESS', 'default' => false],
         'notify_failure' => ['env' => 'BACKUP_NOTIFY_FAILURE', 'default' => true],
     ],
+
+    'logging' => [
+        'app_retention_days' => ['env' => 'LOG_APP_RETENTION_DAYS', 'default' => 90],
+        'audit_retention_days' => ['env' => 'AUDIT_LOG_RETENTION_DAYS', 'default' => 365],
+        'access_retention_days' => ['env' => 'ACCESS_LOG_RETENTION_DAYS', 'default' => 2190],
+        'hipaa_access_logging_enabled' => ['env' => 'HIPAA_ACCESS_LOGGING_ENABLED', 'default' => true],
+    ],
 ];

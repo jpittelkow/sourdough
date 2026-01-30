@@ -50,6 +50,7 @@ interface AuditLog {
   new_values: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
+  correlation_id?: string | null;
   created_at: string;
   user?: {
     id: number;
@@ -91,6 +92,7 @@ export default function AuditLogPage() {
     user_id: "",
     action: "",
     severity: "",
+    correlation_id: "",
     date_from: "",
     date_to: "",
   });
@@ -115,6 +117,7 @@ export default function AuditLogPage() {
         new_values: payload.new_values,
         ip_address: payload.ip_address,
         user_agent: payload.user_agent,
+        correlation_id: payload.correlation_id ?? null,
         created_at: payload.created_at,
         user: payload.user,
       };
@@ -177,6 +180,7 @@ export default function AuditLogPage() {
       if (filters.user_id) params.append("user_id", filters.user_id);
       if (filters.action) params.append("action", filters.action);
       if (filters.severity) params.append("severity", filters.severity);
+      if (filters.correlation_id) params.append("correlation_id", filters.correlation_id);
       if (filters.date_from) params.append("date_from", filters.date_from);
       if (filters.date_to) params.append("date_to", filters.date_to);
 
@@ -201,6 +205,7 @@ export default function AuditLogPage() {
       if (filters.user_id) params.append("user_id", filters.user_id);
       if (filters.action) params.append("action", filters.action);
       if (filters.severity) params.append("severity", filters.severity);
+      if (filters.correlation_id) params.append("correlation_id", filters.correlation_id);
       if (filters.date_from) params.append("date_from", filters.date_from);
       if (filters.date_to) params.append("date_to", filters.date_to);
 
@@ -243,6 +248,7 @@ export default function AuditLogPage() {
       user_id: "",
       action: "",
       severity: "",
+      correlation_id: "",
       date_from: "",
       date_to: "",
     });
@@ -318,11 +324,11 @@ export default function AuditLogPage() {
         <CardHeader>
           <CardTitle>Filters</CardTitle>
           <CardDescription>
-            Filter audit logs by user, action, severity, or date range
+            Filter audit logs by user, action, severity, correlation ID, or date range
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-6">
             <div className="space-y-2">
               <Label htmlFor="user">User</Label>
               <Select
@@ -379,6 +385,17 @@ export default function AuditLogPage() {
                   <SelectItem value="critical">Critical</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="correlation_id">Correlation ID</Label>
+              <Input
+                id="correlation_id"
+                placeholder="Trace ID"
+                value={filters.correlation_id}
+                onChange={(e) =>
+                  setFilters({ ...filters, correlation_id: e.target.value })
+                }
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="date_from">From Date</Label>

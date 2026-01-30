@@ -27,6 +27,7 @@ const response = await fetch('/api/auth/user', {
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
+| POST | `/auth/check-email` | Check email availability for signup (body: `email`; rate limited) |
 | POST | `/auth/register` | Register a new user |
 | POST | `/auth/login` | Login with email/password |
 | POST | `/auth/logout` | Logout current user |
@@ -94,6 +95,17 @@ Requires `admin` ability. See [Audit Logs roadmap](../plans/audit-logs-roadmap.m
 | GET | `/audit-logs` | List audit logs (paginated). Query: `page`, `per_page`, `user_id`, `action` (search), `severity`, `date_from`, `date_to`. Response: Laravel pagination (`data`, `current_page`, `last_page`, `per_page`, `total`). |
 | GET | `/audit-logs/export` | Export as CSV. Query: same filters as list. |
 | GET | `/audit-logs/stats` | Statistics. Query: `date_from`, `date_to` (default last 30 days). Response: `total_actions`, `by_severity` (severity→count), `daily_trends` (date→count), `recent_warnings` (latest 5 warning/error/critical with user), `actions_by_type`, `actions_by_user`. |
+
+### Access Logs (Admin, HIPAA)
+
+Requires `admin` ability. Tracks PHI access for compliance. See [Logging](logging.md#hipaa-access-logging), [Recipe: Add access logging](../ai/recipes/add-access-logging.md).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/access-logs` | List access logs (paginated). Query: `page`, `per_page`, `user_id`, `action`, `resource_type`, `date_from`, `date_to`. Response: Laravel pagination (`data`, `current_page`, `last_page`, `per_page`, `total`). |
+| GET | `/access-logs/export` | Export as CSV. Query: same filters as list. |
+| GET | `/access-logs/stats` | Statistics. Query: `date_from`, `date_to` (default last 30 days). Response: `total`, `by_action`, `by_resource_type`, `by_user`, `daily_trends`. |
+| DELETE | `/access-logs` | Delete all access logs. **Only when HIPAA logging disabled** (Configuration > Log retention). Returns 422 if enabled. On success: `{ message, deleted_count }`. |
 
 ### Settings
 
@@ -186,6 +198,21 @@ Requires `manage-settings` ability. Backup configuration is stored in the databa
 | PUT | `/backup-settings` | Update backup settings (body: subset of setting keys) |
 | POST | `/backup-settings/reset/{key}` | Reset one setting to env default. `{key}` must be a schema key (e.g. `s3_bucket`, `retention_days`) |
 | POST | `/backup-settings/test/{destination}` | Test connection. `{destination}`: `s3`, `sftp`, or `google_drive`. Uses currently saved settings. |
+
+### Jobs / Scheduled Tasks (Admin)
+
+Requires `admin` ability. Monitor scheduled tasks and run whitelisted commands manually. See [Features: Scheduled Jobs](../features.md#scheduled-jobs).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/jobs/scheduled` | List scheduled tasks. Response: `tasks` array with `command`, `schedule`, `description`, `triggerable`, `dangerous`, `last_run` (`{ at, status }` or null), `next_run`. Includes triggerable-only commands (e.g. `log:cleanup`) even if not in schedule. |
+| POST | `/jobs/run/{command}` | Run a whitelisted command. Body (optional): `{ "options": { "--dry-run": true } }`. Allowed: `backup:run`, `log:cleanup`, `log:check-suspicious`. Response (200): `success`, `output`, `duration_ms`. Response (422 on failure): same keys. Rate limit: `backup:run` once per 5 minutes. Audited as `scheduled_command_run`. |
+| GET | `/jobs/queue` | Queue status. Response: `pending`, `failed`, optional `queues` (queue name → count). |
+| GET | `/jobs/failed` | List failed queue jobs (paginated). Query: `per_page`. Response: Laravel pagination. |
+| POST | `/jobs/failed/{id}/retry` | Retry one failed job. |
+| DELETE | `/jobs/failed/{id}` | Delete one failed job. |
+| POST | `/jobs/failed/retry-all` | Retry all failed jobs. |
+| DELETE | `/jobs/failed/clear` | Clear all failed jobs. |
 
 ### System
 

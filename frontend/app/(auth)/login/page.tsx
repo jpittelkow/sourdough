@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useAppConfig } from "@/lib/app-config";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { TwoFactorForm } from "@/components/auth/two-factor-form";
@@ -96,8 +97,11 @@ export default function LoginPage() {
             id="email"
             type="email"
             placeholder="you@example.com"
+            autoFocus
             {...register("email")}
             disabled={isLoading}
+            aria-invalid={!!errors.email?.message}
+            aria-describedby={errors.email?.message ? "email-error" : undefined}
           />
         </FormField>
 
@@ -118,9 +122,8 @@ export default function LoginPage() {
           }
           error={errors.password?.message}
         >
-          <Input
+          <PasswordInput
             id="password"
-            type="password"
             placeholder="••••••••"
             {...register("password")}
             disabled={isLoading}

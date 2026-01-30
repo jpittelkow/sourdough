@@ -110,6 +110,39 @@ Add a new channel (e.g. external service) under `channels`:
 
 3. **Include the channel in the stack** by adding it to `LOG_STACK` (e.g. `LOG_STACK=single,json,external`).
 
+## Live log streaming (admin)
+
+To stream application logs to **Configuration > Application Logs** in real time:
+
+1. Add a `broadcast` channel to `LOG_STACK` (e.g. `LOG_STACK=single,broadcast`).
+2. Set `LOG_BROADCAST_ENABLED=true` and `LOG_BROADCAST_LEVEL=info` (or `warning`/`error`).
+3. Configure Pusher (`BROADCAST_CONNECTION=pusher`). Admin users can then enable **Live** on the Application Logs page.
+
+See [Logging](logging.md#live-console-log-viewer-admin) and `backend/app/Logging/BroadcastLogHandler.php`.
+
+## Application log export (admin)
+
+Admins can export application log files (from `storage/logs/laravel*.log`) as CSV or JSON Lines:
+
+- **Endpoint**: `GET /api/app-logs/export?date_from=&date_to=&level=&correlation_id=&format=csv|json`
+- **UI**: Configuration > Application Logs – Export card (date range, level, correlation ID, format) and Export button.
+- **Backend**: `AppLogExportService` (file discovery, line parsing, filtering), `AppLogExportController`.
+
+## Log retention and cleanup
+
+- **Retention**: Configuration > Log retention – app (1–365 days), audit (30–730 days), access (6 years min for HIPAA). Stored in system settings group `logging`; env fallback: `LOG_APP_RETENTION_DAYS`, `AUDIT_LOG_RETENTION_DAYS`, `ACCESS_LOG_RETENTION_DAYS`.
+- **HIPAA toggle**: Configuration > Log retention – toggle "Enable HIPAA access logging". When disabled, no new access logs are created; "Delete all access logs" is available (with HIPAA violation warning). See [Logging](../../logging.md#hipaa-access-logging).
+- **Cleanup**: `php artisan log:cleanup` (deletes old audit/access rows and old daily log files). Use `--dry-run` to preview, `--archive` to export audit/access to CSV in `storage/app/log-archive/` before deleting. Admins can also run it from **Configuration > Jobs** (Run Now for `log:cleanup`).
+- **Key files**: `LogRetentionController`, `LogCleanupCommand`, `config/logging.php` (retention key), `ConfigServiceProvider::injectLoggingConfig()`.
+
+## Suspicious activity alerting
+
+The system checks for 5+ failed logins in 15 minutes and 10+ data export actions in 1 hour. When detected, admins are notified (in-app + email). Scheduled: `log:check-suspicious` every 15 minutes. Admins can also run it manually from **Configuration > Jobs** (Run Now). Dashboard shows an alert banner when current checks detect suspicious activity. API: `GET /api/suspicious-activity` (admin). Key files: `SuspiciousActivityService`, `CheckSuspiciousActivityCommand`, `SuspiciousActivityController`.
+
+## Related
+
+- **PHI access logging (HIPAA)**: When adding features that read or modify user data, use access logging (middleware or `AccessLogService`). See [Add access logging](add-access-logging.md).
+
 ## Verification
 
 - [ ] Log messages appear at the correct level (info/warning/error)

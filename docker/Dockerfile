@@ -1,4 +1,4 @@
-# AppFoundry Dockerfile
+# Sourdough Dockerfile
 # Multi-stage build for Laravel + Next.js in a single container
 
 #==============================================================================
@@ -25,8 +25,8 @@ RUN npm run build
 #==============================================================================
 FROM php:8.3-fpm-alpine
 
-LABEL maintainer="AppFoundry"
-LABEL description="AppFoundry - Foundation Application Framework"
+LABEL maintainer="Sourdough"
+LABEL description="Sourdough - Foundation Application Framework"
 
 # Build arguments for version info
 ARG APP_VERSION=0.0.0

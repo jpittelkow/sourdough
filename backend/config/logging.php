@@ -1,6 +1,7 @@
 <?php
 
 use App\Logging\AddContextProcessorTap;
+use App\Logging\BroadcastLogHandler;
 use Monolog\Formatter\JsonFormatter;
 use Monolog\Handler\NullHandler;
 use Monolog\Handler\StreamHandler;
@@ -10,6 +11,14 @@ use Monolog\Processor\PsrLogMessageProcessor;
 return [
 
     'default' => env('LOG_CHANNEL', 'stack'),
+
+    'retention' => [
+        'app_days' => (int) env('LOG_APP_RETENTION_DAYS', 90),
+        'audit_days' => (int) env('AUDIT_LOG_RETENTION_DAYS', 365),
+        'access_days' => (int) env('ACCESS_LOG_RETENTION_DAYS', 2190),
+    ],
+
+    'hipaa_access_logging_enabled' => (bool) env('HIPAA_ACCESS_LOGGING_ENABLED', true),
 
     'deprecations' => [
         'channel' => env('LOG_DEPRECATIONS_CHANNEL', 'null'),
@@ -75,6 +84,13 @@ return [
             'driver' => 'errorlog',
             'level' => env('LOG_LEVEL', 'debug'),
             'replace_placeholders' => true,
+        ],
+
+        'broadcast' => [
+            'driver' => 'monolog',
+            'level' => env('LOG_BROADCAST_LEVEL', 'info'),
+            'handler' => BroadcastLogHandler::class,
+            'tap' => [AddContextProcessorTap::class],
         ],
 
         'null' => [

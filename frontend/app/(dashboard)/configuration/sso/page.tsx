@@ -16,6 +16,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { ProviderIcon } from "@/components/provider-icons";
 import { FormField } from "@/components/ui/form-field";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
@@ -206,14 +208,18 @@ export default function SSOSettingsPage() {
         </Card>
 
         {providers.map(({ id, label, clientIdKey, clientSecretKey }) => (
-          <Card key={id}>
-            <CardHeader>
-              <CardTitle className="text-base">{label}</CardTitle>
-              <CardDescription>
-                OAuth client ID and secret from your {label} developer console.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 md:grid-cols-2">
+          <CollapsibleCard
+            key={id}
+            title={label}
+            description={`OAuth client ID and secret from your ${label} developer console.`}
+            icon={<ProviderIcon provider={id} size="sm" style="mono" />}
+            status={{
+              label: watch(clientIdKey) ? "Configured" : "Not configured",
+              variant: watch(clientIdKey) ? "success" : "default",
+            }}
+            defaultOpen={false}
+          >
+            <div className="grid gap-4 md:grid-cols-2">
               <FormField id={clientIdKey} label="Client ID" error={errors[clientIdKey]?.message}>
                 <Input
                   id={clientIdKey}
@@ -232,18 +238,21 @@ export default function SSOSettingsPage() {
                   className="min-h-[44px]"
                 />
               </FormField>
-            </CardContent>
-          </Card>
+            </div>
+          </CollapsibleCard>
         ))}
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Enterprise SSO (OIDC)</CardTitle>
-            <CardDescription>
-              Generic OIDC provider for Okta, Auth0, Keycloak, or other IdPs.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Enterprise SSO (OIDC)"
+          description="Generic OIDC provider for Okta, Auth0, Keycloak, or other IdPs."
+          icon={<ProviderIcon provider="key" size="sm" style="mono" />}
+          status={{
+            label: watch("oidc_client_id") && watch("oidc_issuer_url") ? "Configured" : "Not configured",
+            variant: watch("oidc_client_id") && watch("oidc_issuer_url") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="oidc_client_id" label="Client ID" error={errors.oidc_client_id?.message}>
               <Input
                 id="oidc_client_id"
@@ -280,8 +289,8 @@ export default function SSOSettingsPage() {
                 className="min-h-[44px]"
               />
             </FormField>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
         <Card>
           <CardFooter className="flex flex-col gap-4 sm:flex-row sm:justify-between">

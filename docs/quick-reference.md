@@ -79,7 +79,7 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 | Add API endpoint | `backend/app/Http/Controllers/Api/` | - |
 | Add business logic | `backend/app/Services/{Feature}/` | - |
 | Auth flow | `AuthController.php`, `frontend/lib/auth.ts` | ADR-002 |
-| SSO providers | `SSOService.php`, `sso-buttons.tsx` | ADR-003 |
+| SSO providers | `SSOService.php`, `sso-buttons.tsx`, `provider-icons.tsx` | ADR-003 |
 | 2FA | `TwoFactorService.php`, `two-factor-form.tsx` | ADR-004 |
 | Notifications | `NotificationOrchestrator.php`, `Channels/` | ADR-005 |
 | LLM calls | `LLMOrchestrator.php`, `Providers/` | ADR-006 |
@@ -88,6 +88,9 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 | Add backup destination | [Recipe: add-backup-destination](ai/recipes/add-backup-destination.md) | ADR-007 |
 | Extend backup/restore | [Recipe: extend-backup-restore](ai/recipes/extend-backup-restore.md), [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) | [Backup hub](backup.md) |
 | Logging / frontend errors | [Logging](logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [Recipe: extend-logging](ai/recipes/extend-logging.md) | - |
+| Access logging (HIPAA) | `AccessLogService.php`, `LogResourceAccess` middleware, [Recipe: add-access-logging](ai/recipes/add-access-logging.md) | [Logging](logging.md#hipaa-access-logging) |
+| Log retention / app log export | Configuration > Log retention (retention days, HIPAA toggle, delete-all when disabled); `log:cleanup` (--dry-run, --archive); `GET /api/app-logs/export`; [Logging](logging.md#log-retention-and-cleanup) | - |
+| Suspicious activity | `log:check-suspicious` (scheduled); `GET /api/suspicious-activity`; dashboard banner | [Logging](logging.md#suspicious-activity-alerting) |
 | Docker config | `docker/`, `docker-compose.yml` | ADR-009 |
 | Add settings page | `frontend/app/(dashboard)/settings/` | ADR-012 |
 | Add admin page | `frontend/app/(dashboard)/admin/` | ADR-012 |

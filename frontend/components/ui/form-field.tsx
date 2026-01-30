@@ -25,7 +25,9 @@ export function FormField({
       )}
       {children}
       {error && (
-        <p className="text-sm text-destructive">{error}</p>
+        <p id={`${id}-error`} className="text-sm text-destructive" role="alert">
+          {error}
+        </p>
       )}
     </div>
   );

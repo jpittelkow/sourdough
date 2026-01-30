@@ -22,6 +22,8 @@ See: [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.
 ```
 frontend/app/(dashboard)/           # Existing page patterns
 frontend/components/ui/             # shadcn components (CLI-managed; frontend/components.json)
+frontend/components/ui/collapsible-card.tsx  # Collapsible sections (settings, config)
+frontend/components/provider-icons.tsx       # Provider/channel icons (SSO, LLM, etc.)
 frontend/components/                # App-specific components
 frontend/config/app.ts              # App configuration (branding, etc.)
 frontend/lib/api.ts                 # API call patterns
@@ -120,6 +122,11 @@ backend/app/Models/Setting.php
 backend/app/Models/SystemSetting.php
 docs/plans/env-to-database-roadmap.md
 ```
+
+**Adding a configuration page or menu item:**
+- [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx) – `navigationGroups` and grouped nav
+- [Recipe: Add configuration menu item](recipes/add-configuration-menu-item.md)
+- [Recipe: Add configuration page](recipes/add-config-page.md) – Form and page structure
 
 ## Email Template Work
 
@@ -244,12 +251,33 @@ frontend/components/ui/chart.tsx                       # shadcn chart (Recharts)
 backend/database/migrations/           # audit_logs table, severity column
 ```
 
-**Stats API** (`GET /audit-logs/stats`): Returns `total_actions`, `by_severity`, `daily_trends` (date→count), `recent_warnings` (latest 5 warning/error/critical), `actions_by_type`, `actions_by_user`. Query params: `date_from`, `date_to` (default last 30 days).
+**Stats API** (`GET /audit-logs/stats`): Returns `total_actions`, `by_severity`, `daily_trends` (date→count), `recent_warnings` (latest 5 warning/error/critical), `actions_by_type`, `actions_by_user`. Query params: `date_from`, `date_to` (default last 30 days). Index/export support filter by `correlation_id`.
 
 **Recipes:**
 - [Trigger audit logging](recipes/trigger-audit-logging.md)
 - [Add auditable action](recipes/add-auditable-action.md)
 - [Add dashboard widget](recipes/add-dashboard-widget.md) – for dashboard analytics widgets (see audit widget as example)
+
+## HIPAA / Access Logging Work
+
+**Read first:**
+```
+backend/app/Services/AccessLogService.php
+backend/app/Http/Middleware/LogResourceAccess.php
+backend/app/Models/AccessLog.php
+docs/ai/recipes/add-access-logging.md
+```
+
+**Also useful:**
+```
+backend/routes/api.php  # log.access middleware, access-logs routes, DELETE /access-logs when disabled
+frontend/app/(dashboard)/configuration/access-logs/page.tsx  # Access logs UI
+frontend/app/(dashboard)/configuration/log-retention/page.tsx  # HIPAA toggle, delete-all when disabled
+backend/app/Http/Controllers/Api/AccessLogController.php
+```
+
+**Recipes:**
+- [Add access logging](recipes/add-access-logging.md)
 
 ## Application Logging Work
 
@@ -267,11 +295,38 @@ frontend/components/error-handler-setup.tsx
 **Also useful:**
 ```
 backend/app/Http/Controllers/Api/ClientErrorController.php
-backend/routes/api.php  # client-errors route
+backend/app/Services/AppLogExportService.php      # App log file export (date/level/correlation_id)
+backend/app/Http/Controllers/Api/AppLogExportController.php  # GET /api/app-logs/export
+backend/app/Http/Controllers/Api/LogRetentionController.php  # Log retention settings (group logging)
+backend/app/Console/Commands/LogCleanupCommand.php           # log:cleanup (--dry-run, --archive)
+backend/app/Services/SuspiciousActivityService.php           # Suspicious pattern detection
+backend/app/Console/Commands/CheckSuspiciousActivityCommand.php  # log:check-suspicious
+backend/routes/api.php  # client-errors, app-logs/export, log-retention, suspicious-activity
+frontend/app/(dashboard)/configuration/logs/page.tsx          # Application Logs + Export
+frontend/app/(dashboard)/configuration/log-retention/page.tsx # Log retention UI
 ```
 
 **Recipes:**
 - [Extend logging](recipes/extend-logging.md)
+
+## Scheduled Jobs / Admin Tasks
+
+**Read first:**
+```
+backend/app/Services/ScheduledTaskService.php   # Command whitelist, run(), last run, rate limit
+backend/app/Http/Controllers/Api/JobController.php
+backend/app/Models/TaskRun.php
+backend/routes/api.php  # jobs/* routes (admin)
+frontend/app/(dashboard)/configuration/jobs/page.tsx  # Scheduled Tasks, Queue, Failed Jobs, Run Now
+```
+
+**Also useful:**
+```
+backend/routes/console.php       # Schedule definitions (backup:run, log:check-suspicious, etc.)
+backend/database/migrations/     # task_runs table
+```
+
+Manual run is whitelist-only (`backup:run`, `log:cleanup`, `log:check-suspicious`). Runs are recorded in `task_runs` and audited.
 
 ## Docker/Infrastructure Work
 

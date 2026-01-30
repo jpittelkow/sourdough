@@ -11,9 +11,10 @@ Core functionality and feature documentation:
 
 **Capabilities:**
 - Email/password authentication with Laravel Sanctum
-- SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab)
+- SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab, Enterprise OIDC); **sign-in and register pages** show "Continue with {provider}" buttons for each enabled provider (from `GET /auth/sso/providers`); **setup** is Configuration > SSO (`/configuration/sso`)
 - Two-factor authentication (TOTP + recovery codes)
 - Password reset and email verification
+- **Auth UI:** Sign-in and register use a glassmorphism card layout, password visibility toggle, password strength indicator (register/reset), and real-time email availability check on register (`POST /auth/check-email`)
 - **Admin user management**: Configuration > Users – list users (pagination, search), create/edit/disable users, role (admin) management, send verification email on creation, resend verification email, reset password. Disabled users cannot log in.
 - All features optional for self-hosted deployments
 
@@ -69,6 +70,12 @@ Core functionality and feature documentation:
 - Mail settings: Configuration > Email (`/configuration/email`); SMTP and provider credentials stored in DB with encryption for secrets
 - SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC
 
+**Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns.md#configuration-navigation-pattern).
+
+**Collapsible settings sections:** Configuration pages (SSO, Notifications, AI/LLM, Backup) use the shared `CollapsibleCard` component so provider/channel sections can be expanded or collapsed. Headers show icon, name, and status badge; content (forms, toggles) is in the expandable body. See [Patterns: CollapsibleCard](ai/patterns.md#collapsiblecard-pattern) and [Recipe: Add collapsible section](ai/recipes/add-collapsible-section.md).
+
+**Provider icons:** A shared `ProviderIcon` component (`frontend/components/provider-icons.tsx`) provides branded or monochrome icons for SSO providers, LLM providers, notification channels, email/backup providers. Used on sign-in buttons (branded) and in configuration CollapsibleCard headers (mono).
+
 **Capabilities:**
 - System-wide settings stored in `system_settings` with environment fallback (no restart for changes)
 - SettingService with file-based caching; ConfigServiceProvider injects settings into Laravel config at boot
@@ -102,13 +109,19 @@ Core functionality and feature documentation:
 - [Recipe: Trigger audit logging](ai/recipes/trigger-audit-logging.md) – Log from controllers/services
 - [Recipe: Add auditable action](ai/recipes/add-auditable-action.md) – Add new audited actions
 - [Recipe: Extend logging](ai/recipes/extend-logging.md) – Add logging to backend/frontend, new log channels
+- [Recipe: Add access logging](ai/recipes/add-access-logging.md) – HIPAA access logging for PHI
 - [Logging](logging.md) – Logging standards, configuration, frontend errorLogger
+- [Logging Roadmap](plans/logging-roadmap.md) – Retention, cleanup, app log export (done); optional external storage
 
 **Capabilities:**
-- **Configuration > Audit** (`/configuration/audit`): Paginated audit log with filters (user, action, severity, date range), search, severity badges, detail modal (old/new values, IP, user agent), CSV export. Admin only.
-- **Live streaming**: "Live" toggle on audit page streams new logs in real time via private `audit-logs` channel (Pusher); connection status and highlight animation for new entries. Requires BROADCAST_CONNECTION=pusher and admin user.
+- **Configuration > Audit** (`/configuration/audit`): Paginated audit log with filters (user, action, severity, correlation ID, date range), search, severity badges, detail modal (old/new values, IP, user agent), CSV export. Admin only.
+- **Configuration > Application Logs** (`/configuration/logs`): Real-time console log viewer and export. Enable "Live" to stream `Log::` output via private `app-logs` channel (requires `LOG_BROADCAST_ENABLED=true`, `broadcast` in `LOG_STACK`, Pusher). Export card: export log files by date range, level, correlation ID as CSV or JSON Lines (`GET /api/app-logs/export`). Admin only.
+- **Configuration > Access Logs (HIPAA)** (`/configuration/access-logs`): PHI access audit trail. Table shows date, user, action, resource type, resource ID, IP, and **fields accessed** (extracted automatically by middleware). Filters (user, action, resource type, correlation ID, dates), CSV export. AccessLogService + LogResourceAccess middleware on profile, user, and user-settings routes. Admin only.
+- **Configuration > Log retention** (`/configuration/log-retention`): Configure retention days for application logs (1–365), audit logs (30–730), access logs (6 years minimum for HIPAA). Toggle **HIPAA access logging** (enable/disable). When disabled, “Delete all access logs” is available (with HIPAA violation warning). Cleanup via `php artisan log:cleanup` (optional `--dry-run`, `--archive`). Admin only.
+- **Live streaming (audit)**: "Live" toggle on audit page streams new logs in real time via private `audit-logs` channel (Pusher); connection status and highlight animation for new entries. Requires BROADCAST_CONNECTION=pusher and admin user.
 - **Dashboard analytics** (admin dashboard): “System Activity” widget with stats cards (total actions, warnings/errors), severity donut chart, activity trends area chart (last 30 days), recent warnings list, and “View all logs” link.
 - **Stats API** (`GET /audit-logs/stats`): `total_actions`, `by_severity`, `daily_trends`, `recent_warnings`, `actions_by_type`, `actions_by_user`. Query params: `date_from`, `date_to`.
+- **Suspicious activity**: Banner on admin dashboard when 5+ failed logins in 15 min or 10+ export actions in 1 hour; `GET /api/suspicious-activity`. Scheduled `log:check-suspicious` notifies admins (in-app + email).
 - AuditService + AuditLogging trait; auth, user management, settings, and backup actions logged. Action naming `{resource}.{action}`; severity info/warning/error/critical; sensitive data masked.
 
 **Structured application logging:**
@@ -137,3 +150,13 @@ Core functionality and feature documentation:
 - Scheduled backups (daily/weekly/monthly; configurable time and destinations)
 - Remote destinations: local disk, S3, SFTP, Google Drive (pluggable via `DestinationInterface`)
 - **Backup settings UI**: Configuration > Backup – **Backups** tab (create, download, restore, delete); **Settings** tab (retention, schedule, S3/SFTP/Google Drive credentials, encryption, notifications). All backup configuration stored in DB with env fallback; Test Connection for each remote destination.
+
+## Scheduled Jobs
+
+**Configuration > Jobs** (`/configuration/jobs`) – Monitor and run scheduled tasks. Admin only.
+
+**Capabilities:**
+- **Scheduled Tasks tab**: List of tasks from Laravel scheduler (and triggerable-only commands like log:cleanup). Columns: command, schedule, last run, description. **Run Now** for whitelisted commands (backup:run, log:cleanup, log:check-suspicious); confirmation dialog with extra warning for destructive commands; output and duration shown after run. Run history stored in `task_runs` table.
+- **Queue Status tab**: Pending and failed job counts; queue breakdown when available.
+- **Failed Jobs tab**: List failed queue jobs with retry, delete, retry all, clear all.
+- **API**: `GET /api/jobs/scheduled` (tasks with triggerable, last_run, dangerous); `POST /api/jobs/run/{command}` (body: optional `{ options: {} }`); existing queue/failed endpoints. Manual runs are audited (`scheduled_command_run`).

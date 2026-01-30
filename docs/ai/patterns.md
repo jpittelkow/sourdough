@@ -143,6 +143,36 @@ $this->audit('user.created', $user, [], ['name' => $user->name], null, 'info');
 
 **Key files**: `backend/app/Services/AuditService.php`, `backend/app/Http/Traits/AuditLogging.php`, `backend/app/Models/AuditLog.php`, `backend/app/Http/Controllers/Api/AuditLogController.php`. See [Recipe: Trigger audit logging](recipes/trigger-audit-logging.md) and [Recipe: Add auditable action](recipes/add-auditable-action.md).
 
+### AccessLogService Pattern (HIPAA Access Logging)
+
+Use `AccessLogService` to log access to protected health information (PHI) for HIPAA compliance. This is separate from AuditService (which tracks user actions); AccessLogService tracks data access.
+
+```php
+use App\Services\AccessLogService;
+
+public function __construct(private AccessLogService $accessLog) {}
+
+// View action
+$this->accessLog->log('view', 'User', $user->id, ['name', 'email', 'phone']);
+
+// Update action
+$this->accessLog->log('update', 'User', $user->id, ['email']);
+
+// Bulk view (list)
+$this->accessLog->log('view', 'User', null, null);
+
+// Export
+$this->accessLog->log('export', 'User', null, ['all']);
+```
+
+- **When to use**: Any endpoint that reads, creates, updates, deletes, or exports user data (PHI).
+- **Actions**: `view`, `create`, `update`, `delete`, `export`.
+- **Resource types**: `User`, `Setting`, or any model containing PHI.
+- **Middleware**: Prefer applying `log.access:User` (or `log.access:Setting`) to routes; the middleware resolves action and resource ID automatically and extracts **fields accessed** from request body (create/update) or JSON response (view), excluding sensitive keys.
+- **Toggle**: HIPAA access logging can be disabled in Configuration > Log retention. When disabled, no logs are created; "Delete all access logs" is available (with HIPAA violation warning).
+
+**Key files**: `backend/app/Services/AccessLogService.php`, `backend/app/Http/Middleware/LogResourceAccess.php`, `backend/app/Models/AccessLog.php`. See [Recipe: Add access logging](recipes/add-access-logging.md).
+
 ### Logging Pattern
 
 Use the Laravel `Log` facade for operational and diagnostic events (not user actions; use AuditService for those). Every log record gets `correlation_id`, `user_id`, `ip_address`, and `request_uri` from the context processor when in HTTP context.
@@ -166,6 +196,8 @@ Log::error('Backup restore failed', ['error' => $e->getMessage()]);
 - **Frontend**: Use `errorLogger` from `frontend/lib/error-logger.ts` instead of `console.error`/`console.warn` so client errors are sent to `POST /api/client-errors` and appear in backend logs with correlation ID.
 
 **Key files**: `backend/config/logging.php`, `backend/app/Logging/ContextProcessor.php`, `backend/app/Http/Middleware/AddCorrelationId.php`, `frontend/lib/error-logger.ts`, `docs/logging.md`. See [Recipe: Extend logging](recipes/extend-logging.md).
+
+**Related features**: Application log export (`GET /api/app-logs/export`, filter by date/level/correlation_id); log retention (Configuration > Log retention, `log:cleanup` with `--dry-run`/`--archive`); suspicious activity alerting (`log:check-suspicious` every 15 min, notifies admins; `GET /api/suspicious-activity` for dashboard).
 
 ### SettingService Pattern
 
@@ -275,6 +307,18 @@ The admin UI for email templates lives under **Configuration > Email Templates**
 **Adding a new destination:** See [Add backup destination](recipes/add-backup-destination.md). Summary: implement DestinationInterface, add flat keys to backup schema and backup.php destinations, map in ConfigServiceProvider and BackupSettingController, add Card and Test Connection in Settings tab.
 
 **Extending backup/restore behavior:** See [Extend backup and restore features](recipes/extend-backup-restore.md) for new restore logic, scheduling, notifications, new backup content, or UI-only changes.
+
+### ScheduledTaskService Pattern (Manual Run of Scheduled Commands)
+
+**Whitelist-only:** Only commands listed in `ScheduledTaskService::TRIGGERABLE_COMMANDS` may be run from the Jobs UI. Prevents arbitrary Artisan execution. Add new triggerable commands there with `description` and `dangerous` (extra confirmation in UI).
+
+**Flow:** Controller validates command via `isTriggerable()`, calls `run($command, $userId, $options)`. Service creates `TaskRun` (if table exists), runs `Artisan::call()`, updates TaskRun with status/output/duration, returns `success`, `output`, `duration_ms`, `exit_code`. Controller audits `scheduled_command_run` and returns JSON (422 on failure).
+
+**Rate limiting:** Optional `RATE_LIMIT_SECONDS` per command (e.g. `backup:run` 300s). Service uses `getLastRunAt()` from `task_runs`; block if last run was within the limit.
+
+**Run history:** `task_runs` stores command, user_id (null = scheduled), status, started_at, completed_at, output, error, duration_ms. Use `getLastRun()` / `getRunHistory()` for UI. Service checks `Schema::hasTable('task_runs')` so it works before migration.
+
+**Key files:** `ScheduledTaskService`, `JobController::scheduled()` (parses `schedule:list`, merges triggerable metadata and last_run; appends triggerable-only commands), `JobController::run()`, `TaskRun` model. Frontend: Configuration > Jobs, Run Now with confirmation (extra for dangerous).
 
 ### Form Request Pattern
 
@@ -683,6 +727,96 @@ import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
 
 **Key file:** `frontend/components/ui/settings-switch-row.tsx`
 
+#### CollapsibleCard Pattern
+
+Use `CollapsibleCard` for expandable sections in settings, configuration, or list pages. The header (title, description, icon, status badge, optional header actions) is always visible; the body expands/collapses with a smooth animation.
+
+```tsx
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { MessageSquare } from "lucide-react";
+
+<CollapsibleCard
+  title="Slack"
+  description="Send notifications to Slack channels."
+  icon={<MessageSquare className="h-4 w-4" />}
+  status={{ label: "Configured", variant: "success" }}
+  defaultOpen={false}
+>
+  <div className="space-y-4">{/* form fields */}</div>
+</CollapsibleCard>
+```
+
+**Props:**
+- `title: string` - Card title (always visible)
+- `description?: string` - Optional description in header
+- `icon?: ReactNode` - Optional icon (e.g. Lucide) in header
+- `status?: { label: string; variant: "default" | "success" | "warning" | "destructive" }` - Badge in header
+- `defaultOpen?: boolean` - Whether card starts expanded (default: false)
+- `open?: boolean` - Controlled open state
+- `onOpenChange?: (open: boolean) => void` - Called when open state changes
+- `headerActions?: ReactNode` - Content before chevron (e.g. toggle switch)
+- `children: ReactNode` - Expandable content
+- `disabled?: boolean` - Disable expand/collapse
+- `className?: string` - Additional CSS for the card
+
+**When to use:**
+- Multiple provider/channel cards on a page (SSO, Notifications, LLM, Backup)
+- Configuration sections that can be collapsed
+- Lists with expandable item details
+
+**Key file:** `frontend/components/ui/collapsible-card.tsx`. See [Recipe: Add collapsible section](recipes/add-collapsible-section.md).
+
+#### ProviderIcon Pattern
+
+Use the shared `ProviderIcon` component for SSO providers, LLM providers, notification channels, email/backup providers, and similar. Icons live in **`frontend/components/provider-icons.tsx`**; do not add inline icon maps in page components.
+
+```tsx
+import { ProviderIcon } from "@/components/provider-icons";
+
+// Sign-in buttons (branded style)
+<ProviderIcon provider={provider.icon} size="sm" style="branded" />
+
+// Config/settings headers (mono, theme-aware)
+<ProviderIcon provider="google" size="sm" style="mono" />
+<ProviderIcon provider="openai" size="sm" style="mono" />
+```
+
+**Props:**
+- `provider: string` - Provider id (e.g. `google`, `github`, `openai`, `key` for generic). Must match a key in `provider-icons.tsx`; unknown ids fall back to `key`.
+- `size?: "sm" | "md" | "lg"` - Size preset (default: `md`).
+- `style?: "mono" | "branded"` - Mono uses `currentColor` (theme-aware); branded reserves official colors (currently same as mono in implementation).
+- `className?: string` - Additional CSS classes.
+
+**When to use:**
+- SSO sign-in/register buttons and Configuration > SSO card headers
+- Configuration > AI/LLM provider headers
+- Configuration > Backup destination headers (e.g. S3, Google Drive)
+- Any UI that shows a third-party provider or channel name and needs a consistent icon
+
+**Adding a new icon:** Edit `frontend/components/provider-icons.tsx`. Add the id to `ProviderIconId` (optional), then add an entry to `SSO_ICONS`, `LLM_ICONS`, or `ALL_ICONS` with the same key. Use `renderSvg(className, <path d="..." />)` for simple SVGs. See [Recipe: Add SSO Provider](recipes/add-sso-provider.md) Step 7.
+
+**Key file:** `frontend/components/provider-icons.tsx`
+
+### Configuration Navigation Pattern
+
+Configuration uses **grouped, collapsible navigation** in [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx). Items are organized into groups (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Each group is collapsible; the group containing the current page is expanded by default.
+
+**Structure:**
+
+- **navigationGroups**: Array of `{ name, icon, items }`. Each `item` has `name`, `href`, `icon`, `description`.
+- **GroupedNavigation**: Renders each group as a `Collapsible` (shadcn/ui). Trigger shows group name and icon; content lists links.
+- **Persistence**: Expanded/collapsed state is stored in localStorage under `config-nav-expanded-groups` so preferences survive refresh.
+
+**Adding a new item:**
+
+1. Choose the appropriate group (see [Recipe: Add configuration menu item](recipes/add-configuration-menu-item.md)).
+2. Add an entry to that group's `items` in `navigationGroups` with `name`, `href`, `icon`, `description`.
+3. Create the page at `frontend/app/(dashboard)/configuration/[slug]/page.tsx` so the href resolves.
+
+**Adding a new group:** Only when the feature area does not fit existing groups. Add a new object to `navigationGroups` with `name`, `icon`, and `items` (array). Document the new group in the recipe and here.
+
+**Key file:** [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx)
+
 ### Auth Page Components
 
 Use these shared components for consistent authentication page UX.
@@ -778,6 +912,18 @@ export default function MyForm() {
 - Extends all `ButtonProps`
 
 **Key file:** `frontend/components/ui/loading-button.tsx`
+
+#### SSO Provider Display (Sign-In vs Setup)
+
+**Sign-in and register pages:** SSO buttons are rendered by `SSOButtons` (`frontend/components/auth/sso-buttons.tsx`), which fetches enabled providers from `GET /auth/sso/providers`. Each provider shows a "Continue with {name}" button with an icon. Icons come from the shared **`ProviderIcon`** component (`frontend/components/provider-icons.tsx`): the `icon` value from the API (e.g. `google`, `github`, `gitlab`) must exist in the icon map there; unknown icons fall back to the generic `key` icon. When adding a new SSO provider, add its icon to `provider-icons.tsx` (see [Recipe: Add SSO Provider](recipes/add-sso-provider.md) Step 7).
+
+**Setup page:** Configuration > SSO (`frontend/app/(dashboard)/configuration/sso/page.tsx`) is where admins configure provider credentials. Each provider card uses `CollapsibleCard` with `ProviderIcon` in the header. The `providers` array on that page controls which cards are shown. New providers must be added to the setup page and to `provider-icons.tsx`.
+
+**Key files:**
+- Icons: `frontend/components/provider-icons.tsx` (single source for SSO, LLM, backup icons)
+- Sign-in/register: `frontend/components/auth/sso-buttons.tsx` (uses ProviderIcon)
+- Setup: `frontend/app/(dashboard)/configuration/sso/page.tsx`
+- Backend config: `backend/config/sso.php` (name, icon, enabled, color)
 
 #### AuthDivider
 

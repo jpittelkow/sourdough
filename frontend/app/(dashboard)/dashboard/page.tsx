@@ -1,6 +1,8 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
+import { api } from "@/lib/api";
 import {
   Card,
   CardDescription,
@@ -8,6 +10,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import Link from "next/link";
 import {
   User,
@@ -16,6 +19,7 @@ import {
   Brain,
   Database,
   ArrowRight,
+  AlertTriangle,
 } from "lucide-react";
 import { AuditDashboardWidget } from "@/components/audit/audit-dashboard-widget";
 
@@ -46,8 +50,23 @@ const settingsCards = [
   },
 ];
 
+interface SuspiciousAlert {
+  type: string;
+  message: string;
+  count: number;
+}
+
 export default function DashboardPage() {
   const { user } = useAuth();
+  const [suspiciousAlerts, setSuspiciousAlerts] = useState<SuspiciousAlert[]>([]);
+
+  useEffect(() => {
+    if (!user?.is_admin) return;
+    api
+      .get<{ alerts: SuspiciousAlert[]; has_alerts: boolean }>("/suspicious-activity")
+      .then((res) => res.data.has_alerts && setSuspiciousAlerts(res.data.alerts))
+      .catch(() => {});
+  }, [user?.is_admin]);
 
   return (
     <div className="container py-8">
@@ -101,6 +120,22 @@ export default function DashboardPage() {
               </Card>
             </Link>
           </div>
+
+          {suspiciousAlerts.length > 0 && (
+            <Alert variant="destructive" className="mt-8">
+              <AlertTriangle className="h-4 w-4" />
+              <AlertTitle>Suspicious activity detected</AlertTitle>
+              <AlertDescription>
+                {suspiciousAlerts.map((a) => a.message).join(" ")}
+                <Link
+                  href="/configuration/audit"
+                  className="ml-2 font-medium underline underline-offset-4"
+                >
+                  View audit log
+                </Link>
+              </AlertDescription>
+            </Alert>
+          )}
 
           <div className="mt-8">
             <h2 className="text-xl font-semibold mb-4">System Activity</h2>

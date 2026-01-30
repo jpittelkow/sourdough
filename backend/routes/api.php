@@ -29,6 +29,10 @@ use App\Http\Controllers\Api\LLMSettingController;
 use App\Http\Controllers\Api\SSOSettingController;
 use App\Http\Controllers\Api\UserSettingController;
 use App\Http\Controllers\Api\UserNotificationSettingsController;
+use App\Http\Controllers\Api\AccessLogController;
+use App\Http\Controllers\Api\AppLogExportController;
+use App\Http\Controllers\Api\LogRetentionController;
+use App\Http\Controllers\Api\SuspiciousActivityController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -59,6 +63,10 @@ Route::post('/client-errors', [ClientErrorController::class, 'store'])
 */
 
 Route::prefix('auth')->group(function () {
+    // Email availability check for signup (rate limited to prevent enumeration)
+    Route::post('/check-email', [AuthController::class, 'checkEmail'])
+        ->middleware('throttle:10,1');
+
     // Registration & Login (rate limited)
     Route::post('/register', [AuthController::class, 'register'])
         ->middleware('rate.sensitive:register');
@@ -113,20 +121,20 @@ Route::prefix('auth')->group(function () {
 
 Route::middleware(['auth:sanctum'])->group(function () {
     
-    // Profile
-    Route::prefix('profile')->group(function () {
+    // Profile (access logging: User, self)
+    Route::prefix('profile')->middleware('log.access:User')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
         Route::put('/', [ProfileController::class, 'update']);
         Route::put('/password', [ProfileController::class, 'updatePassword']);
         Route::delete('/', [ProfileController::class, 'destroy']);
     });
-    
-    // User Settings (Personal preferences - not admin-only)
+
+    // User Settings (access logging: Setting, self)
     Route::prefix('user')->group(function () {
-        Route::get('/settings', [UserSettingController::class, 'show']);
-        Route::put('/settings', [UserSettingController::class, 'update']);
-        Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show']);
-        Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update']);
+        Route::get('/settings', [UserSettingController::class, 'show'])->middleware('log.access:Setting');
+        Route::put('/settings', [UserSettingController::class, 'update'])->middleware('log.access:Setting');
+        Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show'])->middleware('log.access:Setting');
+        Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update'])->middleware('log.access:Setting');
     });
     
     // Settings (Admin only)
@@ -186,8 +194,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{filename}', [BackupController::class, 'destroy']);
     });
     
-    // User Management (Admin only)
-    Route::prefix('users')->middleware('can:admin')->group(function () {
+    // User Management (Admin only, access logging: User)
+    Route::prefix('users')->middleware(['can:admin', 'log.access:User'])->group(function () {
         Route::get('/', [UserController::class, 'index']);
         Route::post('/', [UserController::class, 'store']);
         Route::get('/{user}', [UserController::class, 'show']);
@@ -205,6 +213,28 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/export', [AuditLogController::class, 'export']);
         Route::get('/stats', [AuditLogController::class, 'stats']);
     });
+
+    // Access Logs / HIPAA (Admin only)
+    Route::prefix('access-logs')->middleware('can:admin')->group(function () {
+        Route::get('/', [AccessLogController::class, 'index']);
+        Route::get('/export', [AccessLogController::class, 'export']);
+        Route::get('/stats', [AccessLogController::class, 'stats']);
+        Route::delete('/', [AccessLogController::class, 'deleteAll']);
+    });
+
+    // Application logs export (Admin only; reads from file logs)
+    Route::prefix('app-logs')->middleware('can:admin')->group(function () {
+        Route::get('/export', [AppLogExportController::class, 'export']);
+    });
+
+    // Log retention and cleanup config (Admin only)
+    Route::prefix('log-retention')->middleware('can:admin')->group(function () {
+        Route::get('/', [LogRetentionController::class, 'show']);
+        Route::put('/', [LogRetentionController::class, 'update']);
+    });
+
+    // Suspicious activity alerts (Admin only; read-only for dashboard)
+    Route::get('/suspicious-activity', [SuspiciousActivityController::class, 'index'])->middleware('can:admin');
     
     // Email Templates (Admin only)
     Route::prefix('email-templates')->middleware('can:manage-settings')->group(function () {
@@ -259,6 +289,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
     // Jobs (Admin only)
     Route::prefix('jobs')->middleware('can:admin')->group(function () {
         Route::get('/scheduled', [JobController::class, 'scheduled']);
+        Route::post('/run/{command}', [JobController::class, 'run']);
         Route::get('/queue', [JobController::class, 'queueStatus']);
         Route::get('/failed', [JobController::class, 'failedJobs']);
         Route::post('/failed/{id}/retry', [JobController::class, 'retryJob']);

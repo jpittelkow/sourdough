@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
             '2fa' => \App\Http\Middleware\Ensure2FAVerified::class,
             'rate.sensitive' => \App\Http\Middleware\RateLimitSensitive::class,
+            'log.access' => \App\Http\Middleware\LogResourceAccess::class,
         ]);
 
         // Enable stateful API authentication with session support

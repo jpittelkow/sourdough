@@ -46,3 +46,8 @@ if (config('backup.schedule.enabled')) {
 Schedule::command('queue:monitor')
     ->everyFiveMinutes()
     ->withoutOverlapping();
+
+// Suspicious activity check (failed logins, bulk exports)
+Schedule::command('log:check-suspicious')
+    ->everyFifteenMinutes()
+    ->withoutOverlapping(15);

@@ -17,7 +17,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Settings | [ADR-012](../adr/012-admin-only-settings.md), [ADR-014](../adr/014-database-settings-env-fallback.md), `backend/app/Services/SettingService.php`, `backend/config/settings-schema.php`, `frontend/app/(dashboard)/configuration/` |
 | Backup & Restore | [ADR-007](../adr/007-backup-system-design.md), `backend/app/Services/Backup/BackupService.php`, `backend/config/settings-schema.php` (backup group), [add-backup-destination](recipes/add-backup-destination.md), [extend-backup-restore](recipes/extend-backup-restore.md) |
 | Auth | [ADR-002](../adr/002-authentication-architecture.md), `backend/app/Http/Controllers/Api/AuthController.php` |
-| Logging | [Logging](../logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [extend-logging](recipes/extend-logging.md) |
+| Logging | [Logging](../logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [extend-logging](recipes/extend-logging.md), [add-access-logging](recipes/add-access-logging.md) |
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
 
@@ -52,6 +52,8 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Add Config Page | [add-config-page.md](recipes/add-config-page.md) |
 | Add Settings Page | [add-settings-page.md](recipes/add-settings-page.md) |
 | Add UI Component | [add-ui-component.md](recipes/add-ui-component.md) |
+| Add Collapsible Section | [add-collapsible-section.md](recipes/add-collapsible-section.md) |
+| Add Provider Icon | [add-provider-icon.md](recipes/add-provider-icon.md) |
 | Add Notification Channel | [add-notification-channel.md](recipes/add-notification-channel.md) |
 | Trigger Notifications | [trigger-notifications.md](recipes/trigger-notifications.md) |
 | Add Dashboard Widget | [add-dashboard-widget.md](recipes/add-dashboard-widget.md) |
@@ -61,6 +63,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Extend Backup & Restore | [extend-backup-restore.md](recipes/extend-backup-restore.md) |
 | Add Email Template | [add-email-template.md](recipes/add-email-template.md) |
 | Extend Logging | [extend-logging.md](recipes/extend-logging.md) |
+| Add Access Logging (HIPAA) | [add-access-logging.md](recipes/add-access-logging.md) |
 | Add Tests | [add-tests.md](recipes/add-tests.md) |
 | Make Responsive | [make-component-responsive.md](recipes/make-component-responsive.md) |
 

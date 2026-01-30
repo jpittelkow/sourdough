@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,11 +24,20 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
   Loader2,
   RefreshCw,
   Trash2,
   Play,
   AlertCircle,
+  AlertTriangle,
   CheckCircle,
 } from "lucide-react";
 
@@ -35,6 +45,10 @@ interface ScheduledTask {
   command: string;
   schedule: string;
   description: string;
+  triggerable?: boolean;
+  dangerous?: boolean;
+  last_run?: { at: string; status: string } | null;
+  next_run?: string | null;
 }
 
 interface FailedJob {
@@ -61,6 +75,13 @@ export default function JobsPage() {
   const [isLoadingScheduled, setIsLoadingScheduled] = useState(false);
   const [isLoadingQueue, setIsLoadingQueue] = useState(false);
   const [isLoadingFailed, setIsLoadingFailed] = useState(false);
+  const [runTarget, setRunTarget] = useState<ScheduledTask | null>(null);
+  const [isRunning, setIsRunning] = useState(false);
+  const [runResult, setRunResult] = useState<{
+    success: boolean;
+    output: string;
+    duration_ms: number;
+  } | null>(null);
 
   useEffect(() => {
     fetchAll();
@@ -164,6 +185,76 @@ export default function JobsPage() {
     }
   };
 
+  const handleRunNow = (task: ScheduledTask) => {
+    setRunTarget(task);
+    setRunResult(null);
+  };
+
+  const confirmRunNow = async () => {
+    if (!runTarget) return;
+
+    setIsRunning(true);
+    setRunResult(null);
+
+    try {
+      const response = await api.post<{
+        success: boolean;
+        output?: string;
+        duration_ms?: number;
+      }>(`/jobs/run/${encodeURIComponent(runTarget.command)}`, {
+        options: {},
+      });
+
+      const success = response.data?.success ?? false;
+      const output = response.data?.output ?? "";
+      const durationMs = response.data?.duration_ms ?? 0;
+
+      setRunResult({
+        success,
+        output,
+        duration_ms: durationMs,
+      });
+
+      if (success) {
+        toast.success(
+          `${runTarget.command} completed in ${durationMs}ms`
+        );
+        setRunTarget(null);
+        fetchScheduled();
+      } else {
+        toast.error(`${runTarget.command} failed`);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Request failed";
+      setRunResult({
+        success: false,
+        output: message,
+        duration_ms: 0,
+      });
+      toast.error(message);
+      errorLogger.report(
+        err instanceof Error ? err : new Error("Run command failed"),
+        { command: runTarget.command }
+      );
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
+  const closeRunDialog = () => {
+    if (!isRunning) {
+      setRunTarget(null);
+      setRunResult(null);
+    }
+  };
+
+  const formatLastRun = (task: ScheduledTask) => {
+    const lr = task.last_run;
+    if (!lr) return "Never";
+    const date = new Date(lr.at).toLocaleString();
+    return `${date} (${lr.status})`;
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -212,20 +303,49 @@ export default function JobsPage() {
                       <TableRow>
                         <TableHead>Command</TableHead>
                         <TableHead>Schedule</TableHead>
+                        <TableHead>Last Run</TableHead>
                         <TableHead>Description</TableHead>
+                        <TableHead className="w-[100px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {scheduledTasks.map((task, index) => (
-                        <TableRow key={index}>
+                        <TableRow key={`${task.command}-${index}`}>
                           <TableCell className="font-mono text-sm">
                             {task.command}
+                            {task.dangerous && (
+                              <Badge
+                                variant="outline"
+                                className="ml-2 text-amber-600 border-amber-600"
+                              >
+                                Destructive
+                              </Badge>
+                            )}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">{task.schedule}</Badge>
                           </TableCell>
+                          <TableCell className="text-muted-foreground text-sm">
+                            {formatLastRun(task)}
+                          </TableCell>
                           <TableCell className="text-muted-foreground">
                             {task.description || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {task.triggerable ? (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleRunNow(task)}
+                              >
+                                <Play className="mr-2 h-4 w-4" />
+                                Run Now
+                              </Button>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">
+                                —
+                              </span>
+                            )}
                           </TableCell>
                         </TableRow>
                       ))}
@@ -394,6 +514,78 @@ export default function JobsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={!!runTarget} onOpenChange={(open) => !open && closeRunDialog()}>
+        <DialogContent
+          className="max-w-lg"
+          onInteractOutside={(e) => isRunning && e.preventDefault()}
+          onEscapeKeyDown={(e) => isRunning && e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {runResult !== null ? (
+                runResult.success ? (
+                  <>
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    Command completed
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="h-5 w-5 text-destructive" />
+                    Command failed
+                  </>
+                )
+              ) : (
+                <>Run command</>
+              )}
+            </DialogTitle>
+            <DialogDescription>
+              {runTarget && runResult === null && (
+                <>
+                  Run <code className="font-mono text-sm">{runTarget.command}</code> now?
+                  {runTarget.dangerous && (
+                    <span className="mt-2 flex items-center gap-2 text-amber-600">
+                      <AlertTriangle className="h-4 w-4 shrink-0" />
+                      This action can delete or modify data.
+                    </span>
+                  )}
+                </>
+              )}
+              {runTarget && runResult !== null && (
+                <>Completed in {runResult.duration_ms}ms</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {isRunning && (
+            <div className="flex items-center gap-2 py-4">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span>Running {runTarget?.command}…</span>
+            </div>
+          )}
+
+          {runResult !== null && !isRunning && (
+            <div className="space-y-2">
+              <pre className="max-h-48 overflow-auto rounded bg-muted p-3 text-xs whitespace-pre-wrap">
+                {runResult.output || "(no output)"}
+              </pre>
+            </div>
+          )}
+
+          <DialogFooter>
+            {runResult !== null && !isRunning ? (
+              <Button onClick={closeRunDialog}>Close</Button>
+            ) : !isRunning ? (
+              <>
+                <Button variant="outline" onClick={closeRunDialog}>
+                  Cancel
+                </Button>
+                <Button onClick={confirmRunNow}>Run now</Button>
+              </>
+            ) : null}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

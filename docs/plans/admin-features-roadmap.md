@@ -33,8 +33,10 @@ Admin-focused settings expansions for comprehensive application management.
 - [x] Add password policy settings
 
 ### Scheduled Tasks (MEDIUM Priority)
-- [ ] Build Scheduled Tasks/Jobs monitoring and configuration
-- [ ] Add backup schedule configuration
+- [x] Build Scheduled Tasks/Jobs monitoring and configuration
+- [x] Add manual trigger (Run Now) for whitelisted commands (backup:run, log:cleanup, log:check-suspicious)
+- [x] Add last run / run history (task_runs table)
+- [ ] Add backup schedule configuration (existing in Backup & Restore settings)
 - [ ] Add notification digest settings
 
 ### Audit Log (MEDIUM Priority)

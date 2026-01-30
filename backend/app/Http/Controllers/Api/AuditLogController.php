@@ -19,6 +19,7 @@ class AuditLogController extends Controller
         $userId = $request->input('user_id');
         $action = $request->input('action');
         $severity = $request->input('severity');
+        $correlationId = $request->input('correlation_id');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -35,6 +36,10 @@ class AuditLogController extends Controller
 
         if ($severity) {
             $query->where('severity', $severity);
+        }
+
+        if ($correlationId !== null && $correlationId !== '') {
+            $query->where('correlation_id', $correlationId);
         }
 
         if ($dateFrom) {
@@ -58,6 +63,7 @@ class AuditLogController extends Controller
         $userId = $request->input('user_id');
         $action = $request->input('action');
         $severity = $request->input('severity');
+        $correlationId = $request->input('correlation_id');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -73,6 +79,10 @@ class AuditLogController extends Controller
 
         if ($severity) {
             $query->where('severity', $severity);
+        }
+
+        if ($correlationId !== null && $correlationId !== '') {
+            $query->where('correlation_id', $correlationId);
         }
 
         if ($dateFrom) {
@@ -102,6 +112,7 @@ class AuditLogController extends Controller
                 'User',
                 'Action',
                 'Severity',
+                'Correlation ID',
                 'IP Address',
                 'User Agent',
             ]);
@@ -114,6 +125,7 @@ class AuditLogController extends Controller
                     $log->user ? $log->user->email : 'System',
                     $log->action,
                     $log->severity ?? 'info',
+                    $log->correlation_id ?? '',
                     $log->ip_address ?? '',
                     $log->user_agent ?? '',
                 ]);

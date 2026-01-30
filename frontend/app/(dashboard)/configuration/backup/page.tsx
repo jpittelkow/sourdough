@@ -18,6 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { ProviderIcon } from "@/components/provider-icons";
 import {
   Dialog,
   DialogContent,
@@ -694,15 +696,17 @@ export default function BackupPage() {
               </Card>
 
               {/* S3 */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Cloud className="h-5 w-5" />
-                    Amazon S3
-                  </CardTitle>
-                  <CardDescription>Store backups in an S3 bucket.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <CollapsibleCard
+                title="Amazon S3"
+                description="Store backups in an S3 bucket."
+                icon={<ProviderIcon provider="s3" size="sm" style="mono" />}
+                status={{
+                  label: watch("s3_enabled") ? "Enabled" : "Disabled",
+                  variant: watch("s3_enabled") ? "success" : "default",
+                }}
+                defaultOpen={false}
+              >
+                <div className="space-y-4">
                   <SettingsSwitchRow
                     label="Enable S3 destination"
                     checked={watch("s3_enabled")}
@@ -735,19 +739,21 @@ export default function BackupPage() {
                     {testingDestination === "s3" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Test Connection
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </CollapsibleCard>
 
               {/* SFTP */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Server className="h-5 w-5" />
-                    SFTP
-                  </CardTitle>
-                  <CardDescription>Store backups on an SFTP server.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <CollapsibleCard
+                title="SFTP"
+                description="Store backups on an SFTP server."
+                icon={<Server className="h-4 w-4" />}
+                status={{
+                  label: watch("sftp_enabled") ? "Enabled" : "Disabled",
+                  variant: watch("sftp_enabled") ? "success" : "default",
+                }}
+                defaultOpen={false}
+              >
+                <div className="space-y-4">
                   <SettingsSwitchRow
                     label="Enable SFTP destination"
                     checked={watch("sftp_enabled")}
@@ -777,19 +783,21 @@ export default function BackupPage() {
                     {testingDestination === "sftp" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Test Connection
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </CollapsibleCard>
 
               {/* Google Drive */}
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Cloud className="h-5 w-5" />
-                    Google Drive
-                  </CardTitle>
-                  <CardDescription>Store backups in Google Drive.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
+              <CollapsibleCard
+                title="Google Drive"
+                description="Store backups in Google Drive."
+                icon={<ProviderIcon provider="gdrive" size="sm" style="mono" />}
+                status={{
+                  label: watch("gdrive_enabled") ? "Enabled" : "Disabled",
+                  variant: watch("gdrive_enabled") ? "success" : "default",
+                }}
+                defaultOpen={false}
+              >
+                <div className="space-y-4">
                   <SettingsSwitchRow
                     label="Enable Google Drive destination"
                     checked={watch("gdrive_enabled")}
@@ -816,8 +824,8 @@ export default function BackupPage() {
                     {testingDestination === "google_drive" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
                     Test Connection
                   </Button>
-                </CardContent>
-              </Card>
+                </div>
+              </CollapsibleCard>
 
               {/* Encryption */}
               <Card>

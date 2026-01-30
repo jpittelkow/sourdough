@@ -14,6 +14,7 @@ export interface AuditLogStreamPayload {
   new_values: Record<string, unknown> | null;
   ip_address: string | null;
   user_agent: string | null;
+  correlation_id: string | null;
   created_at: string;
   user?: {
     id: number;

@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CollapsibleCard } from "@/components/ui/collapsible-card";
 import {
   Select,
   SelectContent,
@@ -379,12 +380,17 @@ export default function NotificationsPage() {
           </p>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Telegram</CardTitle>
-            <CardDescription>Bot token from BotFather</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <CollapsibleCard
+          title="Telegram"
+          description="Bot token from BotFather"
+          icon={<MessageSquare className="h-4 w-4" />}
+          status={{
+            label: watch("telegram_bot_token") ? "Configured" : "Not configured",
+            variant: watch("telegram_bot_token") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="space-y-4">
             <FormField id="telegram_bot_token" label="Bot token" error={errors.telegram_bot_token?.message}>
               <Input
                 id="telegram_bot_token"
@@ -404,15 +410,20 @@ export default function NotificationsPage() {
             >
               {testingChannel === "telegram" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Discord</CardTitle>
-            <CardDescription>Webhook URL and optional display name</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Discord"
+          description="Webhook URL and optional display name"
+          icon={<MessageSquare className="h-4 w-4" />}
+          status={{
+            label: watch("discord_webhook_url") ? "Configured" : "Not configured",
+            variant: watch("discord_webhook_url") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="discord_webhook_url" label="Webhook URL" error={errors.discord_webhook_url?.message}>
               <Input
                 id="discord_webhook_url"
@@ -440,15 +451,20 @@ export default function NotificationsPage() {
                 {testingChannel === "discord" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Slack</CardTitle>
-            <CardDescription>Webhook URL and optional display</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Slack"
+          description="Webhook URL and optional display"
+          icon={<MessageSquare className="h-4 w-4" />}
+          status={{
+            label: watch("slack_webhook_url") ? "Configured" : "Not configured",
+            variant: watch("slack_webhook_url") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="slack_webhook_url" label="Webhook URL" error={errors.slack_webhook_url?.message}>
               <Input
                 id="slack_webhook_url"
@@ -476,15 +492,20 @@ export default function NotificationsPage() {
                 {testingChannel === "slack" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Signal</CardTitle>
-            <CardDescription>signal-cli path and phone number</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Signal"
+          description="signal-cli path and phone number"
+          icon={<Phone className="h-4 w-4" />}
+          status={{
+            label: watch("signal_cli_path") || watch("signal_phone_number") ? "Configured" : "Not configured",
+            variant: watch("signal_cli_path") || watch("signal_phone_number") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="signal_cli_path" label="CLI path" error={errors.signal_cli_path?.message}>
               <Input id="signal_cli_path" placeholder="/usr/local/bin/signal-cli" {...register("signal_cli_path")} className="min-h-[44px]" />
             </FormField>
@@ -506,15 +527,20 @@ export default function NotificationsPage() {
                 {testingChannel === "signal" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Twilio (SMS)</CardTitle>
-            <CardDescription>Account SID, token, and from number</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Twilio (SMS)"
+          description="Account SID, token, and from number"
+          icon={<Phone className="h-4 w-4" />}
+          status={{
+            label: watch("twilio_sid") && watch("twilio_token") ? "Configured" : "Not configured",
+            variant: watch("twilio_sid") && watch("twilio_token") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="twilio_sid" label="Account SID" error={errors.twilio_sid?.message}>
               <Input id="twilio_sid" placeholder="Optional" {...register("twilio_sid")} className="min-h-[44px]" />
             </FormField>
@@ -536,15 +562,20 @@ export default function NotificationsPage() {
                 {testingChannel === "twilio" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Vonage (SMS)</CardTitle>
-            <CardDescription>API key, secret, and from number</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Vonage (SMS)"
+          description="API key, secret, and from number"
+          icon={<Phone className="h-4 w-4" />}
+          status={{
+            label: watch("vonage_api_key") && watch("vonage_api_secret") ? "Configured" : "Not configured",
+            variant: watch("vonage_api_key") && watch("vonage_api_secret") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="vonage_api_key" label="API key" error={errors.vonage_api_key?.message}>
               <Input id="vonage_api_key" placeholder="Optional" {...register("vonage_api_key")} className="min-h-[44px]" />
             </FormField>
@@ -566,15 +597,20 @@ export default function NotificationsPage() {
                 {testingChannel === "vonage" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">AWS SNS (SMS)</CardTitle>
-            <CardDescription>Uses mail SES AWS credentials. Enable SNS here.</CardDescription>
-          </CardHeader>
-          <CardContent>
+        <CollapsibleCard
+          title="AWS SNS (SMS)"
+          description="Uses mail SES AWS credentials. Enable SNS here."
+          icon={<Phone className="h-4 w-4" />}
+          status={{
+            label: watch("sns_enabled") ? "Enabled" : "Disabled",
+            variant: watch("sns_enabled") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <Label>Enable SNS</Label>
@@ -586,15 +622,20 @@ export default function NotificationsPage() {
                 className="min-h-[44px]"
               />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Web Push (VAPID)</CardTitle>
-            <CardDescription>VAPID keys for web push notifications</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Web Push (VAPID)"
+          description="VAPID keys for web push notifications"
+          icon={<Bell className="h-4 w-4" />}
+          status={{
+            label: watch("vapid_public_key") && watch("vapid_private_key") ? "Configured" : "Not configured",
+            variant: watch("vapid_public_key") && watch("vapid_private_key") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="vapid_public_key" label="Public key" error={errors.vapid_public_key?.message}>
               <Input id="vapid_public_key" placeholder="Optional" {...register("vapid_public_key")} className="min-h-[44px]" />
             </FormField>
@@ -616,15 +657,20 @@ export default function NotificationsPage() {
                 {testingChannel === "webpush" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Firebase Cloud Messaging</CardTitle>
-            <CardDescription>FCM server key</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <CollapsibleCard
+          title="Firebase Cloud Messaging"
+          description="FCM server key"
+          icon={<Bell className="h-4 w-4" />}
+          status={{
+            label: watch("fcm_server_key") ? "Configured" : "Not configured",
+            variant: watch("fcm_server_key") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="space-y-4">
             <FormField id="fcm_server_key" label="Server key" error={errors.fcm_server_key?.message}>
               <Input id="fcm_server_key" type="password" placeholder="Optional" {...register("fcm_server_key")} className="min-h-[44px]" />
             </FormField>
@@ -638,15 +684,20 @@ export default function NotificationsPage() {
             >
               {testingChannel === "fcm" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">ntfy</CardTitle>
-            <CardDescription>Enable and optional server URL</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <CollapsibleCard
+          title="ntfy"
+          description="Enable and optional server URL"
+          icon={<Bell className="h-4 w-4" />}
+          status={{
+            label: watch("ntfy_enabled") ? "Enabled" : "Disabled",
+            variant: watch("ntfy_enabled") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <Label>Enable ntfy</Label>
               <Switch
@@ -668,15 +719,20 @@ export default function NotificationsPage() {
             >
               {testingChannel === "ntfy" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
             </Button>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Matrix</CardTitle>
-            <CardDescription>Homeserver, access token, and default room</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
+        <CollapsibleCard
+          title="Matrix"
+          description="Homeserver, access token, and default room"
+          icon={<MessageSquare className="h-4 w-4" />}
+          status={{
+            label: watch("matrix_homeserver") && watch("matrix_access_token") ? "Configured" : "Not configured",
+            variant: watch("matrix_homeserver") && watch("matrix_access_token") ? "success" : "default",
+          }}
+          defaultOpen={false}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
             <FormField id="matrix_homeserver" label="Homeserver URL" error={errors.matrix_homeserver?.message}>
               <Input id="matrix_homeserver" placeholder="https://matrix.example.com" {...register("matrix_homeserver")} className="min-h-[44px]" />
             </FormField>
@@ -698,8 +754,8 @@ export default function NotificationsPage() {
                 {testingChannel === "matrix" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Test"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </CollapsibleCard>
 
         <Card>
           <CardFooter className="flex flex-col gap-4 sm:flex-row sm:justify-between">

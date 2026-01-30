@@ -57,6 +57,7 @@ class AuditLogCreated implements ShouldBroadcastNow
             'new_values' => $log->new_values,
             'ip_address' => $log->ip_address,
             'user_agent' => $log->user_agent,
+            'correlation_id' => $log->correlation_id,
             'created_at' => $log->created_at->toIso8601String(),
             'user' => $log->user?->only(['id', 'name', 'email']),
         ];

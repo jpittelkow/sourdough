@@ -9,7 +9,8 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
+import { PasswordStrength } from "@/components/ui/password-strength";
 import {
   Card,
   CardContent,
@@ -48,11 +49,14 @@ function ResetPasswordContent() {
 
   const {
     register,
+    watch,
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordForm>({
     resolver: zodResolver(resetPasswordSchema),
   });
+
+  const passwordValue = watch("password");
 
   const onSubmit = async (data: ResetPasswordForm) => {
     if (!token || !email) {
@@ -151,23 +155,22 @@ function ResetPasswordContent() {
               label="New Password"
               error={errors.password?.message}
             >
-              <Input
+              <PasswordInput
                 id="password"
-                type="password"
                 placeholder="••••••••"
                 {...register("password")}
                 disabled={isLoading}
               />
             </FormField>
+            <PasswordStrength password={passwordValue ?? ""} showRequirements className="mt-1" />
 
             <FormField
               id="password_confirmation"
               label="Confirm New Password"
               error={errors.password_confirmation?.message}
             >
-              <Input
+              <PasswordInput
                 id="password_confirmation"
-                type="password"
                 placeholder="••••••••"
                 {...register("password_confirmation")}
                 disabled={isLoading}

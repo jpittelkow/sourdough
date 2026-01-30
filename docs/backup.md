@@ -13,6 +13,7 @@ Backup and restore is a core feature for self-hosted deployments. This page is t
 - **Database** – All application data (users, settings, notifications, etc.). SQLite: file copy; MySQL/PostgreSQL: export compatible with the current implementation.
 - **Files** – Uploaded files under `storage/app/public` (avatars, attachments, etc.).
 - **Settings** – Application settings stored in the database (exported; sensitive values handled securely).
+- **Access logs** – HIPAA access logs (`access_logs` table) exported as `access_logs.json`; restored with merge-by-ID. See [Logging](logging.md#hipaa-access-logging).
 
 Backups are ZIP archives with a `manifest.json` that describes version and contents ([ADR-007: Backup System Design](adr/007-backup-system-design.md)).
 

@@ -14,10 +14,6 @@ Ready to start. These are unblocked and can begin immediately.
 
 | Item | Priority | Source | Notes |
 |------|----------|--------|-------|
-| Log Storage & Archival | MEDIUM | [Audit Logs](plans/audit-logs-roadmap.md) | Evaluate storage options, implement archival, add indexes |
-| Suspicious Activity Alerting | LOW | [Audit Logs](plans/audit-logs-roadmap.md) | Alert on suspicious patterns |
-| Scheduled Tasks/Jobs UI | MEDIUM | [Admin Features](plans/admin-features-roadmap.md) | Jobs monitoring, backup schedule config, digest settings |
-| Additional Notification Providers | MEDIUM | [Notifications](plans/notifications-roadmap.md) | ntfy channel, Novu integration |
 | LLM Provider Expansion | LOW | [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | Azure OpenAI, AWS Bedrock discovery |
 | Version Automation | LOW | [Versioning System](plans/versioning-system-roadmap.md) | Bump scripts, GitHub Actions, auto-release |
 
@@ -27,17 +23,15 @@ Requires foundation work or longer-term planning.
 
 | Roadmap | Priority | Dependencies |
 |---------|----------|--------------|
-| [Configuration Navigation Redesign](plans/config-navigation-redesign-roadmap.md) | MEDIUM | None |
-| [Web Push Notifications](plans/web-push-notifications-roadmap.md) | MEDIUM | None |
+| [Progressive Web App (PWA)](plans/pwa-roadmap.md) | MEDIUM | None |
+| [Web Push Notifications](plans/web-push-notifications-roadmap.md) | MEDIUM | Incorporated into PWA roadmap |
 | [SSO Settings Enhancement](plans/sso-settings-enhancement-roadmap.md) | MEDIUM | None |
 | [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | MEDIUM | ✅ Email Config (complete) |
 | [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Audit Logs (complete) |
 | [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | MEDIUM | None |
 | [Documentation Audit](plans/documentation-audit-roadmap.md) | MEDIUM | None |
 | [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
-| [Branded Iconography](plans/branded-iconography-roadmap.md) | LOW | None |
 | [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
-| [Collapsible Settings UI](plans/collapsible-settings-ui-roadmap.md) | LOW | None |
 
 ## Completed (Core Done)
 
@@ -45,10 +39,12 @@ High-priority work complete. Some optional/lower-priority items remain—see "Ne
 
 | Roadmap | Completed | Remaining Work |
 |---------|-----------|----------------|
-| [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Log storage/archival, alerting |
-| [Admin Features](plans/admin-features-roadmap.md) | 2026-01-29 | Scheduled Tasks UI, Message Templates |
+| [Auth UI Redesign](plans/auth-ui-redesign-roadmap.md) | 2026-01-29 | Optional: illustrations, page transitions |
+| [Logging](plans/logging-roadmap.md) | 2026-01-29 | Optional: archival, aggregation, scheduled export |
+| [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Optional: external storage, aggregation |
+| [Admin Features](plans/admin-features-roadmap.md) | 2026-01-29 | Message Templates, notification digest settings |
 | [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | 2026-01-29 | Azure/Bedrock providers, client caching |
-| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | ntfy/Novu providers, user docs |
+| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | User docs (optional) |
 | [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-27 | Phases 2-4 (automation, scripts, actions) |
 | [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 | QA/testing items (optional) |
 
@@ -66,6 +62,9 @@ All tasks complete.
 | [Settings Restructure](plans/settings-restructure-roadmap.md) | 2026-01-27 |
 | [Critical Fixes](plans/critical-fixes-roadmap.md) | 2026-01-27 |
 | [shadcn/ui CLI Setup](plans/shadcn-cli-setup-roadmap.md) | 2026-01-27 |
+| [Configuration Navigation Redesign](plans/config-navigation-redesign-roadmap.md) | 2026-01-29 |
+| [Collapsible Settings UI](plans/collapsible-settings-ui-roadmap.md) | 2026-01-29 |
+| [Branded Iconography](plans/branded-iconography-roadmap.md) | 2026-01-29 |
 
 ## Journal Entries
 
@@ -73,6 +72,11 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-01-29 | [Configuration Navigation Redesign](journal/2026-01-29-config-nav-redesign.md) |
+| 2026-01-29 | [Scheduled Tasks/Jobs UI (Run Now & History)](journal/2026-01-29-scheduled-jobs-ui.md) |
+| 2026-01-29 | [Live Console Logs & HIPAA Access Logging](journal/2026-01-29-live-logs-hipaa-logging.md) |
+| 2026-01-29 | [Access Logs Field Tracking](journal/2026-01-29-access-logs-field-tracking.md) |
+| 2026-01-29 | [HIPAA Access Logging Toggle](journal/2026-01-29-hipaa-logging-toggle.md) |
 | 2026-01-29 | [Console and Application Logging](journal/2026-01-29-console-app-logging.md) |
 | 2026-01-29 | [Audit Dashboard Analytics (Phase 2)](journal/2026-01-29-audit-dashboard-analytics.md) |
 | 2026-01-29 | [Audit Extended Features (Real-time Streaming & Structured Logging)](journal/2026-01-29-audit-extended-features.md) |

@@ -9,6 +9,7 @@ The REST API is available at `/api`. Key endpoints:
 
 ```
 Authentication:
+  POST   /api/auth/check-email   Check email availability for signup (body: email; rate limited)
   POST   /api/auth/register
   POST   /api/auth/login
   POST   /api/auth/logout

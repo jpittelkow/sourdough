@@ -59,6 +59,8 @@ class AuditService
         $oldValues = $this->filterSensitive($oldValues);
         $newValues = $this->filterSensitive($newValues);
 
+        $correlationId = app()->bound('correlation_id') ? app('correlation_id') : null;
+
         try {
             $log = AuditLog::create([
                 'user_id' => $userId,
@@ -70,6 +72,7 @@ class AuditService
                 'new_values' => !empty($newValues) ? $newValues : null,
                 'ip_address' => $ipAddress,
                 'user_agent' => $userAgent,
+                'correlation_id' => $correlationId,
             ]);
             $log->load('user');
             event(new AuditLogCreated($log));

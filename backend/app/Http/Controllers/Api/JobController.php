@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
+use App\Services\ScheduledTaskService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
@@ -10,46 +12,158 @@ use Illuminate\Support\Facades\DB;
 
 class JobController extends Controller
 {
+    public function __construct(
+        private ScheduledTaskService $scheduledTaskService,
+        private AuditService $auditService
+    ) {}
+
     /**
-     * Get scheduled tasks.
+     * Get scheduled tasks with enhanced metadata (next run, last run, triggerable).
      */
     public function scheduled(): JsonResponse
     {
         try {
-            // Run schedule:list command and capture output
             Artisan::call('schedule:list');
             $output = Artisan::output();
 
-            // Parse the output (this is a simplified version)
-            // In production, you might want to parse this more carefully
-            $tasks = [];
-            $lines = explode("\n", trim($output));
-            
-            foreach ($lines as $line) {
-                if (empty(trim($line)) || strpos($line, 'Command') !== false) {
-                    continue;
-                }
-                
-                // Basic parsing - adjust based on actual Laravel schedule:list output format
-                if (preg_match('/^(.+?)\s+(\d+.*?)\s+(.+)$/', $line, $matches)) {
-                    $tasks[] = [
-                        'command' => trim($matches[1] ?? ''),
-                        'schedule' => trim($matches[2] ?? ''),
-                        'description' => trim($matches[3] ?? ''),
-                    ];
+            $tasks = $this->parseScheduleListOutput($output);
+
+            foreach ($tasks as &$task) {
+                $command = $task['command'];
+                $task['triggerable'] = $this->scheduledTaskService->isTriggerable($command);
+                $task['last_run'] = $this->scheduledTaskService->getLastRun($command);
+
+                if ($task['triggerable']) {
+                    $meta = $this->scheduledTaskService->getCommandMeta($command);
+                    $task['dangerous'] = $meta['dangerous'] ?? false;
+                    if (! empty($meta['description'])) {
+                        $task['description'] = $meta['description'];
+                    }
+                } else {
+                    $task['dangerous'] = false;
                 }
             }
+            unset($task);
 
-            return response()->json([
-                'tasks' => $tasks,
-                'raw_output' => $output, // Include raw output for debugging
-            ]);
+            $commandNames = array_column($tasks, 'command');
+            foreach ($this->scheduledTaskService->getTriggerableCommands() as $cmd => $meta) {
+                if (in_array($cmd, $commandNames, true)) {
+                    continue;
+                }
+                $tasks[] = [
+                    'command' => $cmd,
+                    'schedule' => 'Not scheduled',
+                    'description' => $meta['description'] ?? '',
+                    'next_run' => null,
+                    'triggerable' => true,
+                    'dangerous' => $meta['dangerous'] ?? false,
+                    'last_run' => $this->scheduledTaskService->getLastRun($cmd),
+                ];
+            }
+
+            return response()->json(['tasks' => $tasks]);
         } catch (\Exception $e) {
             return response()->json([
                 'tasks' => [],
                 'error' => 'Unable to retrieve scheduled tasks: ' . $e->getMessage(),
             ]);
         }
+    }
+
+    /**
+     * Parse Laravel schedule:list output into task array.
+     *
+     * @return array<int, array{command: string, schedule: string, description: string, next_run: string|null}>
+     */
+    private function parseScheduleListOutput(string $output): array
+    {
+        $tasks = [];
+        $lines = explode("\n", trim($output));
+
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || stripos($line, 'Command') !== false && str_contains($line, 'Schedule')) {
+                continue;
+            }
+            if (! str_contains($line, 'artisan ')) {
+                continue;
+            }
+            if (preg_match('/artisan\s+([a-z0-9:_-]+)/i', $line, $cmdMatch)) {
+                $command = trim($cmdMatch[1]);
+                $schedule = '';
+                $nextRun = null;
+                if (preg_match('/Next Due:\s*(.+?)(?:\s*$|\s{2,})/i', $line, $nextMatch)) {
+                    $nextRun = trim($nextMatch[1]);
+                }
+                if (preg_match('/^(\S+(?:\s+\S+){4})\s+/', $line, $cronMatch)) {
+                    $schedule = trim($cronMatch[1]);
+                }
+                $description = '';
+                if (preg_match('/' . preg_quote($command, '/') . '\s+(.+?)(?:\s+Next Due:|\s*$)/s', $line, $descMatch)) {
+                    $description = trim(preg_replace('/\.+/', '', $descMatch[1] ?? ''));
+                }
+                if ($nextRun) {
+                    $schedule = $schedule ? $schedule . ' · ' . $nextRun : $nextRun;
+                }
+                $tasks[] = [
+                    'command' => $command,
+                    'schedule' => $schedule ?: 'Scheduled',
+                    'description' => $description,
+                    'next_run' => $nextRun,
+                ];
+            }
+        }
+
+        return $tasks;
+    }
+
+    /**
+     * Run a scheduled command manually (whitelisted commands only).
+     */
+    public function run(Request $request, string $command): JsonResponse
+    {
+        if (! $this->scheduledTaskService->isTriggerable($command)) {
+            return response()->json([
+                'message' => 'Command is not allowed to be triggered manually.',
+            ], 403);
+        }
+
+        $options = $request->input('options', []);
+        if (! is_array($options)) {
+            $options = [];
+        }
+
+        $userId = auth()->id();
+        $result = $this->scheduledTaskService->run($command, $userId, $options);
+
+        $this->auditService->log(
+            'scheduled_command_run',
+            null,
+            [],
+            [
+                'command' => $command,
+                'success' => $result['success'],
+                'duration_ms' => $result['duration_ms'],
+                'exit_code' => $result['exit_code'],
+            ],
+            $userId,
+            $request
+        );
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'output' => $result['output'],
+                'duration_ms' => $result['duration_ms'],
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => $result['output'],
+            'output' => $result['output'],
+            'duration_ms' => $result['duration_ms'],
+        ], 422);
     }
 
     /**

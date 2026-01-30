@@ -30,6 +30,8 @@ const routeTitles: Record<string, string> = {
   "/configuration/api": "API Keys",
   "/configuration/jobs": "Background Jobs",
   "/configuration/audit": "Audit Log",
+  "/configuration/logs": "Application Logs",
+  "/configuration/access-logs": "Access Logs (HIPAA)",
   "/configuration/users": "User Management",
   "/configuration/security": "Security",
   "/configuration/profile": "Profile",

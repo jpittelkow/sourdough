@@ -24,8 +24,7 @@ Complete the notifications system with in-app UI, real-time updates, and user pr
 - [x] Add WebSocket/polling for real-time notification updates (Laravel Echo + Pusher)
 
 ### Additional Providers (MEDIUM Priority)
-- [ ] Implement ntfy channel for self-hosted push notifications
-- [ ] Implement Novu channel for unified notification infrastructure
+- [x] Implement ntfy channel for self-hosted push notifications (2026-01-27)
 
 ---
 
@@ -242,29 +241,9 @@ This could be a sub-section of System Settings or Notification Settings.
 
 ---
 
-## Additional Notification Providers (MEDIUM Priority)
+## Additional Notification Providers ✅ COMPLETE
 
-Integrate additional notification providers to expand delivery options:
-
-### Novu
-
-**What**: Open-source notification infrastructure platform with unified API for multi-channel notifications.
-
-**Benefits**:
-- Single API for email, SMS, push, in-app, chat
-- Built-in notification center UI components
-- Template management and workflow automation
-- Subscriber preference management
-- Analytics and debugging tools
-
-**Integration approach**:
-- Add `NovuChannel` to `backend/app/Services/Notifications/Channels/`
-- Use Novu as a meta-channel that routes to other providers
-- Alternative: Replace NotificationOrchestrator with Novu for unified management
-
-**Links**: [novu.co](https://novu.co) | [GitHub](https://github.com/novuhq/novu)
-
-### ntfy
+### ntfy (Completed 2026-01-27)
 
 **What**: Simple HTTP-based pub/sub notification service for push notifications to phones/desktops.
 
@@ -275,20 +254,12 @@ Integrate additional notification providers to expand delivery options:
 - Supports attachments and actions
 - Free public server available
 
-**Integration approach**:
-- Add `NtfyChannel` to `backend/app/Services/Notifications/Channels/`
-- Configure server URL (self-hosted or ntfy.sh)
-- Map users to ntfy topics
+**Implementation**:
+- `NtfyChannel` in `backend/app/Services/Notifications/Channels/`
+- Configurable server URL (self-hosted or ntfy.sh)
+- User-to-topic mapping
 
 **Links**: [ntfy.sh](https://ntfy.sh) | [GitHub](https://github.com/binwiederhier/ntfy)
-
-### Task Checklist
-
-- [ ] Research Novu integration patterns
-- [x] Implement `NtfyChannel` for push notifications (2026-01-27)
-- [ ] Implement `NovuChannel` for unified notification management
-- [x] Add ntfy/Novu configuration to admin settings (2026-01-27)
-- [ ] Document provider setup in user docs
 
 ---
 
@@ -324,8 +295,7 @@ Benefits:
 | Real-Time (WebSocket) | MEDIUM | High | Laravel Echo setup |
 | Notification Preferences | MEDIUM | Medium | Settings endpoint |
 | Email Provider Admin UI | MEDIUM | High | System settings |
-| ntfy Channel Integration | MEDIUM | Low | None |
-| Novu Channel Integration | MEDIUM | Medium | None |
+| ~~ntfy Channel Integration~~ | ~~MEDIUM~~ | ~~Low~~ | ✅ Complete |
 | Notification Templates | LOW | High | None |
 
 ---

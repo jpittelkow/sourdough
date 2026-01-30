@@ -30,65 +30,60 @@ Currently, settings pages like LLM Providers, Notifications, and SSO display all
 | `/configuration/email` | SMTP settings | Single section |
 | `/user/profile` | User preferences sections | Mixed |
 
-## Phase 1: Create Collapsible Component
+## Phase 1: Create Collapsible Component ✅
 
 Create a reusable collapsible/accordion component using shadcn/ui.
 
-- [ ] Evaluate using shadcn/ui `Accordion` or `Collapsible` component
-- [ ] Create wrapper component if needed for consistent styling
-- [ ] Support single-expand vs multi-expand modes
-- [ ] Add smooth expand/collapse animations
-- [ ] Include expand/collapse icon indicator (chevron)
-- [ ] Support custom header content (icon, title, status badge)
+- [x] Evaluate using shadcn/ui `Accordion` or `Collapsible` component (used Radix Collapsible)
+- [x] Create wrapper component if needed for consistent styling (`CollapsibleCard`)
+- [x] Support single-expand vs multi-expand modes (multi-expand via multiple cards)
+- [x] Add smooth expand/collapse animations (CSS grid-rows transition)
+- [x] Include expand/collapse icon indicator (chevron)
+- [x] Support custom header content (icon, title, status badge, headerActions)
 
-**Files to create/modify:**
-- `frontend/components/ui/collapsible-card.tsx` (or use existing shadcn component)
+**Files:** `frontend/components/ui/collapsible-card.tsx`. See [Patterns: CollapsibleCard](../ai/patterns.md#collapsiblecard-pattern) and [Recipe: Add collapsible section](../ai/recipes/add-collapsible-section.md).
 
-## Phase 2: LLM Providers Page
+## Phase 2: LLM Providers Page ✅
 
 Apply collapsible sections to the LLM System settings page.
 
-- [ ] Wrap each LLM provider (OpenAI, Anthropic, Google, Ollama, etc.) in collapsible
-- [ ] Show provider name and enabled/disabled status in collapsed header
-- [ ] Collapse all by default, expand on click
-- [ ] Keep provider icon visible in collapsed state
-- [ ] Ensure save functionality works for collapsed sections
+- [x] Wrap each LLM provider (OpenAI, Anthropic, Google, Ollama, etc.) in collapsible
+- [x] Show provider name and enabled/disabled status in collapsed header
+- [x] Collapse all by default, expand on click (primary provider default open)
+- [x] Keep provider icon visible in collapsed state
+- [x] Ensure save functionality works for collapsed sections
 
-**Files to modify:**
-- `frontend/app/(dashboard)/configuration/llm-system/page.tsx`
+**Files:** `frontend/app/(dashboard)/configuration/ai/page.tsx` (AI/LLM config).
 
-## Phase 3: Notification Settings Page
+## Phase 3: Notification Settings Page ✅
 
 Apply collapsible sections to the Notifications configuration page.
 
-- [ ] Wrap each notification channel in collapsible
-- [ ] Show channel name and enabled/disabled status in header
-- [ ] Include channel icon in collapsed state
-- [ ] Group related settings logically within each collapsible
+- [x] Wrap each notification channel (credential section) in collapsible
+- [x] Show channel name and configured status in header
+- [x] Include channel icon in collapsed state
+- [x] Group related settings logically within each collapsible
 
-**Files to modify:**
-- `frontend/app/(dashboard)/configuration/notifications/page.tsx`
+**Files:** `frontend/app/(dashboard)/configuration/notifications/page.tsx`
 
-## Phase 4: SSO Providers Page
+## Phase 4: SSO Providers Page ✅
 
 Apply collapsible sections to the SSO configuration page.
 
-- [ ] Wrap each SSO provider in collapsible
-- [ ] Show provider name, logo, and configured status in header
-- [ ] Consider "Setup required" vs "Configured" visual indicators
+- [x] Wrap each SSO provider in collapsible
+- [x] Show provider name, logo, and configured status in header
+- [x] "Configured" vs "Not configured" badge in header
 
-**Files to modify:**
-- `frontend/app/(dashboard)/configuration/sso/page.tsx`
+**Files:** `frontend/app/(dashboard)/configuration/sso/page.tsx`
 
-## Phase 5: Backup Settings Page
+## Phase 5: Backup Settings Page ✅
 
 Apply collapsible sections to the Backup configuration page.
 
-- [ ] Wrap each backup provider/location in collapsible
-- [ ] Show provider name and status in header
+- [x] Wrap each backup destination (S3, SFTP, Google Drive) in collapsible
+- [x] Show provider name and status in header
 
-**Files to modify:**
-- `frontend/app/(dashboard)/configuration/backup/page.tsx`
+**Files:** `frontend/app/(dashboard)/configuration/backup/page.tsx`
 
 ## Phase 6: User Preferences Page
 
@@ -116,15 +111,13 @@ Remember which sections users have expanded.
 - [ ] Ensure forms within collapsed sections validate correctly
 - [ ] Test that save actions work regardless of collapsed state
 
-## Phase 9: Documentation
+## Phase 9: Documentation ✅
 
-- [ ] Update `docs/ai/patterns.md` with collapsible settings pattern
-- [ ] Update relevant recipes if configuration page structure changes
-- [ ] Document component usage in code comments
+- [x] Update `docs/ai/patterns.md` with CollapsibleCard pattern
+- [x] Add [Recipe: Add collapsible section](../ai/recipes/add-collapsible-section.md)
+- [x] Document component usage in code comments and docs
 
-**Files to update:**
-- `docs/ai/patterns.md`
-- `docs/features.md` (mention UI improvement)
+**Files:** `docs/ai/patterns.md`, `docs/ai/recipes/add-collapsible-section.md`, `docs/features.md`, `docs/ai/context-loading.md`
 
 ## Dependencies
 

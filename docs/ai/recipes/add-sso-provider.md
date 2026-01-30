@@ -43,7 +43,8 @@ SSO uses **Laravel Socialite** for OAuth flows. Provider credentials and options
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `frontend/app/(dashboard)/configuration/sso/page.tsx` | Modify | Add provider card and form fields |
+| `frontend/components/provider-icons.tsx` | Modify | Add provider icon to the shared icon map so **sign-in, register, and SSO config** show the correct icon |
+| `frontend/app/(dashboard)/configuration/sso/page.tsx` | Modify | Add provider card and form fields on the **SSO setup page** (Configuration > SSO) |
 
 ### Optional (custom Socialite driver)
 
@@ -136,9 +137,28 @@ In `backend/app/Http/Controllers/Api/SSOSettingController.php`, add validation r
 'example_client_secret' => ['sometimes', 'nullable', 'string', 'max:1000'],
 ```
 
-## Step 7: Add Frontend Form
+## Step 7: Add Sign-In and Config Page Icon
 
-In `frontend/app/(dashboard)/configuration/sso/page.tsx`:
+Icons are centralized in **`frontend/components/provider-icons.tsx`**. SSO buttons (`sso-buttons.tsx`) and the SSO config page both use `ProviderIcon` from this file. Add your provider's icon so sign-in, register, and Configuration > SSO show the correct icon (not the generic `key` icon).
+
+1. Open `frontend/components/provider-icons.tsx`.
+2. Add your provider to the `ProviderIconId` type (optional; `string` is accepted).
+3. Add an entry to **`SSO_ICONS`** (or `ALL_ICONS` if you prefer a single map) with the same key as `config/sso.php` (e.g. `example`):
+
+```tsx
+// In SSO_ICONS (or ALL_ICONS), add:
+example: (className) =>
+  renderSvg(
+    className,
+    <path d="M... your SVG path from official brand assets ..." />
+  ),
+```
+
+Use the same key as `config/sso.php` (e.g. `example`). The `icon` value returned by `GET /auth/sso/providers` comes from `config/sso.php`; unknown keys fall back to the `key` icon. See [Patterns: ProviderIcon](patterns.md#providericon-pattern) and the inline comments in `provider-icons.tsx`.
+
+## Step 8: Add SSO Setup Page Form
+
+In `frontend/app/(dashboard)/configuration/sso/page.tsx` (the **SSO setup page** at Configuration > SSO):
 
 1. Add the provider to the `providers` array:
 
@@ -153,7 +173,7 @@ const providers = [
 
 The existing loop over `providers` will render a card for the new provider automatically.
 
-## Step 8: Add Environment Variables
+## Step 9: Add Environment Variables
 
 In `backend/.env.example` (and root `.env.example` if present):
 
@@ -178,12 +198,13 @@ EXAMPLE_REDIRECT_URI=
 
 ### Frontend
 
-- [ ] SSO settings page: provider added to `providers` array (and schema/defaultValues if not driven by array)
+- [ ] **Sign-in/register and SSO config:** Provider icon added to `frontend/components/provider-icons.tsx` (key must match `config/sso.php` icon)
+- [ ] **SSO setup page:** Provider added to `providers` array in `frontend/app/(dashboard)/configuration/sso/page.tsx` (and schema/defaultValues if not driven by array)
 
 ### Testing
 
-- [ ] Admin can set client ID/secret in Configuration > SSO
-- [ ] Provider appears as enabled on login page when credentials are set
+- [ ] Admin can set client ID/secret in Configuration > SSO (setup page)
+- [ ] Provider appears with correct icon on **sign-in and register pages** when credentials are set (buttons come from `GET /auth/sso/providers`)
 - [ ] Redirect to provider and callback complete successfully
 - [ ] New user can register via SSO; existing user can link account (if allow_linking enabled)
 

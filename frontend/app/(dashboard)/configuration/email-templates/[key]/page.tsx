@@ -372,11 +372,11 @@ export default function EmailTemplateEditorPage() {
               <p className="text-sm font-medium text-muted-foreground">Subject</p>
               <p className="text-sm font-medium">{previewSubject || "—"}</p>
             </div>
-            <div className="mt-4 rounded-md border bg-muted/30 overflow-hidden">
+            <div className="mt-4 rounded-md border bg-white overflow-hidden">
               <iframe
                 title="Email preview"
-                srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:1rem;font-family:system-ui,sans-serif;font-size:14px;">${previewHtml || "<p class=\"text-muted-foreground\">No content</p>"}</body></html>`}
-                className="w-full min-h-[300px] border-0"
+                srcDoc={`<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:1rem;font-family:system-ui,sans-serif;font-size:14px;background:#ffffff;color:#000000;">${previewHtml || "<p style=\"color:#6b7280;\">No content</p>"}</body></html>`}
+                className="w-full min-h-[300px] border-0 bg-white"
                 sandbox="allow-same-origin"
               />
             </div>

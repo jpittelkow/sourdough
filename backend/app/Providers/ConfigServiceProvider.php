@@ -39,6 +39,31 @@ class ConfigServiceProvider extends ServiceProvider
         if (isset($settings['backup'])) {
             $this->injectBackupConfig($settings['backup']);
         }
+
+        if (isset($settings['logging'])) {
+            $this->injectLoggingConfig($settings['logging']);
+        }
+    }
+
+    /**
+     * Inject log retention settings into config.
+     */
+    private function injectLoggingConfig(array $settings): void
+    {
+        if (array_key_exists('app_retention_days', $settings)) {
+            $v = (int) ($settings['app_retention_days'] ?? config('logging.retention.app_days', 90));
+            config(['logging.retention.app_days' => max(1, min(365, $v))]);
+        }
+        if (array_key_exists('audit_retention_days', $settings)) {
+            $v = (int) ($settings['audit_retention_days'] ?? config('logging.retention.audit_days', 365));
+            config(['logging.retention.audit_days' => max(30, min(730, $v))]);
+        }
+        if (array_key_exists('access_retention_days', $settings)) {
+            $v = (int) ($settings['access_retention_days'] ?? config('logging.retention.access_days', 2190));
+            config(['logging.retention.access_days' => max(2190, $v)]);
+        }
+        $hipaa = $settings['hipaa_access_logging_enabled'] ?? config('logging.hipaa_access_logging_enabled', true);
+        config(['logging.hipaa_access_logging_enabled' => filter_var($hipaa, FILTER_VALIDATE_BOOLEAN)]);
     }
 
     /**
