@@ -37,6 +37,9 @@ class ScheduledBackup extends Command
      */
     public function handle(): int
     {
+        $startTime = microtime(true);
+        Log::info('Scheduled backup started');
+
         $this->info('Starting scheduled backup...');
 
         try {
@@ -78,6 +81,8 @@ class ScheduledBackup extends Command
                 $this->applyRetentionPolicy($destinations);
             }
 
+            $durationMs = round((microtime(true) - $startTime) * 1000);
+            Log::info('Scheduled backup completed', ['duration_ms' => $durationMs]);
             $this->info('Scheduled backup completed successfully!');
 
             return Command::SUCCESS;

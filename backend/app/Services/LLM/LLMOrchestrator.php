@@ -43,6 +43,21 @@ class LLMOrchestrator
         // Log the request
         $this->logRequest($user, $mode, $prompt, $result);
 
+        if ($result['success']) {
+            Log::info('LLM query completed', [
+                'user_id' => $user->id,
+                'mode' => $mode,
+                'provider' => $result['provider'] ?? $result['synthesis_provider'] ?? 'multiple',
+                'duration_ms' => $result['total_duration_ms'],
+            ]);
+        } else {
+            Log::warning('LLM query failed', [
+                'user_id' => $user->id,
+                'mode' => $mode,
+                'error' => $result['error'] ?? 'Unknown',
+            ]);
+        }
+
         return $result;
     }
 
@@ -98,14 +113,26 @@ class LLMOrchestrator
 
         try {
             $response = $provider->query('Hello, please respond with "OK" to confirm the connection is working.');
+            $durationMs = round((microtime(true) - $startTime) * 1000);
+            Log::info('LLM provider test succeeded', [
+                'user_id' => $user->id,
+                'provider' => $providerName,
+                'duration_ms' => $durationMs,
+            ]);
 
             return [
                 'success' => true,
                 'message' => 'Connection successful',
                 'response' => $response,
-                'duration_ms' => round((microtime(true) - $startTime) * 1000),
+                'duration_ms' => $durationMs,
             ];
         } catch (\Exception $e) {
+            Log::warning('LLM provider test failed', [
+                'user_id' => $user->id,
+                'provider' => $providerName,
+                'error' => $e->getMessage(),
+            ]);
+
             return [
                 'success' => false,
                 'message' => 'Connection failed',
@@ -180,6 +207,10 @@ class LLMOrchestrator
                     'duration_ms' => round((microtime(true) - $startTime) * 1000),
                 ];
             } catch (\Exception $e) {
+                Log::warning('LLM aggregation provider failed', [
+                    'provider' => $providerConfig->provider,
+                    'error' => $e->getMessage(),
+                ]);
                 $responses[$providerConfig->provider] = [
                     'success' => false,
                     'error' => $e->getMessage(),
@@ -256,6 +287,10 @@ class LLMOrchestrator
                     'weight' => $weights[$providerConfig->provider] ?? 1.0,
                 ];
             } catch (\Exception $e) {
+                Log::warning('LLM council provider failed', [
+                    'provider' => $providerConfig->provider,
+                    'error' => $e->getMessage(),
+                ]);
                 $responses[$providerConfig->provider] = [
                     'success' => false,
                     'error' => $e->getMessage(),

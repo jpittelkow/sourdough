@@ -6,14 +6,21 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\AdminAuthorizationTrait;
 use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
+use App\Services\AuditService;
+use App\Services\EmailConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
 
 class UserController extends Controller
 {
     use AdminAuthorizationTrait;
     use ApiResponseTrait;
+
+    public function __construct(
+        private AuditService $auditService
+    ) {}
 
     /**
      * List all users with pagination.
@@ -51,13 +58,14 @@ class UserController extends Controller
     /**
      * Create a new user.
      */
-    public function store(Request $request): JsonResponse
+    public function store(Request $request, EmailConfigService $emailConfigService): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
             'is_admin' => ['sometimes', 'boolean'],
+            'skip_verification' => ['sometimes', 'boolean'],
         ]);
 
         $user = User::create([
@@ -66,6 +74,13 @@ class UserController extends Controller
             'password' => $validated['password'],
             'is_admin' => $validated['is_admin'] ?? false,
         ]);
+
+        $skipVerification = $validated['skip_verification'] ?? false;
+        if ($emailConfigService->isConfigured() && !$skipVerification) {
+            $user->sendEmailVerificationNotification();
+        } elseif ($skipVerification) {
+            $user->markEmailAsVerified();
+        }
 
         return $this->createdResponse('User created successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
@@ -84,7 +99,11 @@ class UserController extends Controller
             'is_admin' => ['sometimes', 'boolean'],
         ]);
 
+        $oldValues = $user->only(array_keys($validated));
         $user->update($validated);
+        $newValues = $user->fresh()->only(array_keys($validated));
+
+        $this->auditService->logModelChange($user, 'user.updated', $oldValues, $newValues);
 
         return $this->successResponse('User updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
@@ -104,6 +123,11 @@ class UserController extends Controller
             return $this->errorResponse('Cannot delete your own account', 400);
         }
 
+        $this->auditService->log('user.deleted', $user, [
+            'name' => $user->name,
+            'email' => $user->email,
+        ], []);
+
         $user->delete();
 
         return $this->successResponse('User deleted successfully');
@@ -122,7 +146,15 @@ class UserController extends Controller
             return $this->errorResponse('Cannot remove admin status from your own account', 400);
         }
 
+        $wasAdmin = $user->is_admin;
         $user->update(['is_admin' => !$user->is_admin]);
+
+        $this->auditService->log(
+            $user->is_admin ? 'user.admin_granted' : 'user.admin_revoked',
+            $user,
+            ['is_admin' => $wasAdmin],
+            ['is_admin' => $user->is_admin]
+        );
 
         return $this->successResponse('Admin status updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
@@ -158,6 +190,50 @@ class UserController extends Controller
             return $this->errorResponse('Cannot disable your own account', 400);
         }
 
-        return $this->errorResponse('User disable feature requires additional database field', 501);
+        $enabling = (bool) $user->disabled_at;
+        $oldDisabledAt = $user->disabled_at?->toISOString();
+        $user->update([
+            'disabled_at' => $enabling ? null : now(),
+        ]);
+        $user->refresh();
+
+        $this->auditService->log(
+            $enabling ? 'user.enabled' : 'user.disabled',
+            $user,
+            ['disabled_at' => $oldDisabledAt],
+            ['disabled_at' => $user->disabled_at?->toISOString()]
+        );
+
+        $message = $enabling ? 'User enabled successfully' : 'User disabled successfully';
+
+        return $this->successResponse($message, [
+            'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
+        ]);
+    }
+
+    /**
+     * Resend verification email for a user (admin only).
+     * Rate limited to 1 per 5 minutes per user.
+     */
+    public function resendVerification(User $user): JsonResponse
+    {
+        if ($user->hasVerifiedEmail()) {
+            return $this->errorResponse('User is already verified', 400);
+        }
+
+        $key = 'resend-verification:' . $user->id;
+        if (RateLimiter::tooManyAttempts($key, 1)) {
+            $retryAfter = RateLimiter::availableIn($key);
+            return $this->errorResponse(
+                'Please wait before resending. You can resend again in ' . $retryAfter . ' seconds.',
+                429
+            );
+        }
+
+        RateLimiter::hit($key, 300); // 5 minutes
+
+        $user->sendEmailVerificationNotification();
+
+        return $this->successResponse('Verification email sent successfully');
     }
 }

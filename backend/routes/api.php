@@ -20,8 +20,11 @@ use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BackupSettingController;
+use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\LLMController;
+use App\Http\Controllers\Api\LLMModelController;
+use App\Http\Controllers\Api\ClientErrorController;
 use App\Http\Controllers\Api\LLMSettingController;
 use App\Http\Controllers\Api\SSOSettingController;
 use App\Http\Controllers\Api\UserSettingController;
@@ -44,6 +47,10 @@ Route::get('/auth/sso/providers', [SSOController::class, 'providers']);
 // Public system settings and branding (no auth required)
 Route::get('/system-settings/public', [SystemSettingController::class, 'publicSettings']);
 Route::get('/branding', [BrandingController::class, 'show']);
+
+// Client error reporting (rate limited, no auth)
+Route::post('/client-errors', [ClientErrorController::class, 'store'])
+    ->middleware('throttle:10,1');
 
 /*
 |--------------------------------------------------------------------------
@@ -189,6 +196,7 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/{user}/toggle-admin', [UserController::class, 'toggleAdmin']);
         Route::post('/{user}/reset-password', [UserController::class, 'resetPassword']);
         Route::post('/{user}/disable', [UserController::class, 'toggleDisabled']);
+        Route::post('/{user}/resend-verification', [UserController::class, 'resendVerification']);
     });
     
     // Audit Logs (Admin only)
@@ -198,6 +206,16 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/stats', [AuditLogController::class, 'stats']);
     });
     
+    // Email Templates (Admin only)
+    Route::prefix('email-templates')->middleware('can:manage-settings')->group(function () {
+        Route::get('/', [EmailTemplateController::class, 'index']);
+        Route::get('/{key}', [EmailTemplateController::class, 'show']);
+        Route::put('/{key}', [EmailTemplateController::class, 'update']);
+        Route::post('/{key}/preview', [EmailTemplateController::class, 'preview']);
+        Route::post('/{key}/test', [EmailTemplateController::class, 'test']);
+        Route::post('/{key}/reset', [EmailTemplateController::class, 'reset']);
+    });
+
     // Mail Settings (Admin only)
     Route::prefix('mail-settings')->middleware('can:manage-settings')->group(function () {
         Route::get('/', [MailSettingController::class, 'show']);
@@ -219,6 +237,8 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/', [LLMSettingController::class, 'show']);
         Route::put('/', [LLMSettingController::class, 'update']);
         Route::delete('/keys/{key}', [LLMSettingController::class, 'reset']);
+        Route::post('/test-key', [LLMModelController::class, 'testKey']);
+        Route::post('/discover-models', [LLMModelController::class, 'discover']);
     });
 
     // SSO Settings (Admin only)

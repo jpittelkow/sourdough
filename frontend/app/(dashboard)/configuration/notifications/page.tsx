@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -177,7 +178,10 @@ export default function NotificationsPage() {
       };
       reset(formValues);
     } catch (e) {
-      console.error("Failed to fetch notification config:", e);
+      errorLogger.report(
+        e instanceof Error ? e : new Error("Failed to fetch notification config"),
+        { source: "notifications-page" }
+      );
       toast.error("Failed to load notification configuration");
       setChannels([]);
       setSmsProvidersConfigured([]);

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { useAppConfig } from "@/lib/app-config";
+import { errorLogger } from "@/lib/error-logger";
 
 /**
  * Hook to set page title and meta tags dynamically.
@@ -41,7 +42,11 @@ export function usePageTitle(pageTitle?: string, description?: string) {
           }
         } catch (e) {
           // Fallback if direct assignment fails
-          console.warn('Failed to update document.title:', e);
+          errorLogger.captureMessage(
+            "Failed to update document.title",
+            "warning",
+            { error: e instanceof Error ? e.message : String(e) }
+          );
         }
 
         // Update meta description if provided

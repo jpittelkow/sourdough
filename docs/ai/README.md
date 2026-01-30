@@ -17,6 +17,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Settings | [ADR-012](../adr/012-admin-only-settings.md), [ADR-014](../adr/014-database-settings-env-fallback.md), `backend/app/Services/SettingService.php`, `backend/config/settings-schema.php`, `frontend/app/(dashboard)/configuration/` |
 | Backup & Restore | [ADR-007](../adr/007-backup-system-design.md), `backend/app/Services/Backup/BackupService.php`, `backend/config/settings-schema.php` (backup group), [add-backup-destination](recipes/add-backup-destination.md), [extend-backup-restore](recipes/extend-backup-restore.md) |
 | Auth | [ADR-002](../adr/002-authentication-architecture.md), `backend/app/Http/Controllers/Api/AuthController.php` |
+| Logging | [Logging](../logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [extend-logging](recipes/extend-logging.md) |
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
 
@@ -58,6 +59,8 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Add SSO Provider | [add-sso-provider.md](recipes/add-sso-provider.md) |
 | Add Backup Destination | [add-backup-destination.md](recipes/add-backup-destination.md) |
 | Extend Backup & Restore | [extend-backup-restore.md](recipes/extend-backup-restore.md) |
+| Add Email Template | [add-email-template.md](recipes/add-email-template.md) |
+| Extend Logging | [extend-logging.md](recipes/extend-logging.md) |
 | Add Tests | [add-tests.md](recipes/add-tests.md) |
 | Make Responsive | [make-component-responsive.md](recipes/make-component-responsive.md) |
 

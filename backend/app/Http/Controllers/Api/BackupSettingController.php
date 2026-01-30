@@ -83,9 +83,11 @@ class BackupSettingController extends Controller
         ]);
 
         $userId = $request->user()->id;
+        $oldSettings = $this->settingService->getGroup(self::GROUP);
         foreach ($validated as $key => $value) {
             $this->settingService->set(self::GROUP, $key, $value, $userId);
         }
+        $this->auditService->logSettings(self::GROUP, $oldSettings, $validated, $userId);
 
         return $this->successResponse('Backup settings updated successfully');
     }

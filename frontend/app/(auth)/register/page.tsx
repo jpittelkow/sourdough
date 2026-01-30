@@ -8,7 +8,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useAppConfig } from "@/lib/app-config";
 import { Input } from "@/components/ui/input";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { AuthDivider } from "@/components/auth/auth-divider";
@@ -30,6 +32,7 @@ type RegisterForm = z.infer<typeof registerSchema>;
 export default function RegisterPage() {
   const router = useRouter();
   const { register: registerUser } = useAuth();
+  const { features } = useAppConfig();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -61,6 +64,15 @@ export default function RegisterPage() {
       <SSOButtons />
 
       <AuthDivider />
+
+      {!features?.emailVerificationAvailable && features !== null && (
+        <Alert variant="default" className="mb-4">
+          <AlertDescription>
+            Email verification is not configured. Your account will be active
+            immediately after registration.
+          </AlertDescription>
+        </Alert>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <FormField

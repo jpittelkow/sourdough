@@ -3,7 +3,7 @@
 Automatically fetch and display available models when an API key is entered for each LLM provider.
 
 **Priority**: MEDIUM  
-**Status**: Ready  
+**Status**: Complete (2026-01-29)  
 **Last Updated**: 2026-01-29
 
 **Dependencies**:
@@ -13,14 +13,14 @@ Automatically fetch and display available models when an API key is entered for 
 
 ## Task Checklist
 
-- [ ] Create backend model discovery service
-- [ ] Add API endpoints for fetching models from each provider
-- [ ] Add API key input fields to LLM configuration page
-- [ ] Implement dynamic model dropdown that populates on API key entry
-- [ ] Add loading states and error handling for model fetching
-- [ ] Cache discovered models to reduce API calls
-- [ ] Add model validation before saving
-- [ ] Update documentation
+- [x] Create backend model discovery service
+- [x] Add API endpoints for fetching models from each provider (discover-models, test-key)
+- [x] Add API key input fields to LLM configuration page
+- [x] Implement dynamic model dropdown that populates on Fetch Models
+- [x] Add loading states and error handling for model fetching
+- [x] Cache discovered models to reduce API calls (server-side 1h TTL)
+- [x] Add model validation before saving (test key validates credentials)
+- [x] Update documentation
 
 ---
 
@@ -352,29 +352,29 @@ CREATE TABLE llm_cached_models (
 ## 7. Implementation Phases
 
 ### Phase 1: Core Infrastructure
-- [ ] Create `LLMModelDiscoveryService`
-- [ ] Implement OpenAI model discovery
-- [ ] Add API endpoint for model discovery
-- [ ] Add basic API key input to frontend
+- [x] Create `LLMModelDiscoveryService`
+- [x] Implement OpenAI model discovery
+- [x] Add API endpoint for model discovery (discover-models, test-key)
+- [x] Add basic API key input to frontend (Test + Fetch Models in Add Provider dialog)
 
 ### Phase 2: Expand Provider Support
-- [ ] Add Anthropic (Claude) discovery
-- [ ] Add Google (Gemini) discovery
-- [ ] Add Ollama discovery
+- [x] Add Anthropic (Claude) discovery
+- [x] Add Google (Gemini) discovery
+- [x] Add Ollama discovery
 - [ ] Add Azure OpenAI discovery (requires endpoint config)
 - [ ] Add AWS Bedrock discovery (requires IAM config)
 
 ### Phase 3: Polish & Caching
-- [ ] Add server-side model caching
+- [x] Add server-side model caching (1h TTL)
 - [ ] Add client-side caching
 - [ ] Add "Refresh Models" button
-- [ ] Improve error messages per provider
-- [ ] Add model capability indicators (chat, vision, etc.)
+- [x] Improve error messages per provider (sanitized in controller)
+- [x] Add model capability indicators (chat, vision, etc.)
 
 ### Phase 4: Documentation
-- [ ] Update user docs for LLM configuration
+- [x] Update user docs for LLM configuration
 - [ ] Add troubleshooting guide for API key issues
-- [ ] Document supported providers and requirements
+- [x] Document supported providers and requirements
 
 ---
 
@@ -447,7 +447,8 @@ public function test_returns_error_for_invalid_key()
 
 ---
 
-## 11. Related Roadmaps
+## 11. Related Roadmaps and Docs
 
 - [Env to Database Migration](env-to-database-roadmap.md) - Foundation for storing LLM credentials
 - [Integration Settings](integration-settings-roadmap.md) - Similar pattern for other integrations
+- [Recipe: Add LLM Provider](../ai/recipes/add-llm-provider.md) - How to add a new provider and wire it into model discovery (Test Key / Fetch Models)

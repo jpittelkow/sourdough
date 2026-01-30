@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useAppConfig } from "@/lib/app-config";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
@@ -28,6 +29,7 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const { features } = useAppConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
 
@@ -104,12 +106,14 @@ export default function LoginPage() {
           label={
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              <Link
-                href="/forgot-password"
-                className="text-sm text-primary hover:underline"
-              >
-                Forgot password?
-              </Link>
+              {features?.passwordResetAvailable && (
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              )}
             </div>
           }
           error={errors.password?.message}

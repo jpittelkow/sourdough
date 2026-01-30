@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
+use App\Services\AuditService;
+use App\Services\EmailConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -11,6 +13,9 @@ use Illuminate\Support\Facades\Validator;
 
 class SystemSettingController extends Controller
 {
+    public function __construct(
+        private AuditService $auditService
+    ) {}
     /**
      * Get all system settings (admin only).
      */
@@ -28,7 +33,7 @@ class SystemSettingController extends Controller
     /**
      * Get public system settings (no auth required).
      */
-    public function publicSettings(): JsonResponse
+    public function publicSettings(EmailConfigService $emailConfigService): JsonResponse
     {
         $settings = Cache::remember('system_settings_public', 3600, function () {
             return SystemSetting::getPublic();
@@ -36,6 +41,11 @@ class SystemSettingController extends Controller
 
         return response()->json([
             'settings' => $settings,
+            'features' => [
+                'email_configured' => $emailConfigService->isConfigured(),
+                'password_reset_available' => $emailConfigService->isConfigured(),
+                'email_verification_available' => $emailConfigService->isConfigured(),
+            ],
         ]);
     }
 
@@ -81,6 +91,8 @@ class SystemSettingController extends Controller
 
         // Clear cache
         Cache::forget('system_settings_public');
+
+        $this->auditService->logSettings('system', [], ['settings' => $validated['settings']], $user->id);
 
         return response()->json([
             'message' => 'System settings updated successfully',

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AuditLog;
+use App\Services\AuditService;
 use App\Services\Backup\BackupService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +13,8 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 class BackupController extends Controller
 {
     public function __construct(
-        private BackupService $backupService
+        private BackupService $backupService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -57,6 +60,11 @@ class BackupController extends Controller
                 'include_settings' => $request->boolean('include_settings', true),
             ]);
 
+            $this->auditService->log('backup.created', null, [], [
+                'filename' => $backup['filename'] ?? null,
+                'size' => $backup['size'] ?? null,
+            ]);
+
             return response()->json([
                 'message' => 'Backup created successfully',
                 'backup' => $backup,
@@ -86,6 +94,8 @@ class BackupController extends Controller
             ], 404);
         }
 
+        $this->auditService->log('backup.downloaded', null, [], ['filename' => $filename]);
+
         return $this->backupService->download($filename);
     }
 
@@ -102,6 +112,7 @@ class BackupController extends Controller
         try {
             if ($request->hasFile('backup')) {
                 $result = $this->backupService->restoreFromUpload($request->file('backup'));
+                $this->auditService->log('backup.restored', null, [], ['source' => 'upload'], null, null, AuditLog::SEVERITY_WARNING);
             } else {
                 // Validate filename before restore
                 if (!$this->validateFilename($request->filename)) {
@@ -110,6 +121,7 @@ class BackupController extends Controller
                     ], 400);
                 }
                 $result = $this->backupService->restoreFromFile($request->filename);
+                $this->auditService->log('backup.restored', null, [], ['filename' => $request->filename], null, null, AuditLog::SEVERITY_WARNING);
             }
 
             return response()->json([
@@ -140,6 +152,8 @@ class BackupController extends Controller
                 'message' => 'Backup not found',
             ], 404);
         }
+
+        $this->auditService->log('backup.deleted', null, [], ['filename' => $filename]);
 
         $this->backupService->delete($filename);
 

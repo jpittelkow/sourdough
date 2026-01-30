@@ -11,9 +11,15 @@ class AuditLog extends Model
 {
     use HasFactory;
 
+    public const SEVERITY_INFO = 'info';
+    public const SEVERITY_WARNING = 'warning';
+    public const SEVERITY_ERROR = 'error';
+    public const SEVERITY_CRITICAL = 'critical';
+
     protected $fillable = [
         'user_id',
         'action',
+        'severity',
         'auditable_type',
         'auditable_id',
         'old_values',

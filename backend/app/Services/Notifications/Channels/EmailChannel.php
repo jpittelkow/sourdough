@@ -2,22 +2,49 @@
 
 namespace App\Services\Notifications\Channels;
 
+use App\Mail\TemplatedMail;
 use App\Models\User;
+use App\Services\EmailTemplateService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class EmailChannel implements ChannelInterface
 {
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
-        Mail::raw($message, function ($mail) use ($user, $title) {
-            $mail->to($user->email)
-                ->subject($title);
-        });
+        $templateService = app(EmailTemplateService::class);
 
-        return [
-            'email' => $user->email,
-            'sent' => true,
-        ];
+        try {
+            $rendered = $templateService->render('notification', [
+                'user' => ['name' => $user->name, 'email' => $user->email],
+                'title' => $title,
+                'message' => $message,
+                'action_url' => $data['action_url'] ?? '',
+                'action_text' => $data['action_text'] ?? '',
+                'app_name' => config('app.name'),
+            ]);
+
+            Mail::to($user->email)->send(new TemplatedMail($rendered));
+
+            Log::info('Email sent', [
+                'user_id' => $user->id,
+                'to' => $user->email,
+                'type' => $type,
+            ]);
+
+            return [
+                'email' => $user->email,
+                'sent' => true,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Email send failed', [
+                'user_id' => $user->id,
+                'to' => $user->email,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+            throw $e;
+        }
     }
 
     public function getName(): string

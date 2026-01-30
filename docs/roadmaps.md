@@ -10,12 +10,16 @@ _None._
 
 ## Next Up
 
-Ready to start once Active Development items complete or reach stable state.
+Ready to start. These are unblocked and can begin immediately.
 
-| Roadmap | Priority | Notes |
-|---------|----------|-------|
-| [Email Configuration Dependencies](plans/email-configuration-dependencies-roadmap.md) | HIGH | No dependencies, unblocks Configurable Auth Features |
-| [Admin Features](plans/admin-features-roadmap.md) | HIGH | Env to Database complete |
+| Item | Priority | Source | Notes |
+|------|----------|--------|-------|
+| Log Storage & Archival | MEDIUM | [Audit Logs](plans/audit-logs-roadmap.md) | Evaluate storage options, implement archival, add indexes |
+| Suspicious Activity Alerting | LOW | [Audit Logs](plans/audit-logs-roadmap.md) | Alert on suspicious patterns |
+| Scheduled Tasks/Jobs UI | MEDIUM | [Admin Features](plans/admin-features-roadmap.md) | Jobs monitoring, backup schedule config, digest settings |
+| Additional Notification Providers | MEDIUM | [Notifications](plans/notifications-roadmap.md) | ntfy channel, Novu integration |
+| LLM Provider Expansion | LOW | [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | Azure OpenAI, AWS Bedrock discovery |
+| Version Automation | LOW | [Versioning System](plans/versioning-system-roadmap.md) | Bump scripts, GitHub Actions, auto-release |
 
 ## Planned Features
 
@@ -23,28 +27,41 @@ Requires foundation work or longer-term planning.
 
 | Roadmap | Priority | Dependencies |
 |---------|----------|--------------|
-| [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | MEDIUM | None (Env to Database complete) |
-| [Integration Settings](plans/integration-settings-roadmap.md) | MEDIUM | None (Env to Database complete) |
-| [Audit Logs & Logging](plans/audit-logs-roadmap.md) | MEDIUM | None |
+| [Configuration Navigation Redesign](plans/config-navigation-redesign-roadmap.md) | MEDIUM | None |
 | [Web Push Notifications](plans/web-push-notifications-roadmap.md) | MEDIUM | None |
 | [SSO Settings Enhancement](plans/sso-settings-enhancement-roadmap.md) | MEDIUM | None |
-| [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | MEDIUM | Email Configuration Dependencies |
-| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | Audit Logs & Logging |
+| [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | MEDIUM | ✅ Email Config (complete) |
+| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Audit Logs (complete) |
 | [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | MEDIUM | None |
 | [Documentation Audit](plans/documentation-audit-roadmap.md) | MEDIUM | None |
+| [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
 | [Branded Iconography](plans/branded-iconography-roadmap.md) | LOW | None |
-| [Database Options](plans/database-options-roadmap.md) | LOW | None (Env to Database complete) |
+| [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
 | [Collapsible Settings UI](plans/collapsible-settings-ui-roadmap.md) | LOW | None |
 
-## Completed
+## Completed (Core Done)
+
+High-priority work complete. Some optional/lower-priority items remain—see "Next Up" or individual roadmaps.
+
+| Roadmap | Completed | Remaining Work |
+|---------|-----------|----------------|
+| [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Log storage/archival, alerting |
+| [Admin Features](plans/admin-features-roadmap.md) | 2026-01-29 | Scheduled Tasks UI, Message Templates |
+| [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | 2026-01-29 | Azure/Bedrock providers, client caching |
+| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | ntfy/Novu providers, user docs |
+| [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-27 | Phases 2-4 (automation, scripts, actions) |
+| [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 | QA/testing items (optional) |
+
+## Completed (Fully Done)
+
+All tasks complete.
 
 | Roadmap | Completed |
 |---------|-----------|
+| [Integration Settings](plans/integration-settings-roadmap.md) | 2026-01-29 |
+| [Email Configuration Dependencies](plans/email-configuration-dependencies-roadmap.md) | 2026-01-29 |
 | [Env to Database Migration](plans/env-to-database-roadmap.md) | 2026-01-29 |
 | [Global Components Audit](plans/global-components-audit-roadmap.md) | 2026-01-28 |
-| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 |
-| [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-27 |
-| [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 |
 | [Branding & UI Consistency](plans/branding-ui-consistency-roadmap.md) | 2026-01-27 |
 | [Settings Restructure](plans/settings-restructure-roadmap.md) | 2026-01-27 |
 | [Critical Fixes](plans/critical-fixes-roadmap.md) | 2026-01-27 |
@@ -56,6 +73,14 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-01-29 | [Console and Application Logging](journal/2026-01-29-console-app-logging.md) |
+| 2026-01-29 | [Audit Dashboard Analytics (Phase 2)](journal/2026-01-29-audit-dashboard-analytics.md) |
+| 2026-01-29 | [Audit Extended Features (Real-time Streaming & Structured Logging)](journal/2026-01-29-audit-extended-features.md) |
+| 2026-01-29 | [Audit Logging Implementation](journal/2026-01-29-audit-logging-implementation.md) |
+| 2026-01-29 | [LLM Model Discovery](journal/2026-01-29-llm-model-discovery.md) |
+| 2026-01-29 | [User Management Admin (HIGH Priority)](journal/2026-01-29-user-management-admin.md) |
+| 2026-01-29 | [Email Template Integration (Chunk D)](journal/2026-01-29-email-template-integration-chunk-d.md) |
+| 2026-01-29 | [Email Template Infrastructure (Chunk B)](journal/2026-01-29-email-template-infrastructure.md) |
 | 2026-01-29 | [Backup Settings Migration (Env to DB Phase 6)](journal/2026-01-29-backup-settings-migration.md) |
 | 2026-01-28 | [SSO Settings Migration (Env to DB Phase 5)](journal/2026-01-28-sso-settings-migration.md) |
 | 2026-01-28 | [Notification & LLM Settings Migration (Env to DB Phase 3–4)](journal/2026-01-28-notification-llm-settings-migration.md) |

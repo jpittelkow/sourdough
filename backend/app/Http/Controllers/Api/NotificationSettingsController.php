@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\EmailConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -111,8 +112,10 @@ class NotificationSettingsController extends Controller
      */
     private function isChannelConfigured(string $id, array $config, array $userSettings): bool
     {
-        // System-configured channels (email, database) are always configured
-        if (in_array($id, ['email', 'database'])) {
+        if ($id === 'email') {
+            return app(EmailConfigService::class)->isConfigured();
+        }
+        if ($id === 'database') {
             return true;
         }
 

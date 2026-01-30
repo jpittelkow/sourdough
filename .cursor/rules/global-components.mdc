@@ -22,8 +22,19 @@ Create a shared component when:
 | UI Components | `frontend/components/ui/` | `button.tsx`, `card.tsx` |
 | Feature Components | `frontend/components/` | `logo.tsx`, `sidebar.tsx` |
 | Hooks | `frontend/lib/` or `frontend/hooks/` | `use-page-title.ts` |
-| Utilities | `frontend/lib/` | `api.ts`, `utils.ts` |
+| Utilities | `frontend/lib/` | `api.ts`, `utils.ts`, `error-logger.ts` |
 | Backend Services | `backend/app/Services/` | `NotificationOrchestrator.php` |
+
+## Global Utilities (frontend/lib/)
+
+| Utility | Purpose | Usage |
+|---------|---------|-------|
+| `api` | API client with auth | `api.get('/endpoint')` |
+| `errorLogger` | Structured error reporting to backend | `errorLogger.report(error, context)`, `errorLogger.captureMessage(msg, level)` |
+| `usePageTitle` | Document title management | `usePageTitle('Page Name')` |
+| `formatDate` | Date formatting | `formatDate(date)` |
+
+For **error handling** in frontend code: use `errorLogger` from `frontend/lib/error-logger.ts` instead of `console.error` or `console.warn`.
 
 ## Before Creating Page-Specific Logic
 
@@ -118,6 +129,7 @@ Before submitting code:
 - [ ] Searched for existing components/utilities that do this task
 - [ ] If creating new functionality, placed it in the appropriate global location
 - [ ] If duplicating logic, documented why it can't be shared
+- [ ] For error handling: use `errorLogger` from `frontend/lib/error-logger.ts` (not ad-hoc `console.error`/`console.warn`)
 - [ ] Updated component documentation if adding new global component
 
 ## Related Documentation

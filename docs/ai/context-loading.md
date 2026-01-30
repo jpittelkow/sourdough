@@ -121,6 +121,38 @@ backend/app/Models/SystemSetting.php
 docs/plans/env-to-database-roadmap.md
 ```
 
+## Email Template Work
+
+**Read first:**
+```
+docs/adr/016-email-template-system.md
+backend/app/Models/EmailTemplate.php
+backend/app/Services/EmailTemplateService.php
+backend/database/seeders/EmailTemplateSeeder.php
+```
+
+**Also useful (backend):**
+```
+backend/app/Http/Controllers/Api/EmailTemplateController.php
+backend/routes/api.php
+backend/app/Services/RenderedEmail.php
+backend/app/Mail/TemplatedMail.php
+backend/app/Models/User.php (sendPasswordResetNotification, sendEmailVerificationNotification)
+backend/app/Services/Notifications/Channels/EmailChannel.php
+```
+
+**Frontend (Admin UI):**
+```
+frontend/app/(dashboard)/configuration/email-templates/page.tsx
+frontend/app/(dashboard)/configuration/email-templates/[key]/page.tsx
+frontend/components/email-template-editor.tsx
+frontend/components/variable-picker.tsx
+frontend/app/(dashboard)/configuration/layout.tsx
+```
+
+**Recipes:**
+- [Add Email Template](recipes/add-email-template.md)
+
 ## Authentication Work
 
 **Read first:**
@@ -147,6 +179,24 @@ frontend/components/ui/
   - loading-button.tsx                           # Button with spinner
 ```
 
+## User Management Work
+
+**Read first:**
+```
+docs/adr/002-authentication-architecture.md
+backend/app/Http/Controllers/Api/UserController.php
+backend/app/Models/User.php
+frontend/app/(dashboard)/configuration/users/page.tsx
+frontend/components/admin/user-table.tsx
+frontend/components/admin/user-dialog.tsx
+```
+
+**Also useful:**
+```
+backend/routes/api.php                          # users routes (can:admin)
+backend/app/Http/Traits/AdminAuthorizationTrait.php
+```
+
 ## Backup System Work
 
 **Read first:**
@@ -169,6 +219,59 @@ frontend/app/(dashboard)/configuration/backup/page.tsx       # Backups tab + Set
 **Recipes:**
 - [Add backup destination](recipes/add-backup-destination.md)
 - [Extend backup and restore features](recipes/extend-backup-restore.md)
+
+## Audit Logging Work
+
+**Read first:**
+```
+docs/ai/patterns.md                    # AuditService Pattern section
+backend/app/Services/AuditService.php  # Core audit service
+backend/app/Http/Traits/AuditLogging.php
+backend/app/Models/AuditLog.php
+backend/app/Http/Controllers/Api/AuditLogController.php
+```
+
+**Also useful:**
+```
+backend/routes/api.php                 # audit-logs routes (admin)
+frontend/app/(dashboard)/configuration/audit/page.tsx  # Audit log UI
+frontend/app/(dashboard)/dashboard/page.tsx            # Dashboard (audit widget for admins)
+frontend/components/audit/audit-dashboard-widget.tsx   # Audit summary widget
+frontend/components/audit/audit-stats-card.tsx         # Stat card component
+frontend/components/audit/audit-severity-chart.tsx     # Severity donut chart
+frontend/components/audit/audit-trends-chart.tsx       # Activity trends area chart
+frontend/components/ui/chart.tsx                       # shadcn chart (Recharts)
+backend/database/migrations/           # audit_logs table, severity column
+```
+
+**Stats API** (`GET /audit-logs/stats`): Returns `total_actions`, `by_severity`, `daily_trends` (date→count), `recent_warnings` (latest 5 warning/error/critical), `actions_by_type`, `actions_by_user`. Query params: `date_from`, `date_to` (default last 30 days).
+
+**Recipes:**
+- [Trigger audit logging](recipes/trigger-audit-logging.md)
+- [Add auditable action](recipes/add-auditable-action.md)
+- [Add dashboard widget](recipes/add-dashboard-widget.md) – for dashboard analytics widgets (see audit widget as example)
+
+## Application Logging Work
+
+**Read first:**
+```
+docs/logging.md
+backend/config/logging.php
+backend/app/Logging/ContextProcessor.php
+backend/app/Http/Middleware/AddCorrelationId.php
+frontend/lib/error-logger.ts
+frontend/components/error-boundary.tsx
+frontend/components/error-handler-setup.tsx
+```
+
+**Also useful:**
+```
+backend/app/Http/Controllers/Api/ClientErrorController.php
+backend/routes/api.php  # client-errors route
+```
+
+**Recipes:**
+- [Extend logging](recipes/extend-logging.md)
 
 ## Docker/Infrastructure Work
 

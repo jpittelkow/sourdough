@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { useAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,6 +32,7 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
+  const { features, isLoading: isConfigLoading } = useAppConfig();
   const [isLoading, setIsLoading] = useState(false);
   const [isEmailSent, setIsEmailSent] = useState(false);
   const [submittedEmail, setSubmittedEmail] = useState("");
@@ -58,6 +60,30 @@ export default function ForgotPasswordPage() {
       setIsLoading(false);
     }
   };
+
+  if (!isConfigLoading && !features?.passwordResetAvailable) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <AuthStateCard
+          variant="warning"
+          title="Password Reset Unavailable"
+          description="Password reset is not available because email has not been configured."
+          footer={
+            <Link href="/login" className="w-full">
+              <Button variant="outline" className="w-full">
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Sign In
+              </Button>
+            </Link>
+          }
+        >
+          <p className="text-sm text-muted-foreground text-center">
+            Please contact your administrator for assistance.
+          </p>
+        </AuthStateCard>
+      </div>
+    );
+  }
 
   if (isEmailSent) {
     return (

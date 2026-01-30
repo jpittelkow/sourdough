@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { FormField } from "@/components/ui/form-field";
+import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
+import { SaveButton } from "@/components/ui/save-button";
 import {
   Select,
   SelectContent,
@@ -47,6 +52,7 @@ import {
   Play,
   Settings2,
   Info,
+  Cpu,
 } from "lucide-react";
 
 interface AIProvider {
@@ -58,53 +64,87 @@ interface AIProvider {
   is_primary: boolean;
 }
 
+interface DiscoveredModel {
+  id: string;
+  name: string;
+  provider: string;
+  capabilities?: string[];
+}
+
 interface ProviderTemplate {
   id: string;
   name: string;
-  models: string[];
   requires_api_key: boolean;
   supports_vision: boolean;
+  supports_discovery: boolean;
 }
 
 const providerTemplates: ProviderTemplate[] = [
   {
     id: "claude",
     name: "Claude (Anthropic)",
-    models: ["claude-3-opus-20240229", "claude-3-sonnet-20240229", "claude-3-haiku-20240307"],
     requires_api_key: true,
     supports_vision: true,
+    supports_discovery: true,
   },
   {
     id: "openai",
     name: "OpenAI",
-    models: ["gpt-4-turbo-preview", "gpt-4", "gpt-3.5-turbo"],
     requires_api_key: true,
     supports_vision: true,
+    supports_discovery: true,
   },
   {
     id: "gemini",
     name: "Gemini (Google)",
-    models: ["gemini-pro", "gemini-pro-vision"],
     requires_api_key: true,
     supports_vision: true,
+    supports_discovery: true,
   },
   {
     id: "ollama",
     name: "Ollama (Local)",
-    models: ["llama2", "mistral", "mixtral", "codellama"],
     requires_api_key: false,
     supports_vision: false,
+    supports_discovery: true,
   },
 ];
 
 type LLMMode = "single" | "aggregation" | "council";
 
+const SYSTEM_DEFAULTS_INIT = {
+  timeout: 120,
+  logging_enabled: true,
+  council_min_providers: 2,
+  council_strategy: "synthesize" as const,
+  aggregation_parallel: true,
+  aggregation_include_sources: true,
+};
+
+type CouncilStrategy = "majority" | "weighted" | "synthesize";
+
 export default function AISettingsPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.is_admin ?? false;
+
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [mode, setMode] = useState<LLMMode>("single");
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [testingProviders, setTestingProviders] = useState<Set<number>>(new Set());
+
+  // System defaults (admin-only)
+  const [systemDefaults, setSystemDefaults] = useState<{
+    timeout: number;
+    logging_enabled: boolean;
+    council_min_providers: number;
+    council_strategy: CouncilStrategy;
+    aggregation_parallel: boolean;
+    aggregation_include_sources: boolean;
+  }>(SYSTEM_DEFAULTS_INIT);
+  const [systemDefaultsDirty, setSystemDefaultsDirty] = useState(false);
+  const [systemDefaultsSaving, setSystemDefaultsSaving] = useState(false);
+  const [systemDefaultsLoaded, setSystemDefaultsLoaded] = useState(false);
 
   // Add provider dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -113,19 +153,84 @@ export default function AISettingsPage() {
   const [newProviderApiKey, setNewProviderApiKey] = useState<string>("");
   const [newProviderBaseUrl, setNewProviderBaseUrl] = useState<string>("");
 
-  useEffect(() => {
-    fetchAIConfig();
-  }, []);
+  // API key validation state (Add Provider dialog)
+  const [isTestingKey, setIsTestingKey] = useState(false);
+  const [keyValid, setKeyValid] = useState<boolean | null>(null);
+  const [keyError, setKeyError] = useState<string | null>(null);
 
-  const fetchAIConfig = async () => {
+  // Model discovery state (Add Provider dialog)
+  const [discoveredModels, setDiscoveredModels] = useState<DiscoveredModel[]>([]);
+  const [isDiscovering, setIsDiscovering] = useState(false);
+  const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
+  const fetchAIConfig = useCallback(async () => {
     try {
       const response = await api.get("/llm/config");
       setProviders(response.data.providers || []);
       setMode(response.data.mode || "single");
     } catch (error) {
-      console.error("Failed to fetch AI config:", error);
+      errorLogger.report(
+        error instanceof Error ? error : new Error("Failed to fetch AI config"),
+        { source: "ai-page" }
+      );
     } finally {
       setIsLoading(false);
+    }
+  }, []);
+
+  const fetchSystemDefaults = useCallback(async () => {
+    if (!isAdmin) return;
+    try {
+      const response = await api.get("/llm-settings");
+      const s = response.data?.settings ?? {};
+      setSystemDefaults({
+        timeout: s.timeout != null ? Number(s.timeout) : SYSTEM_DEFAULTS_INIT.timeout,
+        logging_enabled: s.logging_enabled ?? SYSTEM_DEFAULTS_INIT.logging_enabled,
+        council_min_providers: s.council_min_providers != null ? Number(s.council_min_providers) : SYSTEM_DEFAULTS_INIT.council_min_providers,
+        council_strategy: (s.council_strategy as CouncilStrategy) ?? SYSTEM_DEFAULTS_INIT.council_strategy,
+        aggregation_parallel: s.aggregation_parallel ?? SYSTEM_DEFAULTS_INIT.aggregation_parallel,
+        aggregation_include_sources: s.aggregation_include_sources ?? SYSTEM_DEFAULTS_INIT.aggregation_include_sources,
+      });
+      setSystemDefaultsDirty(false);
+    } catch {
+      toast.error("Failed to load system defaults");
+    } finally {
+      setSystemDefaultsLoaded(true);
+    }
+  }, [isAdmin]);
+
+  useEffect(() => {
+    fetchAIConfig();
+  }, [fetchAIConfig]);
+
+  useEffect(() => {
+    if (isAdmin && !systemDefaultsLoaded) {
+      fetchSystemDefaults();
+    }
+  }, [isAdmin, systemDefaultsLoaded, fetchSystemDefaults]);
+
+  const saveSystemDefaults = async () => {
+    if (!isAdmin || !systemDefaultsDirty) return;
+    setSystemDefaultsSaving(true);
+    try {
+      await api.put("/llm-settings", {
+        timeout: systemDefaults.timeout,
+        logging_enabled: systemDefaults.logging_enabled,
+        council_min_providers: systemDefaults.council_min_providers,
+        council_strategy: systemDefaults.council_strategy,
+        aggregation_parallel: systemDefaults.aggregation_parallel,
+        aggregation_include_sources: systemDefaults.aggregation_include_sources,
+      });
+      toast.success("System defaults saved");
+      setSystemDefaultsDirty(false);
+      await fetchSystemDefaults();
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to save system defaults");
+    } finally {
+      setSystemDefaultsSaving(false);
     }
   };
 
@@ -183,6 +288,76 @@ export default function AISettingsPage() {
     setNewProviderModel("");
     setNewProviderApiKey("");
     setNewProviderBaseUrl("");
+    setKeyValid(null);
+    setKeyError(null);
+    setDiscoveredModels([]);
+    setDiscoveryError(null);
+  };
+
+  const testApiKey = async () => {
+    if (selectedTemplate === "ollama") {
+      if (!newProviderBaseUrl?.trim()) {
+        setKeyError("Enter Ollama host (e.g. http://localhost:11434)");
+        return;
+      }
+    } else if (!newProviderApiKey?.trim()) {
+      setKeyError("Enter your API key");
+      return;
+    }
+    setIsTestingKey(true);
+    setKeyError(null);
+    setKeyValid(null);
+    try {
+      const response = await api.post("/llm-settings/test-key", {
+        provider: selectedTemplate,
+        api_key: newProviderApiKey || undefined,
+        host: selectedTemplate === "ollama" ? (newProviderBaseUrl || "http://localhost:11434") : undefined,
+      });
+      setKeyValid(response.data.valid);
+      if (!response.data.valid && response.data.error) {
+        setKeyError(response.data.error);
+      }
+    } catch (err: unknown) {
+      const data = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { error?: string; message?: string } } }).response?.data
+        : null;
+      setKeyValid(false);
+      setKeyError(data?.error ?? data?.message ?? "Failed to validate API key");
+    } finally {
+      setIsTestingKey(false);
+    }
+  };
+
+  const discoverModels = async () => {
+    if (selectedTemplate === "ollama") {
+      if (!newProviderBaseUrl?.trim()) {
+        setDiscoveryError("Enter Ollama host first");
+        return;
+      }
+    } else if (!newProviderApiKey?.trim()) {
+      setDiscoveryError("Enter your API key first");
+      return;
+    }
+    setIsDiscovering(true);
+    setDiscoveryError(null);
+    try {
+      const response = await api.post("/llm-settings/discover-models", {
+        provider: selectedTemplate,
+        api_key: newProviderApiKey || undefined,
+        host: selectedTemplate === "ollama" ? (newProviderBaseUrl || "http://localhost:11434") : undefined,
+      });
+      setDiscoveredModels(response.data.models ?? []);
+      if ((response.data.models ?? []).length === 0) {
+        setDiscoveryError("No models returned. Check your API key or host.");
+      }
+    } catch (err: unknown) {
+      const data = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { error?: string; message?: string } } }).response?.data
+        : null;
+      setDiscoveryError(data?.message ?? data?.error ?? "Failed to fetch models. Check your API key.");
+    } finally {
+      setIsDiscovering(false);
+    }
   };
 
   const handleToggleProvider = async (providerId: number, enabled: boolean) => {
@@ -352,7 +527,13 @@ export default function AISettingsPage() {
                 Manage your configured AI providers.
               </CardDescription>
             </div>
-            <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
+            <Dialog
+              open={showAddDialog}
+              onOpenChange={(open) => {
+                setShowAddDialog(open);
+                if (!open) resetAddDialog();
+              }}
+            >
               <DialogTrigger asChild>
                 <Button>
                   <Plus className="mr-2 h-4 w-4" />
@@ -374,6 +555,10 @@ export default function AISettingsPage() {
                       onValueChange={(v) => {
                         setSelectedTemplate(v);
                         setNewProviderModel("");
+                        setKeyValid(null);
+                        setKeyError(null);
+                        setDiscoveredModels([]);
+                        setDiscoveryError(null);
                       }}
                     >
                       <SelectTrigger>
@@ -391,46 +576,137 @@ export default function AISettingsPage() {
 
                   {selectedTemplateData && (
                     <>
-                      <div className="space-y-2">
-                        <Label>Model</Label>
-                        <Select
-                          value={newProviderModel}
-                          onValueChange={setNewProviderModel}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a model" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {selectedTemplateData.models.map((model) => (
-                              <SelectItem key={model} value={model}>
-                                {model}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
                       {selectedTemplateData.requires_api_key && (
                         <div className="space-y-2">
                           <Label>API Key</Label>
-                          <Input
-                            type="password"
-                            value={newProviderApiKey}
-                            onChange={(e) => setNewProviderApiKey(e.target.value)}
-                            placeholder="Enter your API key"
-                          />
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type="password"
+                                value={newProviderApiKey}
+                                onChange={(e) => {
+                                  setNewProviderApiKey(e.target.value);
+                                  setKeyValid(null);
+                                  setKeyError(null);
+                                  setDiscoveredModels([]);
+                                  setDiscoveryError(null);
+                                }}
+                                placeholder="Enter your API key"
+                              />
+                              {keyValid === true && (
+                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                              )}
+                              {keyValid === false && (
+                                <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={testApiKey}
+                              disabled={!newProviderApiKey.trim() || isTestingKey}
+                            >
+                              {isTestingKey ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Test"
+                              )}
+                            </Button>
+                          </div>
+                          {keyError && (
+                            <p className="text-sm text-destructive">{keyError}</p>
+                          )}
                         </div>
                       )}
 
                       {selectedTemplate === "ollama" && (
                         <div className="space-y-2">
-                          <Label>Base URL (optional)</Label>
-                          <Input
-                            type="text"
-                            value={newProviderBaseUrl}
-                            onChange={(e) => setNewProviderBaseUrl(e.target.value)}
-                            placeholder="http://localhost:11434"
-                          />
+                          <Label>Ollama host</Label>
+                          <div className="flex gap-2">
+                            <div className="relative flex-1">
+                              <Input
+                                type="text"
+                                value={newProviderBaseUrl}
+                                onChange={(e) => {
+                                  setNewProviderBaseUrl(e.target.value);
+                                  setKeyValid(null);
+                                  setKeyError(null);
+                                  setDiscoveredModels([]);
+                                  setDiscoveryError(null);
+                                }}
+                                placeholder="http://localhost:11434"
+                              />
+                              {keyValid === true && (
+                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                              )}
+                              {keyValid === false && (
+                                <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                              )}
+                            </div>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={testApiKey}
+                              disabled={!newProviderBaseUrl?.trim() || isTestingKey}
+                            >
+                              {isTestingKey ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Test"
+                              )}
+                            </Button>
+                          </div>
+                          {keyError && (
+                            <p className="text-sm text-destructive">{keyError}</p>
+                          )}
+                        </div>
+                      )}
+
+                      {selectedTemplateData.supports_discovery && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <Label className="mb-0">Models</Label>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={discoverModels}
+                              disabled={
+                                (selectedTemplateData.requires_api_key && !newProviderApiKey?.trim()) ||
+                                (selectedTemplate === "ollama" && !newProviderBaseUrl?.trim()) ||
+                                isDiscovering
+                              }
+                            >
+                              {isDiscovering ? (
+                                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                              ) : null}
+                              Fetch Models
+                            </Button>
+                          </div>
+                          {discoveryError && (
+                            <p className="text-sm text-destructive">{discoveryError}</p>
+                          )}
+                          {discoveredModels.length > 0 ? (
+                            <Select
+                              value={newProviderModel}
+                              onValueChange={setNewProviderModel}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a model" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {discoveredModels.map((model) => (
+                                  <SelectItem key={model.id} value={model.id}>
+                                    {model.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          ) : (
+                            <p className="text-sm text-muted-foreground">
+                              Enter your API key (or host for Ollama) and click Fetch Models.
+                            </p>
+                          )}
                         </div>
                       )}
 
@@ -576,6 +852,136 @@ export default function AISettingsPage() {
             Please enable more providers or switch to a different mode.
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* System Defaults (admin-only) */}
+      {isAdmin && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            saveSystemDefaults();
+          }}
+          className="space-y-6"
+        >
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Cpu className="h-5 w-5" />
+                System Defaults
+              </CardTitle>
+              <CardDescription>
+                System-wide LLM defaults: timeout, logging, and mode-specific options.
+                Users inherit these when not overridden.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+            <FormField id="sys-timeout" label="Request timeout (seconds)">
+              <Input
+                id="sys-timeout"
+                type="number"
+                min={10}
+                max={600}
+                value={systemDefaults.timeout}
+                onChange={(e) => {
+                  const v = parseInt(e.target.value, 10);
+                  if (!isNaN(v)) {
+                    setSystemDefaults((prev) => ({ ...prev, timeout: Math.max(10, Math.min(600, v)) }));
+                    setSystemDefaultsDirty(true);
+                  }
+                }}
+                className="min-h-[44px] max-w-xs"
+              />
+            </FormField>
+            <SettingsSwitchRow
+              label="Log requests"
+              description="Log LLM requests for debugging and cost analysis"
+              checked={systemDefaults.logging_enabled}
+              onCheckedChange={(checked) => {
+                setSystemDefaults((prev) => ({ ...prev, logging_enabled: checked }));
+                setSystemDefaultsDirty(true);
+              }}
+            />
+
+            {mode === "council" && (
+              <div className="space-y-4 pt-2 border-t">
+                <h4 className="text-sm font-medium">Council mode</h4>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <FormField id="sys-council-min" label="Minimum providers">
+                    <Input
+                      id="sys-council-min"
+                      type="number"
+                      min={2}
+                      max={6}
+                      value={systemDefaults.council_min_providers}
+                      onChange={(e) => {
+                        const v = parseInt(e.target.value, 10);
+                        if (!isNaN(v)) {
+                          setSystemDefaults((prev) => ({ ...prev, council_min_providers: Math.max(2, Math.min(6, v)) }));
+                          setSystemDefaultsDirty(true);
+                        }
+                      }}
+                      className="min-h-[44px]"
+                    />
+                  </FormField>
+                  <FormField id="sys-council-strategy" label="Resolution strategy">
+                    <Select
+                      value={systemDefaults.council_strategy}
+                      onValueChange={(v: CouncilStrategy) => {
+                        setSystemDefaults((prev) => ({ ...prev, council_strategy: v }));
+                        setSystemDefaultsDirty(true);
+                      }}
+                    >
+                      <SelectTrigger className="min-h-[44px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="majority">Majority</SelectItem>
+                        <SelectItem value="weighted">Weighted</SelectItem>
+                        <SelectItem value="synthesize">Synthesize</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormField>
+                </div>
+              </div>
+            )}
+
+            {mode === "aggregation" && (
+              <div className="space-y-4 pt-2 border-t">
+                <h4 className="text-sm font-medium">Aggregation mode</h4>
+                <div className="space-y-4">
+                  <SettingsSwitchRow
+                    label="Parallel execution"
+                    description="Run provider queries in parallel"
+                    checked={systemDefaults.aggregation_parallel}
+                    onCheckedChange={(checked) => {
+                      setSystemDefaults((prev) => ({ ...prev, aggregation_parallel: checked }));
+                      setSystemDefaultsDirty(true);
+                    }}
+                  />
+                  <SettingsSwitchRow
+                    label="Include sources"
+                    description="Include individual provider responses"
+                    checked={systemDefaults.aggregation_include_sources}
+                    onCheckedChange={(checked) => {
+                      setSystemDefaults((prev) => ({ ...prev, aggregation_include_sources: checked }));
+                      setSystemDefaultsDirty(true);
+                    }}
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+          <CardFooter className="flex flex-col gap-4 sm:flex-row sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Changes take effect immediately. Empty values fall back to environment variables.
+            </p>
+            <SaveButton
+              isDirty={systemDefaultsDirty}
+              isSaving={systemDefaultsSaving}
+            />
+          </CardFooter>
+        </Card>
+        </form>
       )}
     </div>
   );

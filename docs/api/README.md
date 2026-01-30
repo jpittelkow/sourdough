@@ -69,6 +69,32 @@ const response = await fetch('/api/auth/user', {
 | PUT | `/profile/password` | Update password |
 | DELETE | `/profile` | Delete account |
 
+### User Management (Admin)
+
+Requires `admin` ability. Admin CRUD for users; disabled users cannot log in.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/users` | List users (query: `page`, `per_page`, `search`) |
+| POST | `/users` | Create user (body: name, email, password, is_admin, skip_verification) |
+| GET | `/users/{user}` | Get user |
+| PUT | `/users/{user}` | Update user (body: name, email, password, is_admin) |
+| DELETE | `/users/{user}` | Delete user |
+| POST | `/users/{user}/toggle-admin` | Toggle admin status |
+| POST | `/users/{user}/reset-password` | Reset password (body: password) |
+| POST | `/users/{user}/disable` | Toggle disabled status |
+| POST | `/users/{user}/resend-verification` | Resend verification email (rate limited: 1 per 5 min per user) |
+
+### Audit Logs (Admin)
+
+Requires `admin` ability. See [Audit Logs roadmap](../plans/audit-logs-roadmap.md), [Recipe: Trigger audit logging](../ai/recipes/trigger-audit-logging.md).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/audit-logs` | List audit logs (paginated). Query: `page`, `per_page`, `user_id`, `action` (search), `severity`, `date_from`, `date_to`. Response: Laravel pagination (`data`, `current_page`, `last_page`, `per_page`, `total`). |
+| GET | `/audit-logs/export` | Export as CSV. Query: same filters as list. |
+| GET | `/audit-logs/stats` | Statistics. Query: `date_from`, `date_to` (default last 30 days). Response: `total_actions`, `by_severity` (severity→count), `daily_trends` (date→count), `recent_warnings` (latest 5 warning/error/critical with user), `actions_by_type`, `actions_by_user`. |
+
 ### Settings
 
 | Method | Endpoint | Description |
@@ -88,6 +114,19 @@ Settings are stored in the database with env fallback (see [ADR-014](../adr/014-
 | PUT | `/mail-settings` | Update mail settings (same keys as GET) |
 | POST | `/mail-settings/test` | Send test email (body: `{ "to": "email@example.com" }`) |
 | DELETE | `/mail-settings/keys/{key}` | Reset one setting to env default. `{key}` must be the **schema key** (e.g. `smtp_password`, `mailer`, `from_address`), not the frontend key. |
+
+### Email Templates (Admin)
+
+Requires `manage-settings` ability. Templates are stored in the database; default content is seeded from `EmailTemplateSeeder`. See [ADR-016: Email Template System](../adr/016-email-template-system.md) and [Recipe: Add Email Template](../ai/recipes/add-email-template.md).
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/email-templates` | List all templates (key, name, description, is_system, is_active, updated_at) |
+| GET | `/email-templates/{key}` | Get single template (full content: subject, body_html, body_text, variables, etc.) |
+| PUT | `/email-templates/{key}` | Update template (body: optional subject, body_html, body_text, is_active) |
+| POST | `/email-templates/{key}/preview` | Preview with variables. Body: optional `variables` (object); optional `subject`, `body_html`, `body_text` for live preview of unsaved content. Response: subject, html, text. |
+| POST | `/email-templates/{key}/test` | Send test email. Body: optional `to` (email; defaults to current user). Returns 503 if email not configured. |
+| POST | `/email-templates/{key}/reset` | Reset system template to default content (403 if not system template). |
 
 ### Notifications
 
@@ -111,7 +150,14 @@ Settings are stored in the database with env fallback (see [ADR-014](../adr/014-
 | POST | `/llm/query` | Send text query |
 | POST | `/llm/query/vision` | Send vision query |
 
-**Supported providers**: Claude (Anthropic), OpenAI, Gemini, Ollama, Azure OpenAI, AWS Bedrock
+**LLM Settings (Admin) – model discovery:**
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/llm-settings/test-key` | Validate API key (body: `provider`, `api_key?`, `host?`). Returns `{ valid, error? }`. |
+| POST | `/llm-settings/discover-models` | Fetch available models (body: `provider`, `api_key?`, `host?`). Returns `{ models, provider }`. |
+
+**Supported providers**: Claude (Anthropic), OpenAI, Gemini, Ollama, Azure OpenAI, AWS Bedrock. Model discovery supported for OpenAI, Claude, Gemini, Ollama.
 
 **Operating modes**:
 - `single` - Use one provider

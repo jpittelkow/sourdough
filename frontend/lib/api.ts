@@ -1,4 +1,5 @@
 import axios from "axios";
+import { setCorrelationId } from "@/lib/error-logger";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL
@@ -14,10 +15,19 @@ export const api = axios.create({
 // Flag to prevent multiple redirects
 let isRedirecting = false;
 
-// Response interceptor for error handling
+// Response interceptor: capture correlation ID and handle errors
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    const correlationId = response.headers["x-correlation-id"];
+    if (correlationId) {
+      setCorrelationId(correlationId);
+    }
+    return response;
+  },
   (error) => {
+    if (error.response?.headers?.["x-correlation-id"]) {
+      setCorrelationId(error.response.headers["x-correlation-id"]);
+    }
     if (error.response) {
       // Server responded with error
       const message =

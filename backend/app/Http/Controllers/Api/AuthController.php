@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
+use App\Services\AuditService;
+use App\Services\EmailConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,15 +16,20 @@ use Illuminate\Validation\Rules\Password as PasswordRule;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Support\Facades\Log;
 
 class AuthController extends Controller
 {
     use ApiResponseTrait;
 
+    public function __construct(
+        private AuditService $auditService
+    ) {}
+
     /**
      * Register a new user.
      */
-    public function register(Request $request): JsonResponse
+    public function register(Request $request, EmailConfigService $emailConfigService): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
@@ -37,7 +44,11 @@ class AuthController extends Controller
             'is_admin' => User::count() === 0, // First user is admin
         ]);
 
-        event(new Registered($user));
+        if ($emailConfigService->isConfigured()) {
+            event(new Registered($user));
+        } else {
+            $user->markEmailAsVerified();
+        }
 
         Auth::login($user);
 
@@ -55,10 +66,17 @@ class AuthController extends Controller
         ]);
 
         if (!Auth::attempt($credentials, $request->boolean('remember'))) {
+            $this->auditService->logAuth('login_failed', null, ['email' => $credentials['email']], 'warning');
             return $this->errorResponse('Invalid credentials', 401);
         }
 
         $user = Auth::user();
+
+        if ($user->isDisabled()) {
+            $this->auditService->logAuth('login_failed', $user, ['reason' => 'account_disabled'], 'warning');
+            Auth::logout();
+            return $this->errorResponse('This account has been disabled. Please contact your administrator.', 403);
+        }
 
         // Check if 2FA is enabled
         if ($user->hasTwoFactorEnabled()) {
@@ -71,6 +89,8 @@ class AuthController extends Controller
 
         $request->session()->regenerate();
 
+        $this->auditService->logAuth('login', $user);
+
         return $this->successResponse('Login successful', ['user' => $user]);
     }
 
@@ -79,10 +99,15 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        $user = $request->user();
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        if ($user) {
+            $this->auditService->logAuth('logout', $user);
+        }
 
         return $this->successResponse('Logged out successfully');
     }
@@ -104,18 +129,28 @@ class AuthController extends Controller
 
     /**
      * Request password reset link.
-     * 
-     * Note: Always returns success to prevent user enumeration.
+     *
+     * Note: Always returns success to prevent user enumeration when email is configured.
      * The actual email is only sent if the user exists.
      */
-    public function forgotPassword(Request $request): JsonResponse
+    public function forgotPassword(Request $request, EmailConfigService $emailConfigService): JsonResponse
     {
+        if (!$emailConfigService->isConfigured()) {
+            return $this->errorResponse(
+                'Password reset is not available. Please contact your administrator.',
+                503
+            );
+        }
+
         $request->validate([
             'email' => ['required', 'email'],
         ]);
 
         // Attempt to send the reset link, but don't reveal whether the user exists
         Password::sendResetLink($request->only('email'));
+
+        Log::info('Password reset link requested', ['email' => $request->email]);
+        $this->auditService->logAuth('password_reset_requested', null, ['email' => $request->email]);
 
         // Always return success message to prevent user enumeration
         return $this->successResponse('If an account exists with this email, a password reset link has been sent.');
@@ -141,12 +176,16 @@ class AuthController extends Controller
                 ])->save();
 
                 event(new PasswordReset($user));
+
+                app(AuditService::class)->logAuth('password_reset', $user);
             }
         );
 
         if ($status === Password::PASSWORD_RESET) {
             return $this->successResponse('Password reset successful');
         }
+
+        Log::warning('Password reset failed', ['email' => $request->email, 'status' => $status]);
 
         return response()->json([
             'message' => 'Password reset failed',
@@ -183,12 +222,19 @@ class AuthController extends Controller
     /**
      * Resend verification email.
      */
-    public function resendVerification(Request $request): JsonResponse
+    public function resendVerification(Request $request, EmailConfigService $emailConfigService): JsonResponse
     {
         $user = $request->user();
 
         if ($user->hasVerifiedEmail()) {
             return $this->successResponse('Email already verified');
+        }
+
+        if (!$emailConfigService->isConfigured()) {
+            return $this->errorResponse(
+                'Email verification is not available. Please contact your administrator.',
+                503
+            );
         }
 
         $user->sendEmailVerificationNotification();

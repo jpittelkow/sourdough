@@ -18,6 +18,7 @@ class AuditLogController extends Controller
         $perPage = $request->input('per_page', config('app.pagination.audit_log'));
         $userId = $request->input('user_id');
         $action = $request->input('action');
+        $severity = $request->input('severity');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -30,6 +31,10 @@ class AuditLogController extends Controller
 
         if ($action) {
             $query->where('action', 'like', "%{$action}%");
+        }
+
+        if ($severity) {
+            $query->where('severity', $severity);
         }
 
         if ($dateFrom) {
@@ -52,6 +57,7 @@ class AuditLogController extends Controller
     {
         $userId = $request->input('user_id');
         $action = $request->input('action');
+        $severity = $request->input('severity');
         $dateFrom = $request->input('date_from');
         $dateTo = $request->input('date_to');
 
@@ -65,6 +71,10 @@ class AuditLogController extends Controller
             $query->where('action', 'like', "%{$action}%");
         }
 
+        if ($severity) {
+            $query->where('severity', $severity);
+        }
+
         if ($dateFrom) {
             $query->whereDate('created_at', '>=', $dateFrom);
         }
@@ -73,7 +83,7 @@ class AuditLogController extends Controller
             $query->whereDate('created_at', '<=', $dateTo);
         }
 
-        $logs = $query->get();
+        $logs = $query->orderBy('created_at', 'desc')->get();
 
         $filename = 'audit_logs_' . date('Y-m-d_His') . '.csv';
 
@@ -91,6 +101,7 @@ class AuditLogController extends Controller
                 'Date',
                 'User',
                 'Action',
+                'Severity',
                 'IP Address',
                 'User Agent',
             ]);
@@ -102,6 +113,7 @@ class AuditLogController extends Controller
                     $log->created_at->format('Y-m-d H:i:s'),
                     $log->user ? $log->user->email : 'System',
                     $log->action,
+                    $log->severity ?? 'info',
                     $log->ip_address ?? '',
                     $log->user_agent ?? '',
                 ]);
@@ -120,17 +132,18 @@ class AuditLogController extends Controller
     {
         $dateFrom = $request->input('date_from', now()->subDays(30)->format('Y-m-d'));
         $dateTo = $request->input('date_to', now()->format('Y-m-d'));
+        $baseQuery = AuditLog::whereBetween('created_at', [$dateFrom, $dateTo . ' 23:59:59']);
 
         $stats = [
-            'total_actions' => AuditLog::whereBetween('created_at', [$dateFrom, $dateTo . ' 23:59:59'])->count(),
-            'actions_by_type' => AuditLog::whereBetween('created_at', [$dateFrom, $dateTo . ' 23:59:59'])
+            'total_actions' => (clone $baseQuery)->count(),
+            'actions_by_type' => (clone $baseQuery)
                 ->select('action', DB::raw('count(*) as count'))
                 ->groupBy('action')
                 ->orderByDesc('count')
                 ->limit(10)
                 ->get()
                 ->pluck('count', 'action'),
-            'actions_by_user' => AuditLog::whereBetween('created_at', [$dateFrom, $dateTo . ' 23:59:59'])
+            'actions_by_user' => (clone $baseQuery)
                 ->whereNotNull('user_id')
                 ->select('user_id', DB::raw('count(*) as count'))
                 ->groupBy('user_id')
@@ -144,6 +157,30 @@ class AuditLogController extends Controller
                         'count' => $item->count,
                     ];
                 }),
+            'by_severity' => (clone $baseQuery)
+                ->select('severity', DB::raw('count(*) as count'))
+                ->groupBy('severity')
+                ->get()
+                ->pluck('count', 'severity'),
+            'daily_trends' => (clone $baseQuery)
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->groupByRaw('DATE(created_at)')
+                ->orderBy('date')
+                ->get()
+                ->pluck('count', 'date'),
+            'recent_warnings' => (clone $baseQuery)
+                ->whereIn('severity', ['warning', 'error', 'critical'])
+                ->with('user:id,name,email')
+                ->orderByDesc('created_at')
+                ->limit(5)
+                ->get()
+                ->map(fn ($log) => [
+                    'id' => $log->id,
+                    'action' => $log->action,
+                    'severity' => $log->severity,
+                    'created_at' => $log->created_at->toIso8601String(),
+                    'user' => $log->user,
+                ]),
         ];
 
         return response()->json($stats);

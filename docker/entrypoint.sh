@@ -19,6 +19,11 @@ fi
 
 # Create .next directory for development mode (volume mount overwrites built .next)
 echo "Setting up frontend build directories..."
+if [ "${APP_ENV}" = "local" ] || [ "${APP_ENV}" = "development" ]; then
+    # In dev, clear .next so www-data can create/delete files (avoids EACCES from root-owned leftovers)
+    echo "Development mode: Clearing .next for fresh dev build..."
+    find ${FRONTEND_DIR}/.next -mindepth 1 -maxdepth 1 -exec rm -rf {} \; 2>/dev/null || true
+fi
 mkdir -p ${FRONTEND_DIR}/.next/cache
 chown -R www-data:www-data ${FRONTEND_DIR}/.next
 chmod -R 775 ${FRONTEND_DIR}/.next

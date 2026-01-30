@@ -5,6 +5,12 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "@/lib/api";
 import { applyThemeColors } from "@/lib/theme-colors";
 
+export interface AppConfigFeatures {
+  emailConfigured: boolean;
+  passwordResetAvailable: boolean;
+  emailVerificationAvailable: boolean;
+}
+
 interface AppConfigState {
   appName: string;
   logoUrl: string | null;
@@ -12,6 +18,7 @@ interface AppConfigState {
   primaryColor: string | null;
   secondaryColor: string | null;
   customCss: string | null;
+  features: AppConfigFeatures | null;
   isLoading: boolean;
   error: Error | null;
 }
@@ -35,6 +42,7 @@ function useAppConfigQuery() {
 
         const systemSettings = systemSettingsResponse?.data?.settings || {};
         const branding = brandingResponse?.data?.settings || {};
+        const features = systemSettingsResponse?.data?.features;
 
         // Backend ensures app_name always has a default value, so it should always be present
         return {
@@ -44,6 +52,13 @@ function useAppConfigQuery() {
           primaryColor: branding.primary_color || null,
           secondaryColor: branding.secondary_color || null,
           customCss: branding.custom_css || null,
+          features: features
+            ? {
+                emailConfigured: !!features.email_configured,
+                passwordResetAvailable: !!features.password_reset_available,
+                emailVerificationAvailable: !!features.email_verification_available,
+              }
+            : null,
         };
       } catch (error) {
         // If API fails, return empty values - components should handle loading/error states
@@ -55,6 +70,7 @@ function useAppConfigQuery() {
           primaryColor: null,
           secondaryColor: null,
           customCss: null,
+          features: null,
         };
       }
     },
@@ -78,6 +94,7 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   const primaryColor = query.data?.primaryColor || null;
   const secondaryColor = query.data?.secondaryColor || null;
   const customCss = query.data?.customCss || null;
+  const features = query.data?.features ?? null;
 
   // Apply theme colors when they're loaded
   React.useEffect(() => {
@@ -140,6 +157,7 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
     primaryColor,
     secondaryColor,
     customCss,
+    features,
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
@@ -167,6 +185,7 @@ export function useAppConfig(): AppConfigState {
       primaryColor: null,
       secondaryColor: null,
       customCss: null,
+      features: null,
       isLoading: false,
       error: null,
     };

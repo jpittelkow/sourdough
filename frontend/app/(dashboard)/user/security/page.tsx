@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,7 +104,10 @@ export default function SecurityPage() {
       setTwoFactorStatus(twoFactorRes.data);
       setSsoProviders(ssoRes.data.providers || []);
     } catch (error) {
-      console.error("Failed to fetch security status:", error);
+      errorLogger.report(
+        error instanceof Error ? error : new Error("Failed to fetch security status"),
+        { source: "user-security-page" }
+      );
     }
   };
 

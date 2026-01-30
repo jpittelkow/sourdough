@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -98,7 +99,11 @@ export default function PreferencesPage() {
       });
       setChannelSettings(initial);
     } catch (e) {
-      console.warn("Failed to fetch notification channels:", e);
+      errorLogger.captureMessage(
+        "Failed to fetch notification channels",
+        "warning",
+        { error: e instanceof Error ? e.message : String(e) }
+      );
       setChannels([]);
     } finally {
       setChannelsLoading(false);
@@ -201,9 +206,11 @@ export default function PreferencesPage() {
       if (themeValue && themeValue !== theme) {
         setTheme(themeValue);
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       // If endpoint doesn't exist yet, use defaults
-      console.warn("Failed to fetch preferences:", error);
+      errorLogger.captureMessage("Failed to fetch preferences", "warning", {
+        error: error instanceof Error ? error.message : String(error),
+      });
       const currentTheme = theme || "system";
       setPreferences({
         theme: currentTheme,
@@ -232,7 +239,7 @@ export default function PreferencesPage() {
       
       // Ensure we have at least one field to update
       if (Object.keys(payload).length === 0) {
-        console.warn("No fields to update");
+        errorLogger.captureMessage("No fields to update", "warning");
         setIsSaving(false);
         return;
       }
@@ -255,7 +262,10 @@ export default function PreferencesPage() {
           || "Failed to save preferences";
         toast.error(errorMessage);
       }
-      console.error("Failed to save preferences:", error.response?.data || error);
+      errorLogger.report(
+        error instanceof Error ? error : new Error("Failed to save preferences"),
+        { response: error.response?.data, source: "preferences-page" }
+      );
     } finally {
       setIsSaving(false);
     }

@@ -22,7 +22,6 @@ import {
   Users,
   Bell,
   Brain,
-  Cpu,
   Mail,
   HardDrive,
   Key,
@@ -32,6 +31,7 @@ import {
   Database,
   Menu,
   LogIn,
+  MailOpen,
 } from "lucide-react";
 
 const navigation = [
@@ -60,16 +60,16 @@ const navigation = [
     description: "LLM providers and modes",
   },
   {
-    name: "LLM system",
-    href: "/configuration/llm-system",
-    icon: Cpu,
-    description: "System-wide LLM defaults",
-  },
-  {
     name: "Email",
     href: "/configuration/email",
     icon: Mail,
     description: "Email delivery configuration",
+  },
+  {
+    name: "Email Templates",
+    href: "/configuration/email-templates",
+    icon: MailOpen,
+    description: "Customize system emails",
   },
   {
     name: "SSO",

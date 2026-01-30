@@ -3,7 +3,7 @@
 Integration and configuration settings for external services and customization.
 
 **Priority**: MEDIUM  
-**Status**: Planned  
+**Status**: Complete  
 **Last Updated**: 2026-01-29
 
 **Dependencies**:
@@ -15,10 +15,10 @@ Integration and configuration settings for external services and customization.
 ## Task Checklist
 
 - [x] Add SSO/Authentication provider configuration UI - See [SSO Settings Enhancement](sso-settings-enhancement-roadmap.md)
-- [ ] Add Email/SMTP configuration settings UI
-- [ ] Add Storage Settings for upload policies and stats
-- [ ] Create API tokens and webhook management settings
-- [ ] Add Theme/Branding customization settings
+- [x] Add Email/SMTP configuration settings UI
+- [x] Add Storage Settings for upload policies and stats
+- [x] Create API tokens and webhook management settings
+- [x] Add Theme/Branding customization settings
 
 ---
 
@@ -190,10 +190,10 @@ webhooks:
 | Feature | Priority | Effort | Value | Status |
 |---------|----------|--------|-------|--------|
 | SSO Configuration | HIGH | Medium | High | ✅ Done - See [SSO Settings Enhancement](sso-settings-enhancement-roadmap.md) |
-| Email Configuration | MEDIUM | Medium | Medium | Planned |
-| Storage Settings | LOW-MEDIUM | Medium | Medium | Planned |
-| API/Webhooks | LOW-MEDIUM | High | Medium | Planned |
-| Theme/Branding | LOW | Low | Low | Planned |
+| Email Configuration | MEDIUM | Medium | Medium | ✅ Done |
+| Storage Settings | LOW-MEDIUM | Medium | Medium | ✅ Done |
+| API/Webhooks | LOW-MEDIUM | High | Medium | ✅ Done |
+| Theme/Branding | LOW | Low | Low | ✅ Done |
 
 ---
 

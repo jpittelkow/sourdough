@@ -10,6 +10,7 @@ Welcome to Sourdough! This guide will help you get started with the application.
 4. [Notifications](#notifications)
 5. [AI/LLM Features](#aillm-features)
 6. [Backup & Restore](#backup--restore)
+7. [Administration (Admins)](#administration-admins)
 
 ---
 
@@ -239,25 +240,31 @@ Access via **Settings > AI**
 
 Sourdough supports multiple AI providers. Configure the ones you want to use:
 
-#### Claude (Anthropic)
-1. Get an API key from [console.anthropic.com](https://console.anthropic.com)
-2. Enter the key in **Settings > AI > Claude**
-3. Select your preferred model
+#### Adding a Provider
 
-#### OpenAI
-1. Get an API key from [platform.openai.com](https://platform.openai.com)
-2. Enter the key in **Settings > AI > OpenAI**
-3. Select your preferred model
+1. Go to **Configuration > AI** (admin only)
+2. Click **Add Provider**
+3. Select a provider (Claude, OpenAI, Gemini, or Ollama)
+4. **For API-based providers (Claude, OpenAI, Gemini):**
+   - Enter your API key
+   - Click **Test** to validate the key (shows checkmark if valid)
+   - Click **Fetch Models** to load available models from the provider
+   - Select a model from the dropdown
+5. **For Ollama (local):**
+   - Enter the Ollama host URL (e.g., `http://localhost:11434`)
+   - Click **Test** to verify connection
+   - Click **Fetch Models** to load models installed on your Ollama server
+   - Select a model from the dropdown
+6. Click **Add Provider** to save
 
-#### Gemini (Google)
-1. Get an API key from [makersuite.google.com](https://makersuite.google.com)
-2. Enter the key in **Settings > AI > Gemini**
-3. Select your preferred model
+**Model Discovery**: The system automatically fetches available models from each provider's API, so you always see the latest models your API key has access to. Model lists are cached for 1 hour to reduce API calls.
 
-#### Ollama (Local)
-1. Install Ollama on your machine or server
-2. Enter the Ollama server URL
-3. Select from available models
+#### Getting API Keys
+
+- **Claude (Anthropic)**: Get an API key from [console.anthropic.com](https://console.anthropic.com)
+- **OpenAI**: Get an API key from [platform.openai.com](https://platform.openai.com)
+- **Gemini (Google)**: Get an API key from [makersuite.google.com](https://makersuite.google.com)
+- **Ollama**: No API key needed; install Ollama locally and enter the server URL
 
 ### Operating Modes
 
@@ -352,12 +359,47 @@ If enabled by your administrator in **Configuration > Backup** > **Settings**:
 
 ---
 
+## Administration (Admins)
+
+Admin-only configuration is under **Configuration** in the main navigation (requires admin/manager role).
+
+### User Management
+
+Access via **Configuration > Users** (`/configuration/users`).
+
+- **List users**: View all users with pagination and search by name or email. Columns show user, email, status (Active/Disabled, Verified/Unverified), and created date.
+- **Create user**: Click **Create User**. Enter name, email, and password. Optionally grant admin privileges. Use **Skip email verification** to create the user as already verified; otherwise a verification email is sent if email is configured.
+- **Edit user**: Use the actions menu on a user row to edit name, email, password, and admin status.
+- **Disable/enable user**: Use **Disable User** or **Enable User** from the actions menu. Disabled users cannot log in. You cannot disable your own account or the last admin.
+- **Resend verification email**: For unverified users, use **Resend Verification Email** from the actions menu. Rate limited to once per 5 minutes per user.
+- **Reset password**: Use **Reset Password** from the actions menu and enter a new password for the user.
+- **Delete user**: Use **Delete** from the actions menu. You cannot delete your own account or the last admin.
+
+### Customizing System Emails
+
+Access via **Configuration > Email Templates** (`/configuration/email-templates`).
+
+You can customize the content of system-generated emails (password reset, email verification, welcome, notifications):
+
+1. Open **Configuration > Email Templates**
+2. Click a template (e.g. **Password Reset**) to open the editor
+3. Edit the **Subject** and **Body** using the rich text editor. Use **Insert variable** to add placeholders such as `{{user.name}}` or `{{reset_url}}` that are replaced when the email is sent
+4. Use the **Preview** panel on the right to see how the email will look with sample data
+5. Click **Save** to apply changes
+6. Use **Send test email** to send a test to an address (requires email to be configured under Configuration > Email)
+7. For system templates, **Reset to default** restores the original content
+
+Variables available for each template are listed in the template description. Inactive templates are not used when sending emails; you can disable a template without deleting it.
+
+---
+
 ## Troubleshooting
 
 ### Can't Login
 
 - Verify your email and password
 - Check if your account is verified
+- Check if your account has been disabled (contact your administrator)
 - Try resetting your password
 - Clear browser cookies and try again
 

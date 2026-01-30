@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use App\Services\Auth\TwoFactorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,8 @@ use Illuminate\Support\Facades\Auth;
 class TwoFactorController extends Controller
 {
     public function __construct(
-        private TwoFactorService $twoFactorService
+        private TwoFactorService $twoFactorService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -80,6 +82,8 @@ class TwoFactorController extends Controller
 
         $recoveryCodes = $this->twoFactorService->confirmSetup($user);
 
+        $this->auditService->logAuth('2fa_enabled', $user);
+
         return response()->json([
             'message' => 'Two-factor authentication enabled successfully',
             'recovery_codes' => $recoveryCodes,
@@ -104,6 +108,8 @@ class TwoFactorController extends Controller
         }
 
         $this->twoFactorService->disable($user);
+
+        $this->auditService->logAuth('2fa_disabled', $user);
 
         return response()->json([
             'message' => 'Two-factor authentication disabled',
@@ -174,6 +180,8 @@ class TwoFactorController extends Controller
         $request->session()->forget('2fa:user_id');
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
+
+        $this->auditService->logAuth('login', $user);
 
         return response()->json([
             'message' => 'Two-factor authentication verified',

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 
 interface SSOProvider {
   id: string;
@@ -21,7 +22,10 @@ export function SSOButtons() {
         const response = await api.get("/auth/sso/providers");
         setProviders(response.data.providers);
       } catch (error) {
-        console.error("Failed to fetch SSO providers:", error);
+        errorLogger.report(
+          error instanceof Error ? error : new Error("Failed to fetch SSO providers"),
+          { source: "sso-buttons" }
+        );
       } finally {
         setIsLoading(false);
       }

@@ -19,7 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal, Shield, ShieldOff, Key, Trash2, Edit } from "lucide-react";
+import { MoreHorizontal, Shield, ShieldOff, Key, Trash2, Edit, UserX, UserCheck, Mail } from "lucide-react";
 import { UserDialog } from "./user-dialog";
 import {
   Dialog,
@@ -39,6 +39,7 @@ interface User {
   avatar: string | null;
   is_admin: boolean;
   email_verified_at: string | null;
+  disabled_at: string | null;
   created_at: string;
 }
 
@@ -56,6 +57,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
   const [userToResetPassword, setUserToResetPassword] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [resendVerificationUserId, setResendVerificationUserId] = useState<number | null>(null);
 
   const handleEdit = (user: User) => {
     setEditingUser(user);
@@ -124,6 +126,36 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
     }
   };
 
+  const handleToggleDisabled = async (user: User) => {
+    try {
+      const { api } = await import("@/lib/api");
+      await api.post(`/users/${user.id}/disable`);
+      const { toast } = await import("sonner");
+      toast.success(user.disabled_at ? "User enabled successfully" : "User disabled successfully");
+      onUserUpdated();
+    } catch (error: any) {
+      const { toast } = await import("sonner");
+      toast.error(error.response?.data?.message || "Failed to update user status");
+    }
+  };
+
+  const handleResendVerification = async (user: User) => {
+    setResendVerificationUserId(user.id);
+    try {
+      const { api } = await import("@/lib/api");
+      await api.post(`/users/${user.id}/resend-verification`);
+      const { toast } = await import("sonner");
+      toast.success("Verification email sent successfully");
+      onUserUpdated();
+    } catch (error: any) {
+      const { toast } = await import("sonner");
+      const message = error.response?.data?.message || "Failed to send verification email";
+      toast.error(message);
+    } finally {
+      setResendVerificationUserId(null);
+    }
+  };
+
   return (
     <>
       <div className="overflow-x-auto rounded-md border">
@@ -167,13 +199,20 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
               </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
-                {user.email_verified_at ? (
-                  <Badge variant="default" className="bg-green-500">
-                    Verified
-                  </Badge>
-                ) : (
-                  <Badge variant="secondary">Unverified</Badge>
-                )}
+                <div className="flex flex-wrap gap-1">
+                  {user.disabled_at ? (
+                    <Badge variant="destructive">Disabled</Badge>
+                  ) : (
+                    <Badge variant="outline">Active</Badge>
+                  )}
+                  {user.email_verified_at ? (
+                    <Badge variant="default" className="bg-green-500">
+                      Verified
+                    </Badge>
+                  ) : (
+                    <Badge variant="secondary">Unverified</Badge>
+                  )}
+                </div>
               </TableCell>
               <TableCell>
                 {new Date(user.created_at).toLocaleDateString()}
@@ -195,11 +234,33 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                       <Edit className="mr-2 h-4 w-4" />
                       Edit
                     </DropdownMenuItem>
+                    {!user.email_verified_at && (
+                      <DropdownMenuItem
+                        onClick={() => handleResendVerification(user)}
+                        disabled={resendVerificationUserId === user.id}
+                      >
+                        <Mail className="mr-2 h-4 w-4" />
+                        {resendVerificationUserId === user.id ? "Sending…" : "Resend Verification Email"}
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem onClick={() => handleResetPassword(user)}>
                       <Key className="mr-2 h-4 w-4" />
                       Reset Password
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={() => handleToggleDisabled(user)}>
+                      {user.disabled_at ? (
+                        <>
+                          <UserCheck className="mr-2 h-4 w-4" />
+                          Enable User
+                        </>
+                      ) : (
+                        <>
+                          <UserX className="mr-2 h-4 w-4" />
+                          Disable User
+                        </>
+                      )}
+                    </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
                       {user.is_admin ? (
                         <>

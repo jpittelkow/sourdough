@@ -32,6 +32,21 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\VersionService::class, function ($app) {
             return new \App\Services\VersionService();
         });
+
+        // Register Email Config Service
+        $this->app->singleton(\App\Services\EmailConfigService::class, function ($app) {
+            return new \App\Services\EmailConfigService($app->make(\App\Services\SettingService::class));
+        });
+
+        // Register Email Template Service
+        $this->app->singleton(\App\Services\EmailTemplateService::class, function ($app) {
+            return new \App\Services\EmailTemplateService();
+        });
+
+        // Register Audit Service
+        $this->app->singleton(\App\Services\AuditService::class, function ($app) {
+            return new \App\Services\AuditService();
+        });
     }
 
     /**

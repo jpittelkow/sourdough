@@ -8,6 +8,8 @@ import { useAuth } from "@/lib/auth";
 import { AppConfigProvider } from "@/lib/app-config";
 import { VersionProvider } from "@/lib/version-provider";
 import { NotificationProvider } from "@/lib/notifications";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { ErrorHandlerSetup } from "@/components/error-handler-setup";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, isInitialized } = useAuth();
@@ -37,16 +39,19 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <AppConfigProvider>
-        <VersionProvider>
-          <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
-            <AuthInitializer>
-              <NotificationProvider>{children}</NotificationProvider>
-            </AuthInitializer>
-            <Toaster richColors position="top-right" />
-          </ThemeProvider>
-        </VersionProvider>
-      </AppConfigProvider>
+      <ErrorBoundary>
+        <AppConfigProvider>
+          <VersionProvider>
+            <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
+              <ErrorHandlerSetup />
+              <AuthInitializer>
+                <NotificationProvider>{children}</NotificationProvider>
+              </AuthInitializer>
+              <Toaster richColors position="top-right" />
+            </ThemeProvider>
+          </VersionProvider>
+        </AppConfigProvider>
+      </ErrorBoundary>
     </QueryClientProvider>
   );
 }

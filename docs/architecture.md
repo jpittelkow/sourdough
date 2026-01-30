@@ -29,7 +29,7 @@ Architecture Decision Records (ADRs) document all significant design decisions:
 - [ADR-001: Technology Stack](adr/001-technology-stack.md) - Laravel 11, Next.js 14, SQLite, Docker selection rationale
   - Key files: `composer.json`, `package.json`, `backend/config/app.php`, `frontend/next.config.js`
 - [ADR-002: Authentication Architecture](adr/002-authentication-architecture.md) - Laravel Sanctum session-based authentication
-  - Key files: `backend/app/Http/Controllers/Api/AuthController.php`, `backend/config/auth.php`, `backend/config/sanctum.php`, `frontend/lib/auth.ts`, `frontend/app/(auth)/`
+  - Key files: `backend/app/Http/Controllers/Api/AuthController.php`, `backend/app/Http/Controllers/Api/UserController.php`, `backend/config/auth.php`, `backend/config/sanctum.php`, `frontend/lib/auth.ts`, `frontend/app/(auth)/`, `frontend/app/(dashboard)/configuration/users/page.tsx`, `frontend/components/admin/user-table.tsx`, `frontend/components/admin/user-dialog.tsx`
 - [ADR-003: SSO Provider Integration](adr/003-sso-provider-integration.md) - OAuth2/OIDC provider integration strategy
   - Key files: `backend/app/Http/Controllers/Api/SSOController.php`, `backend/app/Services/Auth/SSOService.php`, `backend/config/sso.php`, `frontend/components/auth/sso-buttons.tsx`
 - [ADR-004: Two-Factor Authentication](adr/004-two-factor-authentication.md) - TOTP implementation with recovery codes
@@ -37,7 +37,7 @@ Architecture Decision Records (ADRs) document all significant design decisions:
 - [ADR-005: Notification System Architecture](adr/005-notification-system-architecture.md) - Multi-channel notification orchestrator
   - Key files: `backend/app/Services/Notifications/NotificationOrchestrator.php`, `backend/app/Services/Notifications/NotificationChannelMetadata.php`, `backend/app/Services/Notifications/Channels/`, `backend/app/Http/Controllers/Api/NotificationChannelConfigController.php`, `backend/app/Http/Controllers/Api/UserNotificationSettingsController.php`, `backend/config/notifications.php`
 - [ADR-006: LLM Orchestration Modes](adr/006-llm-orchestration-modes.md) - Single, Aggregation, Council mode designs
-  - Key files: `backend/app/Services/LLM/LLMOrchestrator.php`, `backend/app/Services/LLM/Providers/`, `backend/config/llm.php`
+  - Key files: `backend/app/Services/LLM/LLMOrchestrator.php`, `backend/app/Services/LLM/Providers/`, `backend/app/Services/LLMModelDiscoveryService.php`, `backend/app/Http/Controllers/Api/LLMModelController.php`, `backend/config/llm.php`
 - [ADR-007: Backup System Design](adr/007-backup-system-design.md) - Backup format, scheduling, remote storage
   - Key files: `backend/app/Services/Backup/BackupService.php`, `backend/app/Services/Backup/Destinations/`, `backend/config/backup.php`, `backend/app/Http/Controllers/Api/BackupSettingController.php`, `backend/config/settings-schema.php` (backup group)
   - **Full backup documentation:** [Backup & Restore](backup.md) (user, admin, developer guides; key files; recipes and patterns)
@@ -57,6 +57,14 @@ Architecture Decision Records (ADRs) document all significant design decisions:
   - Key files: `backend/app/Services/SettingService.php`, `backend/app/Providers/ConfigServiceProvider.php`, `backend/config/settings-schema.php`, `backend/app/Models/SystemSetting.php`
 - [ADR-015: Environment-Only Settings](adr/015-env-only-settings.md) - Settings that must remain in .env (APP_KEY, DB_*, CACHE_STORE, LOG_*, APP_ENV, APP_DEBUG)
   - Key files: `backend/config/settings-schema.php`, `.env.example`
+- [ADR-016: Email Template System](adr/016-email-template-system.md) - Database-stored email templates with variable replacement; TemplatedMail Mailable; User overrides (password reset, email verification); EmailChannel uses notification template
+  - Key files: `backend/app/Models/EmailTemplate.php`, `backend/app/Services/EmailTemplateService.php`, `backend/app/Services/RenderedEmail.php`, `backend/app/Mail/TemplatedMail.php`, `backend/app/Models/User.php` (sendPasswordResetNotification, sendEmailVerificationNotification), `backend/app/Services/Notifications/Channels/EmailChannel.php`, `backend/app/Http/Controllers/Api/EmailTemplateController.php`, `backend/database/seeders/EmailTemplateSeeder.php`; frontend: `frontend/app/(dashboard)/configuration/email-templates/page.tsx`, `frontend/app/(dashboard)/configuration/email-templates/[key]/page.tsx`, `frontend/components/email-template-editor.tsx`, `frontend/components/variable-picker.tsx`
+
+### Logging and Observability
+
+Application logging (operational and diagnostic events) is separate from audit logging (user actions). Backend uses Laravel `Log` facade with structured context; correlation IDs and request context are added via `ContextProcessor`. Frontend errors are reported to `POST /api/client-errors` and logged server-side. See [Logging](logging.md) for standards, configuration, and key files.
+
+**Key files**: `backend/config/logging.php`, `backend/app/Logging/ContextProcessor.php`, `backend/app/Http/Middleware/AddCorrelationId.php`, `backend/app/Http/Controllers/Api/ClientErrorController.php`, `frontend/lib/error-logger.ts`, `frontend/components/error-boundary.tsx`, `frontend/components/error-handler-setup.tsx`
 
 ## Settings Architecture
 

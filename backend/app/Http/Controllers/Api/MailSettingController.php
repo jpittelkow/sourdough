@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -55,7 +56,8 @@ class MailSettingController extends Controller
     ];
 
     public function __construct(
-        private SettingService $settingService
+        private SettingService $settingService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -100,11 +102,19 @@ class MailSettingController extends Controller
         ]);
 
         $userId = $request->user()->id;
+        $oldSettings = $this->settingService->getGroup(self::GROUP);
 
         foreach ($validated as $frontendKey => $value) {
             $schemaKey = self::FRONTEND_TO_SCHEMA[$frontendKey] ?? $frontendKey;
             $this->settingService->set(self::GROUP, $schemaKey, $value, $userId);
         }
+
+        $newSettings = [];
+        foreach ($validated as $frontendKey => $value) {
+            $schemaKey = self::FRONTEND_TO_SCHEMA[$frontendKey] ?? $frontendKey;
+            $newSettings[$schemaKey] = $value;
+        }
+        $this->auditService->logSettings(self::GROUP, $oldSettings, $newSettings, $userId);
 
         return response()->json([
             'message' => 'Mail settings updated successfully',

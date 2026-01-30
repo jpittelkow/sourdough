@@ -2,17 +2,21 @@
 
 namespace App\Models;
 
+use App\Mail\TemplatedMail;
+use App\Services\EmailTemplateService;
+use Illuminate\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Mail;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\ApiToken;
 
-class User extends Authenticatable
+class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, Notifiable;
+    use HasApiTokens, HasFactory, MustVerifyEmail, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -23,6 +27,7 @@ class User extends Authenticatable
         'password',
         'avatar',
         'email_verified_at',
+        'disabled_at',
         'is_admin',
         'two_factor_enabled',
         'two_factor_secret',
@@ -47,12 +52,21 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'disabled_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'two_factor_enabled' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    /**
+     * Check if user account is disabled.
+     */
+    public function isDisabled(): bool
+    {
+        return $this->disabled_at !== null;
     }
 
     /**
@@ -178,5 +192,44 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->is_admin === true;
+    }
+
+    /**
+     * Send the password reset notification.
+     * Uses the email template system for customizable content.
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        $templateService = app(EmailTemplateService::class);
+        $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
+        $resetUrl = $frontendUrl . '/reset-password?token=' . $token . '&email=' . urlencode($this->email);
+
+        $rendered = $templateService->render('password_reset', [
+            'user' => ['name' => $this->name, 'email' => $this->email],
+            'reset_url' => $resetUrl,
+            'expires_in' => (string) config('auth.passwords.users.expire', 60) . ' minutes',
+            'app_name' => config('app.name'),
+        ]);
+
+        Mail::to($this->email)->send(new TemplatedMail($rendered));
+    }
+
+    /**
+     * Send the email verification notification.
+     * Uses the email template system for customizable content.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        $templateService = app(EmailTemplateService::class);
+        $frontendUrl = config('app.frontend_url', 'http://localhost:3000');
+        $verificationUrl = $frontendUrl . '/verify-email?id=' . $this->getKey() . '&hash=' . sha1($this->getEmailForVerification());
+
+        $rendered = $templateService->render('email_verification', [
+            'user' => ['name' => $this->name, 'email' => $this->email],
+            'verification_url' => $verificationUrl,
+            'app_name' => config('app.name'),
+        ]);
+
+        Mail::to($this->email)->send(new TemplatedMail($rendered));
     }
 }

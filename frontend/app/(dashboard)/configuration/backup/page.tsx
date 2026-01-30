@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -176,7 +177,10 @@ export default function BackupPage() {
       const response = await api.get("/backup");
       setBackups(response.data.backups || []);
     } catch (error) {
-      console.error("Failed to fetch backups:", error);
+      errorLogger.report(
+        error instanceof Error ? error : new Error("Failed to fetch backups"),
+        { source: "backup-page" }
+      );
     } finally {
       setIsLoading(false);
     }

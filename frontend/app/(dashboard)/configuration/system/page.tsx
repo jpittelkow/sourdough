@@ -1,15 +1,19 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Card,
   CardContent,
@@ -111,10 +115,12 @@ const systemSchema = z.object({
 type SystemForm = z.infer<typeof systemSchema>;
 
 export default function SystemSettingsPage() {
+  const { features } = useAppConfig();
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<SystemForm | null>(null);
   const queryClient = useQueryClient();
+  const emailConfigured = features?.emailConfigured ?? false;
 
   const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<SystemForm>({
     resolver: zodResolver(systemSchema),
@@ -267,6 +273,21 @@ export default function SystemSettingsPage() {
         </p>
       </div>
 
+      {!emailConfigured && (
+        <Alert variant="warning">
+          <AlertTriangle className="h-4 w-4" />
+          <AlertTitle>Email Not Configured</AlertTitle>
+          <AlertDescription>
+            Email features are disabled. Password reset and email verification
+            will not work until you{" "}
+            <Link href="/configuration/mail" className="underline hover:no-underline">
+              configure email settings
+            </Link>
+            .
+          </AlertDescription>
+        </Alert>
+      )}
+
       <form onSubmit={handleSubmit(onSubmit)}>
         <Tabs defaultValue="general" className="space-y-6">
           <TabsList>
@@ -395,7 +416,9 @@ export default function SystemSettingsPage() {
                   <div className="space-y-0.5">
                     <Label>Email Verification Required</Label>
                     <p className="text-sm text-muted-foreground">
-                      Require users to verify their email address
+                      {emailConfigured
+                        ? "Require users to verify their email address"
+                        : "Requires email to be configured (see warning above)"}
                     </p>
                   </div>
                   <Switch
@@ -403,6 +426,7 @@ export default function SystemSettingsPage() {
                     onCheckedChange={(checked) =>
                       setValue("registration.email_verification_required", checked, { shouldDirty: true })
                     }
+                    disabled={!emailConfigured}
                   />
                 </div>
 
@@ -509,11 +533,19 @@ export default function SystemSettingsPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="default_llm_mode">Default LLM Mode</Label>
-                  <Input
-                    id="default_llm_mode"
-                    {...register("defaults.default_llm_mode")}
-                    placeholder="auto"
-                  />
+                  <Select
+                    value={watch("defaults.default_llm_mode") || ""}
+                    onValueChange={(value) => setValue("defaults.default_llm_mode", value, { shouldDirty: true })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select default LLM mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="single">Single</SelectItem>
+                      <SelectItem value="council">Council</SelectItem>
+                      <SelectItem value="auto">Auto</SelectItem>
+                    </SelectContent>
+                  </Select>
                   <p className="text-sm text-muted-foreground">
                     Default LLM mode for new users
                   </p>

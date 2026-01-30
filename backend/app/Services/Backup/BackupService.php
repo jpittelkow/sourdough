@@ -3,6 +3,7 @@
 namespace App\Services\Backup;
 
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Http\UploadedFile;
 use Symfony\Component\HttpFoundation\StreamedResponse;
@@ -44,6 +45,12 @@ class BackupService
         $includeDatabase = $options['include_database'] ?? true;
         $includeFiles = $options['include_files'] ?? true;
         $includeSettings = $options['include_settings'] ?? true;
+
+        Log::info('Backup started', [
+            'include_database' => $includeDatabase,
+            'include_files' => $includeFiles,
+            'include_settings' => $includeSettings,
+        ]);
 
         $timestamp = now()->format('Y-m-d_H-i-s');
         $filename = "sourdough-backup-{$timestamp}.zip";
@@ -97,6 +104,11 @@ class BackupService
         Storage::disk($this->disk)->put($filename, $content);
         unlink($tempPath);
 
+        Log::info('Backup created', [
+            'filename' => $filename,
+            'size' => strlen($content),
+        ]);
+
         return [
             'filename' => $filename,
             'size' => strlen($content),
@@ -125,15 +137,19 @@ class BackupService
      */
     public function restoreFromUpload(UploadedFile $file): array
     {
+        Log::warning('Backup restore started (upload)', ['filename' => $file->getClientOriginalName()]);
+
         $tempPath = $file->storeAs('temp', 'restore-upload.zip', 'local');
         $fullPath = storage_path("app/{$tempPath}");
 
         try {
             $result = $this->performRestore($fullPath);
             unlink($fullPath);
+            Log::warning('Backup restore completed (upload)', ['restored' => array_keys($result['restored'] ?? [])]);
             return $result;
         } catch (\Exception $e) {
             unlink($fullPath);
+            Log::error('Backup restore failed', ['error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -143,6 +159,8 @@ class BackupService
      */
     public function restoreFromFile(string $filename): array
     {
+        Log::warning('Backup restore started (file)', ['filename' => $filename]);
+
         $tempPath = storage_path('app/temp/restore.zip');
 
         // Copy from backup disk to temp
@@ -152,9 +170,11 @@ class BackupService
         try {
             $result = $this->performRestore($tempPath);
             unlink($tempPath);
+            Log::warning('Backup restore completed (file)', ['filename' => $filename, 'restored' => array_keys($result['restored'] ?? [])]);
             return $result;
         } catch (\Exception $e) {
             unlink($tempPath);
+            Log::error('Backup restore failed', ['filename' => $filename, 'error' => $e->getMessage()]);
             throw $e;
         }
     }
@@ -222,6 +242,7 @@ class BackupService
             DB::commit();
         } catch (\Exception $e) {
             DB::rollBack();
+            Log::error('Backup restore failed during performRestore', ['error' => $e->getMessage()]);
             throw $e;
         }
 

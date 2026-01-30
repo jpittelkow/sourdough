@@ -1,17 +1,32 @@
 # Recipe: Add LLM Provider
 
-Step-by-step guide to add a new LLM (Large Language Model) provider.
+Step-by-step guide to add a new LLM (Large Language Model) provider so users can select it in **Configuration > AI** and use it for queries. Optionally enable **model discovery** (Test Key / Fetch Models in the Add Provider dialog).
 
 ## Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
 | `backend/app/Services/LLM/Providers/{Name}Provider.php` | Create | Provider implementation |
-| `backend/config/llm.php` | Modify | Register provider |
-| `backend/.env.example` | Modify | Add environment variables |
-| `frontend/app/(dashboard)/settings/llm/page.tsx` | Modify | Add configuration UI (if needed) |
+| `backend/app/Services/LLM/LLMOrchestrator.php` | Modify | Register provider in `getProviderInstance()` |
+| `backend/config/llm.php` | Modify | Add provider config and council weight |
+| `backend/app/Services/LLMModelDiscoveryService.php` | Modify | Add discovery (Test Key / Fetch Models) |
+| `backend/app/Http/Controllers/Api/LLMModelController.php` | Modify | Allow new provider in validation rules |
+| `frontend/app/(dashboard)/configuration/ai/page.tsx` | Modify | Add to `providerTemplates` |
+
+---
 
 ## Step 1: Create the Provider Class
+
+Providers implement `LLMProviderInterface` and are constructed with the user's `AIProvider` model (API key, model, settings from DB).
+
+**Interface** (see `backend/app/Services/LLM/LLMProviderInterface.php`):
+
+- `query(string $prompt, ?string $systemPrompt = null): array` — returns `['content' => string, 'tokens' => ['input' => int, 'output' => int, 'total' => int]]`
+- `visionQuery(string $prompt, string $imageData, string $mimeType = 'image/jpeg', ?string $systemPrompt = null): array` — same shape
+- `supportsVision(): bool`
+- `getName(): string`
+
+**Example** (follow existing providers):
 
 ```php
 <?php
@@ -19,374 +34,245 @@ Step-by-step guide to add a new LLM (Large Language Model) provider.
 
 namespace App\Services\LLM\Providers;
 
-use App\Services\LLM\Contracts\LLMProviderInterface;
-use App\Services\LLM\DTOs\LLMRequest;
-use App\Services\LLM\DTOs\LLMResponse;
+use App\Models\AIProvider;
+use App\Services\LLM\LLMProviderInterface;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 
 class ExampleProvider implements LLMProviderInterface
 {
-    protected string $apiKey;
-    protected string $baseUrl;
-    protected string $model;
+    private string $apiKey;
+    private string $model;
+    private int $maxTokens;
 
-    public function __construct()
+    public function __construct(AIProvider $config)
     {
-        $this->apiKey = config('llm.providers.example.api_key');
-        $this->baseUrl = config('llm.providers.example.base_url', 'https://api.example.com/v1');
-        $this->model = config('llm.providers.example.model', 'example-model-v1');
+        $this->apiKey = $config->api_key;
+        $this->model = $config->model ?? config('llm.providers.example.model', 'example-model-v1');
+        $this->maxTokens = $config->settings['max_tokens'] ?? config('llm.providers.example.max_tokens', 4096);
     }
 
-    /**
-     * Send a request to the LLM provider.
-     */
-    public function complete(LLMRequest $request): LLMResponse
+    public function query(string $prompt, ?string $systemPrompt = null): array
     {
-        $startTime = microtime(true);
+        $messages = [];
+        if ($systemPrompt) {
+            $messages[] = ['role' => 'system', 'content' => $systemPrompt];
+        }
+        $messages[] = ['role' => 'user', 'content' => $prompt];
 
-        try {
-            $response = Http::timeout(120)
-                ->withHeaders([
-                    'Authorization' => 'Bearer ' . $this->apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post("{$this->baseUrl}/chat/completions", [
-                    'model' => $request->model ?? $this->model,
-                    'messages' => $this->formatMessages($request),
-                    'temperature' => $request->temperature ?? 0.7,
-                    'max_tokens' => $request->maxTokens ?? 2048,
-                    'stream' => false,
-                ]);
-
-            $elapsed = microtime(true) - $startTime;
-
-            if (!$response->successful()) {
-                Log::error('ExampleProvider: Request failed', [
-                    'status' => $response->status(),
-                    'body' => $response->body(),
-                ]);
-
-                return new LLMResponse(
-                    success: false,
-                    content: null,
-                    error: "API error: {$response->status()}",
-                    provider: 'example',
-                    model: $this->model,
-                    latencyMs: (int)($elapsed * 1000),
-                );
-            }
-
-            $data = $response->json();
-
-            return new LLMResponse(
-                success: true,
-                content: $data['choices'][0]['message']['content'] ?? '',
-                error: null,
-                provider: 'example',
-                model: $data['model'] ?? $this->model,
-                latencyMs: (int)($elapsed * 1000),
-                inputTokens: $data['usage']['prompt_tokens'] ?? null,
-                outputTokens: $data['usage']['completion_tokens'] ?? null,
-                totalTokens: $data['usage']['total_tokens'] ?? null,
-            );
-
-        } catch (\Exception $e) {
-            $elapsed = microtime(true) - $startTime;
-
-            Log::error('ExampleProvider: Exception', [
-                'error' => $e->getMessage(),
+        $response = Http::timeout(config('llm.timeout', 120))
+            ->withToken($this->apiKey)
+            ->post('https://api.example.com/v1/chat/completions', [
+                'model' => $this->model,
+                'messages' => $messages,
+                'max_tokens' => $this->maxTokens,
             ]);
 
-            return new LLMResponse(
-                success: false,
-                content: null,
-                error: $e->getMessage(),
-                provider: 'example',
-                model: $this->model,
-                latencyMs: (int)($elapsed * 1000),
-            );
+        if (!$response->successful()) {
+            throw new \RuntimeException('Example API error: ' . $response->body());
         }
+
+        $data = $response->json();
+        return [
+            'content' => $data['choices'][0]['message']['content'] ?? '',
+            'tokens' => [
+                'input' => $data['usage']['prompt_tokens'] ?? 0,
+                'output' => $data['usage']['completion_tokens'] ?? 0,
+                'total' => $data['usage']['total_tokens'] ?? 0,
+            ],
+        ];
     }
 
-    /**
-     * Check if the provider is available/configured.
-     */
-    public function isAvailable(): bool
+    public function visionQuery(string $prompt, string $imageData, string $mimeType = 'image/jpeg', ?string $systemPrompt = null): array
     {
-        return !empty($this->apiKey);
+        // Implement if provider supports vision; otherwise throw or delegate to query.
+        throw new \RuntimeException('Example provider does not support vision');
     }
 
-    /**
-     * Get the provider name.
-     */
+    public function supportsVision(): bool
+    {
+        return false;
+    }
+
     public function getName(): string
     {
         return 'example';
     }
+}
+```
 
-    /**
-     * Get available models for this provider.
-     */
-    public function getModels(): array
-    {
-        return [
-            'example-model-v1' => 'Example Model v1',
-            'example-model-v2' => 'Example Model v2 (Advanced)',
+**Reference implementations:** `OpenAIProvider.php`, `AnthropicProvider.php`, `GeminiProvider.php`, `OllamaProvider.php`.
+
+---
+
+## Step 2: Register in LLMOrchestrator
+
+In `backend/app/Services/LLM/LLMOrchestrator.php`, add your provider to the `getProviderInstance()` match:
+
+```php
+private function getProviderInstance(string $providerName, AIProvider $config): LLMProviderInterface
+{
+    // ...
+    $this->providerInstances[$key] = match ($providerName) {
+        'claude' => new AnthropicProvider($config),
+        'openai' => new OpenAIProvider($config),
+        'gemini' => new GeminiProvider($config),
+        'ollama' => new OllamaProvider($config),
+        'azure' => new AzureOpenAIProvider($config),
+        'bedrock' => new BedrockProvider($config),
+        'example' => new ExampleProvider($config),  // add this
+        default => throw new \InvalidArgumentException("Unknown provider: {$providerName}"),
+    };
+    // ...
+}
+```
+
+---
+
+## Step 3: Add to config/llm.php
+
+In `backend/config/llm.php`, add your provider under `'providers'` and, if using council mode, under `'council' => 'weights'`:
+
+```php
+'providers' => [
+    // ... existing providers ...
+    'example' => [
+        'name' => 'Example LLM',
+        'driver' => 'example',
+        'enabled' => !empty(env('EXAMPLE_LLM_API_KEY')),
+        'api_key' => env('EXAMPLE_LLM_API_KEY'),
+        'model' => env('EXAMPLE_LLM_MODEL', 'example-model-v1'),
+        'max_tokens' => env('EXAMPLE_LLM_MAX_TOKENS', 4096),
+        'supports_vision' => false,
+        'supports_tools' => false,
+    ],
+],
+// ...
+'council' => [
+    'weights' => [
+        // ... existing ...
+        'example' => 1.0,
+    ],
+],
+```
+
+---
+
+## Step 4: Add Model Discovery (Test Key / Fetch Models)
+
+To support **Test** and **Fetch Models** in the Add Provider dialog, wire the new provider into model discovery.
+
+### 4.1 LLMModelDiscoveryService
+
+In `backend/app/Services/LLMModelDiscoveryService.php`:
+
+1. Add a case in `fetchModelsFromProvider()`:
+
+```php
+private function fetchModelsFromProvider(string $provider, array $credentials): array
+{
+    return match ($provider) {
+        'openai' => $this->discoverOpenAIModels($credentials['api_key'] ?? ''),
+        'claude' => $this->discoverAnthropicModels($credentials['api_key'] ?? ''),
+        'gemini' => $this->discoverGeminiModels($credentials['api_key'] ?? ''),
+        'ollama' => $this->discoverOllamaModels($credentials['host'] ?? 'http://localhost:11434'),
+        'example' => $this->discoverExampleModels($credentials['api_key'] ?? ''),  // add
+        default => throw new \InvalidArgumentException("Unknown or unsupported provider: {$provider}"),
+    };
+}
+```
+
+2. Add a private method that returns the same shape as other discover methods:
+
+```php
+/**
+ * @return array<int, array{id: string, name: string, provider: string, capabilities?: array<string>}>
+ */
+private function discoverExampleModels(string $apiKey): array
+{
+    $response = Http::timeout(15)
+        ->withToken($apiKey)
+        ->get('https://api.example.com/v1/models');
+
+    if (!$response->successful()) {
+        $body = $response->json();
+        $message = $body['error']['message'] ?? $response->body();
+        throw new \RuntimeException('Example API error: ' . $message);
+    }
+
+    $data = $response->json('data', []);
+    $models = [];
+    foreach ($data as $m) {
+        $id = $m['id'] ?? '';
+        if ($id === '') continue;
+        $models[] = [
+            'id' => $id,
+            'name' => $m['name'] ?? $id,
+            'provider' => 'example',
+            'capabilities' => ['chat'],
         ];
     }
-
-    /**
-     * Format messages for the provider's API format.
-     */
-    protected function formatMessages(LLMRequest $request): array
-    {
-        $messages = [];
-
-        // Add system message if provided
-        if ($request->systemPrompt) {
-            $messages[] = [
-                'role' => 'system',
-                'content' => $request->systemPrompt,
-            ];
-        }
-
-        // Add conversation history
-        foreach ($request->messages as $message) {
-            $messages[] = [
-                'role' => $message['role'],
-                'content' => $message['content'],
-            ];
-        }
-
-        // Add current prompt
-        if ($request->prompt) {
-            $messages[] = [
-                'role' => 'user',
-                'content' => $request->prompt,
-            ];
-        }
-
-        return $messages;
-    }
+    return array_values($models);
 }
 ```
 
-## Step 2: Create DTOs (if not existing)
+Use the provider’s real models/list endpoint and normalize to `id`, `name`, `provider`, and optional `capabilities`. See `discoverOpenAIModels` / `discoverAnthropicModels` for patterns.
 
-```php
-<?php
-// backend/app/Services/LLM/DTOs/LLMRequest.php
+### 4.2 LLMModelController
 
-namespace App\Services\LLM\DTOs;
+In `backend/app/Http/Controllers/Api/LLMModelController.php`, allow the new provider in both endpoints:
 
-class LLMRequest
-{
-    public function __construct(
-        public ?string $prompt = null,
-        public ?string $systemPrompt = null,
-        public array $messages = [],
-        public ?string $model = null,
-        public float $temperature = 0.7,
-        public int $maxTokens = 2048,
-    ) {}
-}
-```
+- `testKey()`: validation rule `'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama,example']`
+- `discover()`: same `'provider' => ... 'in:...,example'`
 
-```php
-<?php
-// backend/app/Services/LLM/DTOs/LLMResponse.php
+Add `example` (or your provider id) to the existing `in:` list in both places.
 
-namespace App\Services\LLM\DTOs;
+---
 
-class LLMResponse
-{
-    public function __construct(
-        public bool $success,
-        public ?string $content,
-        public ?string $error,
-        public string $provider,
-        public string $model,
-        public int $latencyMs,
-        public ?int $inputTokens = null,
-        public ?int $outputTokens = null,
-        public ?int $totalTokens = null,
-    ) {}
-}
-```
+## Step 5: Add to Frontend (Configuration > AI)
 
-## Step 3: Register in Configuration
+In `frontend/app/(dashboard)/configuration/ai/page.tsx`, add an entry to `providerTemplates`:
 
-```php
-// backend/config/llm.php
-
-return [
-    // Default provider
-    'default' => env('LLM_DEFAULT_PROVIDER', 'openai'),
-
-    // Orchestration mode: single, failover, consensus, council
-    'mode' => env('LLM_MODE', 'single'),
-
-    'providers' => [
-        'openai' => [
-            'class' => \App\Services\LLM\Providers\OpenAIProvider::class,
-            'api_key' => env('OPENAI_API_KEY'),
-            'model' => env('OPENAI_MODEL', 'gpt-4'),
-            'enabled' => env('LLM_OPENAI_ENABLED', true),
-        ],
-
-        'anthropic' => [
-            'class' => \App\Services\LLM\Providers\AnthropicProvider::class,
-            'api_key' => env('ANTHROPIC_API_KEY'),
-            'model' => env('ANTHROPIC_MODEL', 'claude-3-sonnet'),
-            'enabled' => env('LLM_ANTHROPIC_ENABLED', false),
-        ],
-
-        // Add the new provider
-        'example' => [
-            'class' => \App\Services\LLM\Providers\ExampleProvider::class,
-            'api_key' => env('EXAMPLE_LLM_API_KEY'),
-            'base_url' => env('EXAMPLE_LLM_BASE_URL', 'https://api.example.com/v1'),
-            'model' => env('EXAMPLE_LLM_MODEL', 'example-model-v1'),
-            'enabled' => env('LLM_EXAMPLE_ENABLED', false),
-        ],
-    ],
-
-    // Fallback order for failover mode
-    'failover_order' => ['openai', 'anthropic', 'example'],
+```ts
+const providerTemplates: ProviderTemplate[] = [
+  // ... existing (claude, openai, gemini, ollama) ...
+  {
+    id: "example",
+    name: "Example LLM",
+    requires_api_key: true,
+    supports_vision: false,
+    supports_discovery: true,
+  },
 ];
 ```
 
-## Step 4: Add Environment Variables
+- `id` must match the backend provider key (e.g. `config/llm.php` and orchestrator).
+- Use `supports_discovery: true` only if you implemented Step 4; otherwise the Add Provider dialog will not show Test / Fetch Models for this provider.
 
-```env
-# .env.example
-
-# Example LLM Provider
-LLM_EXAMPLE_ENABLED=false
-EXAMPLE_LLM_API_KEY=
-EXAMPLE_LLM_BASE_URL=https://api.example.com/v1
-EXAMPLE_LLM_MODEL=example-model-v1
-```
-
-## Step 5: Add to Frontend Settings (if user-configurable)
-
-```tsx
-// frontend/app/(dashboard)/settings/llm/page.tsx
-// Add to the provider list:
-
-{/* Example Provider */}
-<Card>
-  <CardHeader>
-    <div className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <div className="p-2 bg-purple-100 dark:bg-purple-900 rounded-lg">
-          <Brain className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-        </div>
-        <div>
-          <CardTitle className="text-base">Example LLM</CardTitle>
-          <CardDescription>Use Example's language models</CardDescription>
-        </div>
-      </div>
-      <Switch
-        checked={settings.example_enabled}
-        onCheckedChange={(checked) =>
-          setSettings({ ...settings, example_enabled: checked })
-        }
-      />
-    </div>
-  </CardHeader>
-  {settings.example_enabled && (
-    <CardContent className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="example_api_key">API Key</Label>
-        <Input
-          id="example_api_key"
-          type="password"
-          value={settings.example_api_key}
-          onChange={(e) =>
-            setSettings({ ...settings, example_api_key: e.target.value })
-          }
-          placeholder="Enter your Example API key"
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="example_model">Model</Label>
-        <Select
-          value={settings.example_model}
-          onValueChange={(value) =>
-            setSettings({ ...settings, example_model: value })
-          }
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select model" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="example-model-v1">Example Model v1</SelectItem>
-            <SelectItem value="example-model-v2">Example Model v2</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-    </CardContent>
-  )}
-</Card>
-```
-
-## Provider Interface Reference
-
-```php
-interface LLMProviderInterface
-{
-    /**
-     * Send a completion request to the LLM.
-     */
-    public function complete(LLMRequest $request): LLMResponse;
-
-    /**
-     * Check if the provider is properly configured and available.
-     */
-    public function isAvailable(): bool;
-
-    /**
-     * Get the provider identifier name.
-     */
-    public function getName(): string;
-
-    /**
-     * Get available models for this provider.
-     */
-    public function getModels(): array;
-}
-```
+---
 
 ## Checklist
 
-- [ ] Provider class created implementing `LLMProviderInterface`
-- [ ] `complete()` method handles API communication
-- [ ] `isAvailable()` checks for required configuration
-- [ ] `getModels()` returns available model options
-- [ ] Error handling and logging implemented
-- [ ] Provider registered in `config/llm.php`
-- [ ] Environment variables added to `.env.example`
-- [ ] Frontend settings UI added (if user-configurable)
-- [ ] Token counting implemented (if API provides it)
-- [ ] Latency tracking implemented
-- [ ] ADR reference: `docs/adr/006-llm-orchestration-modes.md`
+- [ ] Provider class created implementing `LLMProviderInterface` (`query`, `visionQuery`, `supportsVision`, `getName`)
+- [ ] Constructor accepts `AIProvider $config` and reads `api_key`, `model`, `settings`
+- [ ] Provider registered in `LLMOrchestrator::getProviderInstance()`
+- [ ] Provider and optional council weight added in `config/llm.php`
+- [ ] (Optional) Model discovery: case and `discoverXxxModels()` added in `LLMModelDiscoveryService`
+- [ ] (Optional) Model discovery: provider id added to `LLMModelController` validation `in:...` for `testKey` and `discover`
+- [ ] Frontend: entry added to `providerTemplates` in `configuration/ai/page.tsx`
+- [ ] Error handling and timeouts (e.g. `config('llm.timeout')`) in provider and discovery
+- [ ] ADR reference: [ADR-006: LLM Orchestration Modes](adr/006-llm-orchestration-modes.md); model discovery: [LLM Model Discovery Roadmap](plans/llm-model-discovery-roadmap.md)
+
+---
 
 ## Existing Providers for Reference
 
-Look at these files for patterns:
-- `backend/app/Services/LLM/Providers/OpenAIProvider.php`
-- `backend/app/Services/LLM/Providers/AnthropicProvider.php`
-- `backend/app/Services/LLM/Providers/OllamaProvider.php`
+| Provider | Class | Discovery |
+|----------|--------|-----------|
+| OpenAI | `OpenAIProvider.php` | `discoverOpenAIModels()` |
+| Claude | `AnthropicProvider.php` | `discoverAnthropicModels()` |
+| Gemini | `GeminiProvider.php` | `discoverGeminiModels()` |
+| Ollama | `OllamaProvider.php` | `discoverOllamaModels()` (uses `host`) |
+| Azure OpenAI | `AzureOpenAIProvider.php` | Not in discovery (deferred) |
+| AWS Bedrock | `BedrockProvider.php` | Not in discovery (deferred) |
 
-## Orchestrator Integration Notes
-
-The `LLMOrchestrator` automatically discovers enabled providers from config. Provider-specific logic is handled by the orchestrator based on the selected mode:
-
-- **single**: Uses the default provider only
-- **failover**: Tries providers in order until one succeeds
-- **consensus**: Sends to multiple providers, returns majority answer
-- **council**: All providers "vote" on the response
-
-No orchestrator changes needed unless you need custom behavior for this provider.
+Use the existing discover methods in `LLMModelDiscoveryService` as templates for your provider’s models API and response shape.

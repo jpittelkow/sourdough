@@ -3,8 +3,8 @@
 Refactor email notifications to properly handle unconfigured state and disable dependent features.
 
 **Priority**: HIGH  
-**Status**: Planned  
-**Last Updated**: 2026-01-28
+**Status**: Complete  
+**Last Updated**: 2026-01-29
 
 **Dependencies**: None
 
@@ -25,34 +25,66 @@ Currently, email-dependent features (password reset, email verification) may be 
 
 ### Phase 1: Email Configuration Detection
 
-- [ ] Update `EmailChannel` to detect if SMTP/mail provider is properly configured
-- [ ] Add `isConfigured()` method that checks for required settings (host, port, credentials)
-- [ ] Return `configured: false` in channel metadata when email isn't set up
-- [ ] Add configuration status to `/api/settings/notifications` response
+- [x] Create `EmailConfigService` with `isConfigured()` that checks mail settings (host, port, credentials per provider)
+- [x] Return `configured: false` in channel metadata when email isn't set up (NotificationSettingsController)
+- [x] Add configuration status to public API (`/system-settings/public` features object)
 
 ### Phase 2: Feature Gating
 
-- [ ] Create helper/service to check if email-dependent features are available
-- [ ] Gate password reset functionality on email availability
-  - [ ] Disable "Forgot Password" link when email not configured
-  - [ ] Return appropriate error if reset attempted without email
-- [ ] Gate email verification functionality on email availability
-  - [ ] Skip email verification requirement when email not configured
-  - [ ] Or: Disable registration entirely if email verification is required but email not configured
-- [ ] Add admin notification/warning when email-dependent features are disabled
+- [x] Create `EmailConfigService` to check if email-dependent features are available
+- [x] Gate password reset functionality on email availability
+  - [x] Disable "Forgot Password" link when email not configured
+  - [x] Return 503 error if reset attempted without email
+- [x] Gate email verification functionality on email availability
+  - [x] Auto-verify user when email not configured (registration)
+  - [x] Return 503 on resend verification when email not configured
+- [x] Add admin notification/warning when email-dependent features are disabled
 
 ### Phase 3: Admin UI Improvements
 
-- [ ] Show email configuration status prominently in System Settings
-- [ ] Add warning banner when email is not configured but email-dependent features exist
-- [ ] Provide clear guidance on how to configure email (SMTP settings, provider API keys)
-- [ ] Add "Test Email" functionality to verify configuration
+- [x] Show email configuration status in System Settings (warning banner when not configured)
+- [x] Add warning banner when email is not configured with link to Mail settings
+- [x] Disable "Email Verification Required" toggle when email not configured
+- [ ] Add "Test Email" functionality to verify configuration (already exists in Mail settings)
+
+### Phase 6: Email Template Infrastructure (Chunk B – 2026-01-29)
+
+- [x] EmailTemplate model, migration, seeder with four default templates
+- [x] EmailTemplateService, RenderedEmail DTO, variable replacement (`{{variable}}`, `{{user.name}}`)
+- [x] EmailTemplateSeeder run from migration; getDefaultForKey for reset
+
+### Phase 7: Email Template API (Chunk B – 2026-01-29)
+
+- [x] EmailTemplateController (index, show, update, preview, test, reset)
+- [x] Routes under `auth:sanctum` + `can:manage-settings` at `/api/email-templates`
+
+### Phase 8: Email Templates Admin UI (Chunk C – 2026-01-29)
+
+- [x] Email Templates list page at `/configuration/email-templates`
+- [x] Template editor page with TipTap WYSIWYG editor
+- [x] Variable picker for inserting `{{variable}}` placeholders
+- [x] Live preview panel (debounced, supports unsaved content via preview API)
+- [x] Send test email dialog
+- [x] Reset to default for system templates
+- [x] Preview API accepts optional subject, body_html, body_text for live preview
 
 ### Phase 4: Documentation
 
-- [ ] Document email configuration requirements
-- [ ] Document which features depend on email
-- [ ] Add troubleshooting guide for email issues
+- [x] Document email configuration requirements
+- [x] Document which features depend on email
+- [x] Add troubleshooting guide for email issues
+
+### Phase 9: Integrate Templates into Email Flows (Chunk D – 2026-01-29)
+
+- [x] Create TemplatedMail Mailable class
+- [x] Override sendPasswordResetNotification in User model (template-based reset link email)
+- [x] Override sendEmailVerificationNotification in User model (template-based verification email)
+- [x] Update EmailChannel to use EmailTemplateService and notification template
+
+### Phase 10: Documentation (Chunk D – 2026-01-29)
+
+- [x] Add Email Templates admin section to user-docs.md
+- [x] Update roadmap status to Complete
 
 ---
 
@@ -85,22 +117,28 @@ When email is not configured:
 ## Files Reference
 
 **Backend**:
-- `backend/app/Services/Notifications/Channels/EmailChannel.php` - Add configuration detection
+- `backend/app/Services/Notifications/Channels/EmailChannel.php` - Configuration detection; uses EmailTemplateService (Chunk D)
 - `backend/app/Http/Controllers/Api/AuthController.php` - Gate password reset
 - `backend/config/mail.php` - Mail configuration
 - `backend/config/notifications.php` - Notification channel config
+- **Email templates (Chunk B):** `backend/app/Models/EmailTemplate.php`, `backend/app/Services/EmailTemplateService.php`, `backend/app/Services/RenderedEmail.php`, `backend/app/Http/Controllers/Api/EmailTemplateController.php`, `backend/database/seeders/EmailTemplateSeeder.php`, `backend/routes/api.php` (email-templates routes)
+- **Chunk D:** `backend/app/Mail/TemplatedMail.php`, `backend/app/Models/User.php` (sendPasswordResetNotification, sendEmailVerificationNotification)
 
 **Frontend**:
 - `frontend/app/(auth)/forgot-password/page.tsx` - Conditionally show/hide
 - `frontend/app/(dashboard)/configuration/system/page.tsx` - Show email status
 - Login/registration pages - Handle email verification requirement
+- **Email templates (Chunk C):** `frontend/app/(dashboard)/configuration/email-templates/page.tsx`, `frontend/app/(dashboard)/configuration/email-templates/[key]/page.tsx`, `frontend/components/email-template-editor.tsx`, `frontend/components/variable-picker.tsx`
 
 ---
 
 ## Success Criteria
 
-- [ ] Email channel correctly reports configured/unconfigured status
-- [ ] Password reset is unavailable when email not configured
-- [ ] Email verification requirement is handled appropriately
-- [ ] Admins have clear visibility into email configuration status
-- [ ] No silent failures for email-dependent features
+- [x] Email channel correctly reports configured/unconfigured status (via EmailConfigService)
+- [x] Password reset is unavailable when email not configured (backend 503, frontend link hidden / page shows unavailable)
+- [x] Email verification requirement is handled appropriately (auto-verify when email not configured)
+- [x] Admins have clear visibility into email configuration status (System Settings banner)
+- [x] No silent failures for email-dependent features
+- [x] Admins can view and edit email templates via Configuration > Email Templates (Chunk C)
+- [x] Password reset, email verification, and notification emails use customizable templates (Chunk D)
+- [x] Admin and email configuration documentation in user-docs.md (Chunk D)

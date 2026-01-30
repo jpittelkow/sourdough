@@ -62,3 +62,7 @@ Migrated notification channel credentials (Phase 3) and LLM system-wide settings
 - Verify Configuration > Notifications: load credentials, save, test a channel (e.g. Telegram if token set).
 - Verify Configuration > LLM system: change mode/primary/timeout, save; confirm council/aggregation sections show when relevant.
 - Confirm config injection: e.g. `config('notifications.channels.telegram.bot_token')` and `config('llm.mode')` reflect DB after save and next request.
+
+---
+
+**Update (2026-01-29):** The LLM system UI (`/configuration/llm-system`) was consolidated into Configuration > AI / LLM (`/configuration/ai`) as an admin-only "System Defaults" card. The separate LLM system page and nav entry were removed. See [2026-01-29-llm-settings-consolidation.md](2026-01-29-llm-settings-consolidation.md).

@@ -257,8 +257,13 @@ export function StatWidget({ title, value, icon: Icon, description }) {
 
 ### Chart Widget
 
+Use **shadcn chart** (`ChartContainer` + Recharts) when available for consistent theming and tooltips. See `frontend/components/ui/chart.tsx` and the audit widget charts.
+
 ```tsx
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer } from 'recharts';
+import { ChartContainer } from '@/components/ui/chart';
+import { BarChart, Bar, XAxis, YAxis } from 'recharts';
+
+const config = { value: { label: 'Count', color: 'hsl(217 91% 60%)' } };
 
 export function ChartWidget({ data }) {
   return (
@@ -267,18 +272,20 @@ export function ChartWidget({ data }) {
         <CardTitle>Activity Chart</CardTitle>
       </CardHeader>
       <CardContent>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={data}>
+        <ChartContainer config={config} className="min-h-[200px] w-full">
+          <BarChart data={data} accessibilityLayer>
             <XAxis dataKey="name" />
             <YAxis />
-            <Bar dataKey="value" fill="#8884d8" />
+            <Bar dataKey="value" fill="var(--color-value)" />
           </BarChart>
-        </ResponsiveContainer>
+        </ChartContainer>
       </CardContent>
     </Card>
   );
 }
 ```
+
+Alternatively, use raw `ResponsiveContainer` + Recharts if you prefer (no ChartConfig/theming).
 
 ### List Widget
 
@@ -371,3 +378,7 @@ export function ActionWidget() {
   <LargeWidget className="md:col-span-2" />
 </div>
 ```
+
+## See also
+
+- **Audit dashboard widget** – Real-world example: stats cards, severity donut + activity trends charts (shadcn), recent-warnings list, “View all” link. Uses `GET /audit-logs/stats`. See `frontend/components/audit/audit-dashboard-widget.tsx`, `audit-severity-chart.tsx`, `audit-trends-chart.tsx`, and [Audit Dashboard Analytics](../../journal/2026-01-29-audit-dashboard-analytics.md).

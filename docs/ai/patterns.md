@@ -101,6 +101,72 @@ class ExampleController extends Controller
 }
 ```
 
+### User Disable Pattern
+
+When supporting disable/enable for user accounts, use a nullable `disabled_at` timestamp and block disabled users at login:
+
+- **Model**: Add `disabled_at` to `$fillable` and `$casts` (datetime). Add `isDisabled(): bool` helper that returns `$this->disabled_at !== null`.
+- **Login**: In `AuthController::login()`, after `Auth::attempt()` succeeds, check `$user->isDisabled()`. If disabled, call `Auth::logout()` and return 403 with a clear message (e.g. "This account has been disabled. Please contact your administrator.").
+- **Admin toggle**: In `UserController::toggleDisabled()`, prevent disabling self or the last admin (use `AdminAuthorizationTrait::ensureNotLastAdmin()`). Toggle by setting `disabled_at` to `now()` or `null`.
+- **API**: Expose `disabled_at` in user list/detail responses so the frontend can show Active/Disabled badge and Enable/Disable action.
+
+**Key files**: `backend/app/Models/User.php`, `backend/app/Http/Controllers/Api/AuthController.php`, `backend/app/Http/Controllers/Api/UserController.php`, `backend/app/Http/Traits/AdminAuthorizationTrait.php`.
+
+### AuditService Pattern
+
+Use `AuditService` to log significant user actions for compliance and debugging. The service is registered as a singleton; inject it in controllers or use the `AuditLogging` trait.
+
+```php
+use App\Services\AuditService;
+use App\Http\Traits\AuditLogging;
+
+// Option 1: Inject AuditService
+public function __construct(private AuditService $auditService) {}
+
+$this->auditService->log('user.created', $user, [], ['name' => $user->name]);
+$this->auditService->logAuth('login', $user);
+$this->auditService->logAuth('login_failed', null, ['email' => $email], 'warning');
+$this->auditService->logSettings('mail', $oldValues, $newValues, $request->user()->id);
+$this->auditService->logUserAction('custom.action', null, null, 'info');
+$this->auditService->logModelChange($model, 'resource.updated', $oldValues, $newValues);
+
+// Option 2: Use AuditLogging trait (forwards to AuditService::log)
+use AuditLogging;
+$this->audit('user.created', $user, [], ['name' => $user->name], null, 'info');
+```
+
+- **When to use**: Log auth events (login, logout, failed login, 2FA), user management (create, update, delete, disable, admin toggle), settings changes, backup operations, and any other action that should be auditable.
+- **Action naming**: Use `{resource}.{action}` (e.g. `auth.login`, `user.created`, `settings.updated`, `backup.restored`). Severity: `info`, `warning`, `error`, `critical`.
+- **Sensitive data**: `AuditService::log()` and `logSettings()` automatically mask keys containing `password`, `token`, `secret`, `api_key`, etc. (values replaced with `***`). Do not pass raw secrets in `old_values`/`new_values`.
+- **Error resilience**: If writing the audit log fails, the service logs to Laravel Log and returns null; the request is not broken.
+- **Request context**: If you do not pass `Request`, the service resolves it from the container when available (for IP and user agent).
+
+**Key files**: `backend/app/Services/AuditService.php`, `backend/app/Http/Traits/AuditLogging.php`, `backend/app/Models/AuditLog.php`, `backend/app/Http/Controllers/Api/AuditLogController.php`. See [Recipe: Trigger audit logging](recipes/trigger-audit-logging.md) and [Recipe: Add auditable action](recipes/add-auditable-action.md).
+
+### Logging Pattern
+
+Use the Laravel `Log` facade for operational and diagnostic events (not user actions; use AuditService for those). Every log record gets `correlation_id`, `user_id`, `ip_address`, and `request_uri` from the context processor when in HTTP context.
+
+```php
+use Illuminate\Support\Facades\Log;
+
+// Success / operational events
+Log::info('Backup created', ['filename' => $filename, 'size' => $size]);
+Log::info('Email sent', ['user_id' => $user->id, 'to' => $user->email]);
+
+// Recoverable issues
+Log::warning('LLM provider failed', ['provider' => $name, 'error' => $e->getMessage()]);
+
+// Failures
+Log::error('Backup restore failed', ['error' => $e->getMessage()]);
+```
+
+- **Levels**: Use `info` for normal operations, `warning` for recoverable issues (e.g. one provider failed), `error` for failures. Use `debug` only for development.
+- **Context**: Always pass a structured array (ids, names, duration_ms). Do not log secrets or full request bodies.
+- **Frontend**: Use `errorLogger` from `frontend/lib/error-logger.ts` instead of `console.error`/`console.warn` so client errors are sent to `POST /api/client-errors` and appear in backend logs with correlation ID.
+
+**Key files**: `backend/config/logging.php`, `backend/app/Logging/ContextProcessor.php`, `backend/app/Http/Middleware/AddCorrelationId.php`, `frontend/lib/error-logger.ts`, `docs/logging.md`. See [Recipe: Extend logging](recipes/extend-logging.md).
+
 ### SettingService Pattern
 
 Use `SettingService` for system-wide settings that can be stored in the database with environment fallback. Do not use `SystemSetting` directly for migratable settings; use the service so env fallback and caching apply.
@@ -134,6 +200,63 @@ $all = $this->settingService->all();
 - Define new migratable settings in `backend/config/settings-schema.php` with `env`, `default`, and `encrypted` keys.
 - Add boot-time injection in `ConfigServiceProvider::boot()` for new groups.
 - Use file cache only for settings (not DB) to avoid circular dependency.
+
+### EmailTemplateService Pattern
+
+Use `EmailTemplateService` for rendering email templates with variable replacement. Send rendered content via the **TemplatedMail** Mailable:
+
+```php
+use App\Mail\TemplatedMail;
+use App\Services\EmailTemplateService;
+use App\Services\RenderedEmail;
+use Illuminate\Support\Facades\Mail;
+
+public function __construct(private EmailTemplateService $templateService) {}
+
+// Render a template (active templates only)
+$rendered = $this->templateService->render('password_reset', [
+    'user' => ['name' => $user->name, 'email' => $user->email],
+    'reset_url' => $resetUrl,
+    'expires_in' => '60 minutes',
+    'app_name' => config('app.name'),
+]);
+
+// Send via TemplatedMail (standard pattern)
+Mail::to($user->email)->send(new TemplatedMail($rendered));
+
+// Or use rendered content directly
+$rendered->subject; // "Reset your password"
+$rendered->html;    // HTML body
+$rendered->text;    // Plain text body
+```
+
+- **TemplatedMail**: Accepts a `RenderedEmail` DTO; sets subject and HTML body. Use for all template-based sends so admins’ customizations apply.
+- Variable placeholders: `{{variable}}` or `{{user.name}}` (dot notation for nested arrays). Missing variables are replaced with empty string.
+- For admin preview of any template (including inactive), use `renderTemplate(EmailTemplate $template, array $variables): RenderedEmail`.
+- For **live preview of unsaved content** (e.g. admin UI), use `renderContent(string $subject, string $bodyHtml, ?string $bodyText, array $variables): RenderedEmail`. The preview API accepts optional `subject`, `body_html`, `body_text` in the request body and uses them when present.
+- Default templates are defined in `EmailTemplateSeeder` and seeded on migration; reset-to-default uses `getDefaultContent($key)`.
+
+**Integration points:** Built-in templates are wired as follows. Use the same pattern (render + TemplatedMail) for new flows.
+
+- **password_reset** – `User::sendPasswordResetNotification($token)`; reset URL uses `config('app.frontend_url')` + `/reset-password?token=...&email=...`.
+- **email_verification** – `User::sendEmailVerificationNotification()`; verification URL uses frontend `/verify-email?id=...&hash=...`.
+- **notification** – `EmailChannel::send()`; passes user, title, message, action_url, action_text, app_name.
+- **welcome** – Template exists; not yet wired (e.g. to `Registered` event).
+
+**Key files**: `backend/app/Services/EmailTemplateService.php`, `backend/app/Services/RenderedEmail.php`, `backend/app/Mail/TemplatedMail.php`, `backend/app/Models/EmailTemplate.php`, `backend/app/Models/User.php` (overrides), `backend/app/Services/Notifications/Channels/EmailChannel.php`, `backend/database/seeders/EmailTemplateSeeder.php`. See [ADR-016: Email Template System](../adr/016-email-template-system.md) and [Recipe: Add Email Template](recipes/add-email-template.md).
+
+### Email Template Admin UI Pattern
+
+The admin UI for email templates lives under **Configuration > Email Templates** (`/configuration/email-templates`):
+
+- **List page**: Fetches `GET /api/email-templates`; displays name, description, Active/Inactive badge, System badge, last updated; row click navigates to `/configuration/email-templates/[key]`.
+- **Editor page**: Fetches `GET /api/email-templates/{key}`; form with subject (Input), body (TipTap WYSIWYG via `EmailTemplateEditor`), plain text (Textarea, optional), Active (Switch). Save calls `PUT /api/email-templates/{key}`. Reset to default (system templates only) calls `POST /api/email-templates/{key}/reset`.
+- **EmailTemplateEditor**: TipTap with StarterKit, Link, Image, Placeholder; toolbar (Bold, Italic, headings, lists, link, image, variable picker). Controlled: `content` and `onChange(html)`. Variable picker inserts `{{variable}}` at cursor.
+- **VariablePicker**: Dropdown listing template `variables`; on select, parent inserts `{{variable}}` into the editor.
+- **Live preview**: Debounce (e.g. 500ms) then `POST /api/email-templates/{key}/preview` with current `subject`, `body_html`, `body_text`; render returned HTML in an iframe (sandbox). Preview API uses `EmailTemplateService::renderContent()` when body is provided.
+- **Test email**: Dialog with email input (default current user); `POST /api/email-templates/{key}/test` with `{ to }`. Handle 503 when email is not configured.
+
+**Key files**: `frontend/app/(dashboard)/configuration/email-templates/page.tsx`, `frontend/app/(dashboard)/configuration/email-templates/[key]/page.tsx`, `frontend/components/email-template-editor.tsx`, `frontend/components/variable-picker.tsx`. Navigation: add "Email Templates" to `frontend/app/(dashboard)/configuration/layout.tsx`.
 
 ### Backup & Restore Patterns
 
@@ -1163,6 +1286,17 @@ export function ExampleComponent({
 - Sensible defaults for optional props
 
 **Real example:** See `frontend/components/logo.tsx`
+
+### Charts (shadcn + Recharts)
+
+Use the shadcn chart component (`ChartContainer`, `ChartTooltip`, `ChartTooltipContent`) with Recharts for dashboard and analytics charts. Config-driven colors and tooltips; theme-aware.
+
+- **ChartContainer**: Wrap charts; requires `config` (`ChartConfig`) and `className` with `min-h-[...]` for responsive height. Injects `--color-{key}` CSS variables from config.
+- **ChartConfig**: Keys map to data keys; each entry has `label` and `color` (or `theme { light, dark }`). Use `var(--color-{key})` for fills/strokes.
+- **ChartTooltip / ChartTooltipContent**: Optional; use `nameKey`, `labelKey` when keys differ from config.
+- Prefer `AreaChart`, `BarChart`, `PieChart` + `Pie` (donut via `innerRadius`) from `recharts`. Use `accessibilityLayer` on the chart.
+
+**Key files:** `frontend/components/ui/chart.tsx`, `frontend/components/audit/audit-severity-chart.tsx`, `frontend/components/audit/audit-trends-chart.tsx`. See [Add dashboard widget](recipes/add-dashboard-widget.md) for chart widget variation.
 
 ## Error Handling Patterns
 

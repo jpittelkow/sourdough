@@ -25,6 +25,7 @@ const userSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters").optional().or(z.literal("")),
   is_admin: z.boolean(),
+  skip_verification: z.boolean().optional(),
 });
 
 type UserForm = z.infer<typeof userSchema>;
@@ -61,6 +62,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
       email: "",
       password: "",
       is_admin: false,
+      skip_verification: false,
     },
   });
 
@@ -78,6 +80,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
         email: "",
         password: "",
         is_admin: false,
+        skip_verification: false,
       });
     }
   }, [user, reset]);
@@ -102,7 +105,13 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
           setIsSaving(false);
           return;
         }
-        await api.post("/users", data);
+        await api.post("/users", {
+          name: data.name,
+          email: data.email,
+          password: data.password,
+          is_admin: data.is_admin,
+          skip_verification: data.skip_verification ?? false,
+        });
         toast.success("User created successfully");
       }
       onOpenChange(false);
@@ -179,6 +188,27 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
                 onCheckedChange={(checked) => setValue("is_admin", checked)}
               />
             </div>
+
+            {!isEditing && (
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label>Skip email verification</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Create user as already verified (no verification email sent)
+                  </p>
+                </div>
+                <Switch
+                  checked={watch("skip_verification") ?? false}
+                  onCheckedChange={(checked) => setValue("skip_verification", checked)}
+                />
+              </div>
+            )}
+
+            {!isEditing && !(watch("skip_verification") ?? false) && (
+              <p className="text-sm text-muted-foreground">
+                A verification email will be sent to the user if email is configured.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button

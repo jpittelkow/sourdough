@@ -87,6 +87,7 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 | Backup UI | `frontend/app/(dashboard)/configuration/backup/page.tsx` (Backups + Settings tabs) | [Backup hub](backup.md) |
 | Add backup destination | [Recipe: add-backup-destination](ai/recipes/add-backup-destination.md) | ADR-007 |
 | Extend backup/restore | [Recipe: extend-backup-restore](ai/recipes/extend-backup-restore.md), [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) | [Backup hub](backup.md) |
+| Logging / frontend errors | [Logging](logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [Recipe: extend-logging](ai/recipes/extend-logging.md) | - |
 | Docker config | `docker/`, `docker-compose.yml` | ADR-009 |
 | Add settings page | `frontend/app/(dashboard)/settings/` | ADR-012 |
 | Add admin page | `frontend/app/(dashboard)/admin/` | ADR-012 |
