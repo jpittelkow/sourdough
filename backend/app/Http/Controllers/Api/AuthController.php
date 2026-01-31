@@ -4,9 +4,12 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponseTrait;
+use App\Enums\Permission;
 use App\Models\User;
 use App\Services\AuditService;
 use App\Services\EmailConfigService;
+use App\Services\GroupService;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -23,7 +26,8 @@ class AuthController extends Controller
     use ApiResponseTrait;
 
     public function __construct(
-        private AuditService $auditService
+        private AuditService $auditService,
+        private SettingService $settingService
     ) {}
 
     /**
@@ -52,12 +56,23 @@ class AuthController extends Controller
             'password' => ['required', 'confirmed', PasswordRule::defaults()],
         ]);
 
+        $groupService = app(GroupService::class);
+        $isFirstUser = User::count() === 0;
+        if ($isFirstUser) {
+            $groupService->ensureDefaultGroupsExist();
+        }
+
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
-            'is_admin' => User::count() === 0, // First user is admin
         ]);
+
+        if ($isFirstUser) {
+            $user->assignGroup('admin');
+        } else {
+            $groupService->assignDefaultGroupToUser($user);
+        }
 
         if ($emailConfigService->isConfigured()) {
             event(new Registered($user));
@@ -66,6 +81,9 @@ class AuthController extends Controller
         }
 
         Auth::login($user);
+        $request->session()->regenerate();
+
+        $this->auditService->logAuth('register', $user);
 
         return $this->createdResponse('Registration successful', ['user' => $user]);
     }
@@ -133,11 +151,17 @@ class AuthController extends Controller
     public function user(Request $request): JsonResponse
     {
         $user = $request->user();
-        $user->load(['socialAccounts:id,user_id,provider,nickname,avatar']);
+        $user->load(['socialAccounts:id,user_id,provider,nickname,avatar', 'groups:id,name,slug', 'groups.permissions']);
+
+        $permissions = $user->inGroup('admin')
+            ? Permission::all()
+            : $user->groups->flatMap(fn ($g) => $g->permissions->pluck('permission'))->unique()->values()->all();
 
         return $this->dataResponse([
             'user' => $user,
             'sso_accounts' => $user->socialAccounts->pluck('provider'),
+            'groups' => $user->groups->pluck('slug'),
+            'permissions' => $permissions,
             'two_factor_enabled' => $user->hasTwoFactorEnabled(),
         ]);
     }
@@ -153,6 +177,13 @@ class AuthController extends Controller
         if (!$emailConfigService->isConfigured()) {
             return $this->errorResponse(
                 'Password reset is not available. Please contact your administrator.',
+                503
+            );
+        }
+
+        if (!$this->settingService->get('auth', 'password_reset_enabled', true)) {
+            return $this->errorResponse(
+                'Password reset is disabled. Please contact your administrator.',
                 503
             );
         }

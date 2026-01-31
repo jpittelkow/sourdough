@@ -39,6 +39,7 @@ export default function RegisterPage() {
   const { register: registerUser } = useAuth();
   const { features } = useAppConfig();
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
   const { isChecking, isAvailable, error: availabilityError, checkEmail } =
     useEmailAvailability();
 
@@ -73,13 +74,14 @@ export default function RegisterPage() {
 
   const onSubmit = async (data: RegisterForm) => {
     setIsLoading(true);
+    setFormError(null);
     try {
       await registerUser(data.name, data.email, data.password, data.password_confirmation);
       toast.success("Account created successfully!");
       router.push("/dashboard");
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "Registration failed";
-      toast.error(message);
+      setFormError(message);
     } finally {
       setIsLoading(false);
     }
@@ -106,6 +108,11 @@ export default function RegisterPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
         <FormField
           id="name"
           label="Name"

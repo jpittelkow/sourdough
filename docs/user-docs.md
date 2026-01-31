@@ -3,6 +3,7 @@
 End-user guides and help:
 
 - [User Guide](user/README.md) - Complete user documentation covering account management, security, notifications, AI features, backup/restore
+- [User Guide – Single Sign-On (SSO)](user/README.md#single-sign-on-sso) - Admin SSO setup (Configuration > SSO)
 - [Backup & Restore](backup.md) - Central backup docs (user, admin, and developer); for end users see [User Guide – Backup & Restore](user/README.md#backup--restore)
 
 Administrators can manage users (create, edit, disable, resend verification) from **Configuration > Users**. See [User Guide – Administration (Admins)](user/README.md#administration-admins).
@@ -40,6 +41,32 @@ Administrators can customize all system-generated emails from **Configuration > 
 
 - System templates can be reset to defaults via the **Reset** button
 - Custom modifications will be lost when resetting
+
+## Notification Templates (Admin)
+
+Administrators can customize per-type notification messages for push, in-app, and chat channels from **Configuration > Notification Templates**.
+
+### Channel Groups
+
+| Group | Channels |
+|-------|----------|
+| Push | Web Push, Firebase (FCM), ntfy |
+| In-App | In-app notification feed |
+| Chat | Telegram, Discord, Slack, SMS (Twilio, Vonage, SNS), Signal, Matrix |
+
+### Editing Templates
+
+1. Navigate to **Configuration > Notification Templates**
+2. Click a row to edit a template (type + channel group)
+3. Modify the title and body; use variables like `{{user.name}}`, `{{app_name}}`, `{{backup_name}}`
+4. Preview updates in the right panel as you type
+5. Toggle **Active** to enable or disable the template
+6. Click **Save**
+7. System templates can be **Reset to default** to restore seeded content
+
+### Default Types
+
+Templates are seeded for: backup.completed, backup.failed, auth.login, auth.password_reset, system.update, llm.quota_warning (each with push, inapp, and chat variants).
 
 ### Email Configuration Requirements
 

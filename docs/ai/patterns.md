@@ -173,6 +173,157 @@ $this->accessLog->log('export', 'User', null, ['all']);
 
 **Key files**: `backend/app/Services/AccessLogService.php`, `backend/app/Http/Middleware/LogResourceAccess.php`, `backend/app/Models/AccessLog.php`. See [Recipe: Add access logging](recipes/add-access-logging.md).
 
+### Permission Checking Pattern (User Groups)
+
+Use `PermissionService` for cached permission checks, or `User::hasPermission()` / `User::inGroup()` on the User model (which uses the `HasGroups` trait).
+
+```php
+use App\Enums\Permission;
+use App\Services\PermissionService;
+
+// In controller or service: cached check
+public function __construct(private PermissionService $permissionService) {}
+
+if (!$this->permissionService->check($request->user(), Permission::BACKUPS_CREATE)) {
+    abort(403, 'You do not have permission to create backups.');
+}
+
+// On User model (from HasGroups trait): direct check
+if ($user->inGroup('admin')) { /* admin has all permissions */ }
+if ($user->hasPermission(Permission::SETTINGS_EDIT)) { /* ... */ }
+if ($user->hasPermission('users.view', null, null)) { /* global permission */ }
+```
+
+- **Admin group**: Users in the `admin` group have all permissions implicitly; no need to store every permission.
+- **Caching**: `PermissionService::check()` caches results per user (single key per user for SQLite compatibility). Call `clearUserCache($user)` or `clearGroupCache($group)` when membership or group permissions change.
+- **Admin check**: `User::isAdmin()` returns `true` if the user is in the `admin` group. The API includes a computed `is_admin` attribute derived from this.
+- **Route protection**: All permissions are registered as Laravel Gates in `AppServiceProvider`. Use `->middleware('can:permission.name')` on routes (e.g. `can:users.view`, `can:backups.create`). See [backend/routes/api.php](backend/routes/api.php) for examples.
+
+**Key files**: `backend/app/Services/PermissionService.php`, `backend/app/Traits/HasGroups.php`, `backend/app/Enums/Permission.php`, `backend/app/Models/UserGroup.php`, `backend/app/Providers/AppServiceProvider.php`.
+
+### Permission Gate (Frontend)
+
+Use `usePermission(permission)` or `<PermissionGate>` to conditionally render UI based on the current user's permissions. The auth user from `GET /auth/user` includes a computed `permissions` array (admin users receive all permission strings).
+
+```tsx
+import { usePermission } from "@/lib/use-permission";
+import { PermissionGate } from "@/components/permission-gate";
+
+// Hook: single permission check
+const canEditBackups = usePermission("backups.restore");
+if (canEditBackups) {
+  // show restore button
+}
+
+// Component: wrap content that requires a permission
+<PermissionGate permission="users.create" fallback={null}>
+  <Button>Create User</Button>
+</PermissionGate>
+```
+
+- **Config navigation**: Configuration layout filters nav items by permission; each item can specify `permission` so only users with that permission see the link. Access to the Configuration area requires at least one of the config-related permissions (or admin).
+- **Backend is source of truth**: Frontend permission checks are for UX only; API routes are protected with `can:permission` middleware.
+- **Admin check**: Prefer `isAdminUser(user)` from `@/lib/auth` over `user?.is_admin` so the UI stays correct if the API ever drops the computed `is_admin` attribute (admin is derived from admin group membership).
+
+**Key files**: `frontend/lib/use-permission.ts`, `frontend/lib/auth.ts` (`isAdminUser`), `frontend/components/permission-gate.tsx`, `frontend/app/(dashboard)/configuration/layout.tsx`, [Recipe: Add a new permission](recipes/add-new-permission.md).
+
+### User Group Assignment (Frontend)
+
+Use the shared **`useGroups()`** hook and **`UserGroupPicker`** component for group lists and user-group assignment. Do not fetch groups inline in multiple places.
+
+```tsx
+// Use the shared hook for group list (filter dropdown, picker data)
+import { useGroups } from "@/lib/use-groups";
+
+const { groups, isLoading, error, refetch } = useGroups();
+// groups: Group[] from GET /groups
+```
+
+```tsx
+// For user edit: use UserGroupPicker (uses useGroups internally)
+import { UserGroupPicker } from "@/components/admin/user-group-picker";
+
+<UserGroupPicker
+  selectedGroupIds={selectedGroupIds}
+  onChange={setSelectedGroupIds}
+  currentUserId={currentUser?.id}
+  editedUserId={user?.id}
+/>
+```
+
+- **Backend**: Load groups on user list/detail (`UserController::index` / `show` with `with('groups:id,name,slug')`). Update memberships via `PUT /users/{user}/groups` with `{ group_ids: number[] }`; audit and clear permission cache.
+- **Current user**: Pass `currentUserId` so the picker can prevent removing self from the admin group (`editedUserId === currentUserId`).
+- **Profile**: Auth user from `GET /auth/user` includes `groups`; display read-only on profile page.
+
+**Key files**: `frontend/lib/use-groups.ts`, `frontend/components/admin/user-group-picker.tsx`, `backend/app/Http/Controllers/Api/UserController.php` (`updateGroups`).
+
+### Dashboard Widget Pattern
+
+Dashboard uses static, developer-defined widgets. Widgets are self-contained React components added directly to the dashboard page—no database storage or user configuration.
+
+**Widget component structure:**
+
+```tsx
+"use client";
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+interface StatsWidgetProps {
+  metrics?: string[];
+  title?: string;
+}
+
+export function StatsWidget({
+  metrics = ["users", "storage"],
+  title = "System Stats",
+}: StatsWidgetProps) {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard", "stats", metrics],
+    queryFn: () => api.get("/dashboard/stats", { params: { metrics } }),
+    staleTime: 5 * 60 * 1000, // Cache 5 minutes
+  });
+
+  if (isLoading) return <WidgetSkeleton />;
+  if (error) return <WidgetError onRetry={refetch} />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {data?.metrics?.map((m) => (
+          <div key={m.label} className="flex justify-between text-sm">
+            <span className="text-muted-foreground">{m.label}</span>
+            <span className="font-medium">{m.value}</span>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+**Adding to dashboard:**
+
+```tsx
+// frontend/app/(dashboard)/dashboard/page.tsx
+export default function DashboardPage() {
+  const { hasPermission } = usePermission();
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <WelcomeWidget />
+      <StatsWidget />
+      {hasPermission("admin") && <SystemHealthWidget />}
+    </div>
+  );
+}
+```
+
+**Key files:** `frontend/app/(dashboard)/dashboard/page.tsx`, `frontend/components/dashboard/`, `frontend/components/dashboard/widgets/` (reference: welcome-widget, stats-widget, quick-actions-widget). See [Recipe: Add Dashboard Widget](recipes/add-dashboard-widget.md).
+
 ### Logging Pattern
 
 Use the Laravel `Log` facade for operational and diagnostic events (not user actions; use AuditService for those). Every log record gets `correlation_id`, `user_id`, `ip_address`, and `request_uri` from the context processor when in HTTP context.
@@ -198,6 +349,32 @@ Log::error('Backup restore failed', ['error' => $e->getMessage()]);
 **Key files**: `backend/config/logging.php`, `backend/app/Logging/ContextProcessor.php`, `backend/app/Http/Middleware/AddCorrelationId.php`, `frontend/lib/error-logger.ts`, `docs/logging.md`. See [Recipe: Extend logging](recipes/extend-logging.md).
 
 **Related features**: Application log export (`GET /api/app-logs/export`, filter by date/level/correlation_id); log retention (Configuration > Log retention, `log:cleanup` with `--dry-run`/`--archive`); suspicious activity alerting (`log:check-suspicious` every 15 min, notifies admins; `GET /api/suspicious-activity` for dashboard).
+
+### LLMModelDiscoveryService Pattern
+
+Use `LLMModelDiscoveryService` to discover available models for an LLM provider using credentials.
+
+- `discoverModels(provider, credentials)` — Returns normalized model list with server-side caching (1h TTL).
+- `validateCredentials(provider, credentials)` — Returns true if credentials are valid (at least one model returned).
+
+Each provider has a private `discover{Provider}Models()` method that:
+
+1. Calls the provider's models/deployments API.
+2. Normalizes the response to `[{id, name, provider, capabilities?}]`.
+3. Filters to relevant models (e.g. chat or text-generation only).
+
+Credential requirements vary by provider:
+
+| Provider | Credentials |
+|----------|-------------|
+| openai, claude, gemini | `api_key` |
+| ollama | `host` |
+| azure | `endpoint`, `api_key` |
+| bedrock | `region`, `access_key`, `secret_key` |
+
+The service cache key must include a hash of all credential fields used by the provider (e.g. endpoint for Azure, access_key/secret_key for Bedrock) so different accounts do not share the same cached model list.
+
+**Key files**: `backend/app/Services/LLMModelDiscoveryService.php`, `backend/app/Http/Controllers/Api/LLMModelController.php`. See [Recipe: Add LLM Provider](recipes/add-llm-provider.md) and [LLM Model Discovery Roadmap](../plans/llm-model-discovery-roadmap.md).
 
 ### SettingService Pattern
 
@@ -232,6 +409,32 @@ $all = $this->settingService->all();
 - Define new migratable settings in `backend/config/settings-schema.php` with `env`, `default`, and `encrypted` keys.
 - Add boot-time injection in `ConfigServiceProvider::boot()` for new groups.
 - Use file cache only for settings (not DB) to avoid circular dependency.
+
+### SearchService Pattern
+
+Use `SearchService` for full-text search with Meilisearch/Scout. The service centralizes search logic, result transformation (title, subtitle, url, highlight), and index stats. When Meilisearch is unavailable, user search falls back to database `LIKE` queries.
+
+- **searchUsers(query, perPage?, page)** — User search with pagination (Scout uses 3 args: perPage, pageName, page).
+- **globalSearch(query, type?, filters?, page?, perPage?, scopeUserId?)** — Multi-model search; returns unified `{ data, meta }`. Pass `scopeUserId` for non-admin to scope user results to that user only.
+- **getSuggestions(query, limit?, scopeUserId?)** — Fast autocomplete; returns pages, user groups (admin only), and users in one list.
+- **syncPagesToIndex()** — Sync static pages from `config/search-pages.php` to the Meilisearch `pages` index.
+- **searchPages(query, isAdmin, limit)** — Search the pages index (filter by `admin_only` when not admin).
+- **searchUserGroups(query, limit)** — Search user groups (admin only); used in getSuggestions.
+- **getPagesIndexStats()** — Document count for the pages index.
+- **getIndexStats()** — Document counts per index (includes pages and all searchable models).
+- **reindexAll()** / **reindexModel(model)** — Reindex all or a single searchable model. Use `search:reindex pages` to sync pages.
+
+**XSS safety:** Transform methods must escape all user-provided text (title, subtitle) with `htmlspecialchars(..., ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')` before returning. Use `highlightMatch()` for highlight text (it escapes then wraps the query in `<mark>`); the frontend renders highlights with `dangerouslySetInnerHTML`.
+
+**Access logging:** Routes that return user/PHI search results use `log.access:User` middleware (`GET /api/search`, `GET /api/search/suggestions`). See [Logging Compliance](../../.cursor/rules/logging-compliance.mdc).
+
+**Adding a new searchable model:** Add the model to `SearchService::$searchableModels` and `SearchReindexCommand::$searchableModels`, implement a type branch and transform method (with escaping) in SearchService, add the result type icon in `frontend/components/search/search-result-icon.tsx`, and ensure routes have access logging if returning PHI. See [Recipe: Add searchable model](recipes/add-searchable-model.md).
+
+**Page search:** Pages are indexed in Meilisearch with content keywords for discoverability. The `pages` index includes titles, subtitles, URLs, and rich content describing what each page contains. Use `searchPages(query, isAdmin, limit)` to search. Pages are defined in `backend/config/search-pages.php`. See [Recipe: Add searchable page](recipes/add-searchable-page.md).
+
+**UserGroup search:** User groups are searchable by name, slug, and description. Admin-only — non-admin users do not see group results. Use `searchUserGroups(query, limit)` or include in `globalSearch()` with `type=user_groups`.
+
+**Key files:** `backend/app/Services/Search/SearchService.php`, `backend/config/search-pages.php`, `backend/app/Http/Controllers/Api/SearchController.php`, `backend/app/Http/Controllers/Api/Admin/SearchAdminController.php`, `backend/app/Console/Commands/SearchReindexCommand.php`, `backend/routes/api.php` (search/suggestions + log.access), `frontend/lib/search.ts`, `frontend/components/search/search-modal.tsx`, `frontend/components/search/search-provider.tsx`.
 
 ### EmailTemplateService Pattern
 
@@ -290,6 +493,49 @@ The admin UI for email templates lives under **Configuration > Email Templates**
 
 **Key files**: `frontend/app/(dashboard)/configuration/email-templates/page.tsx`, `frontend/app/(dashboard)/configuration/email-templates/[key]/page.tsx`, `frontend/components/email-template-editor.tsx`, `frontend/components/variable-picker.tsx`. Navigation: add "Email Templates" to `frontend/app/(dashboard)/configuration/layout.tsx`.
 
+### NotificationTemplateService Pattern
+
+Use `NotificationTemplateService` for rendering per-type, per-channel-group notification templates (push, inapp, chat). Email continues to use EmailTemplateService (ADR-016).
+
+```php
+use App\Services\NotificationTemplateService;
+
+public function __construct(private NotificationTemplateService $templateService) {}
+
+// Render a template (active only) for a type and channel group
+$rendered = $this->templateService->render('backup.completed', 'inapp', [
+    'user' => ['name' => $user->name, 'email' => $user->email],
+    'app_name' => config('app.name'),
+    'backup_name' => $backup->name,
+]);
+
+// $rendered is ['title' => string, 'body' => string]
+$title = $rendered['title'];
+$body = $rendered['body'];
+```
+
+- **getByTypeAndChannel($type, $channelGroup)**: Find active template. Returns null if none.
+- **render($type, $channelGroup, $variables)**: Render active template; throws if not found.
+- **renderTemplate(NotificationTemplate $template, $variables)**: Admin preview of any template.
+- **renderContent($title, $body, $variables)**: Live preview of unsaved content.
+- **getDefaultContent($type, $channelGroup)**: For reset; delegates to NotificationTemplateSeeder::getDefaultFor().
+
+Channel groups: `push` (WebPush, FCM, ntfy), `inapp` (DatabaseChannel), `chat` (Telegram, Discord, Slack, Twilio, Signal, Matrix, Vonage, SNS). Each channel’s `send()` optionally resolves a template for (type, channel_group) when present; otherwise uses passed title/message. Use **NotificationOrchestrator::sendByType($user, $type, $variables, $channels)** to send using templates per channel.
+
+**Key files**: `backend/app/Services/NotificationTemplateService.php`, `backend/app/Models/NotificationTemplate.php`, `backend/app/Services/Notifications/NotificationOrchestrator.php`, `backend/app/Services/Notifications/Channels/*`. See [ADR-017: Notification Template System](../adr/017-notification-template-system.md) and [Recipe: Add Notification Template](recipes/add-notification-template.md).
+
+### Notification Template Admin UI Pattern
+
+The admin UI for notification templates lives under **Configuration > Notification Templates** (`/configuration/notification-templates`):
+
+- **List page**: Fetches `GET /api/notification-templates`; displays type, channel group (Push/In-App/Chat), title, Active/Inactive badge, System badge, last updated; row click navigates to `/configuration/notification-templates/[id]`.
+- **Editor page**: Fetches `GET /api/notification-templates/{id}`; form with title (Input), body (Textarea), Active (Switch). Save calls `PUT /api/notification-templates/{id}`. Reset to default (system templates only) calls `POST /api/notification-templates/{id}/reset`.
+- **Live preview**: Debounce (e.g. 500ms) then `POST /api/notification-templates/{id}/preview` with current `title`, `body`; display returned title and body in a preview panel. Preview API uses `NotificationTemplateService::renderContent()` when title/body are provided.
+- **Variables**: Template `variables` list is shown in the form description; use placeholders like `{{user.name}}`, `{{app_name}}`, `{{backup_name}}` in title and body. No separate variable picker component (simpler than email templates).
+- **Variables Reference panel**: The editor page includes a collapsible "Available Variables" card (below the Preview card). The API returns `variable_descriptions` (from `NotificationTemplateController::variableDescriptions()`) alongside `variables` in `GET /api/notification-templates/{id}`. Each row shows the placeholder (e.g. `{{app_name}}`), a short description, and a Copy button. When adding a new notification type or a new variable name, add an entry to `variableDescriptions()` so the panel stays accurate; see [Recipe: Add Notification Template](recipes/add-notification-template.md) and [Recipe: Keep Notification Template Variables Reference Up to Date](recipes/keep-notification-template-variables-up-to-date.md).
+
+**Key files**: `frontend/app/(dashboard)/configuration/notification-templates/page.tsx`, `frontend/app/(dashboard)/configuration/notification-templates/[id]/page.tsx`. Navigation: add "Notification Templates" to `frontend/app/(dashboard)/configuration/layout.tsx` (Communications group). Search: add entry to `frontend/lib/search-pages.ts`; the `NotificationTemplate` model is searchable (Scout/Meilisearch)—see [Add Searchable Model](recipes/add-searchable-model.md). Backend: `SearchService` (globalSearch, transformNotificationTemplateToResult), `SearchReindexCommand`, `backend/config/search-pages.php` (config-notification-templates page), and `search-result-icon.tsx` (notification_template icon).
+
 ### Backup & Restore Patterns
 
 **Documentation:** Full backup docs (user, admin, developer; key files; recipes): [Backup & Restore](../backup.md).
@@ -307,6 +553,20 @@ The admin UI for email templates lives under **Configuration > Email Templates**
 **Adding a new destination:** See [Add backup destination](recipes/add-backup-destination.md). Summary: implement DestinationInterface, add flat keys to backup schema and backup.php destinations, map in ConfigServiceProvider and BackupSettingController, add Card and Test Connection in Settings tab.
 
 **Extending backup/restore behavior:** See [Extend backup and restore features](recipes/extend-backup-restore.md) for new restore logic, scheduling, notifications, new backup content, or UI-only changes.
+
+### Storage Settings Pattern
+
+**Documentation:** [Storage Settings Enhancement Roadmap](../plans/storage-settings-roadmap.md), [Features: Storage Settings](../features.md#storage-settings).
+
+**Storage settings (database):** Storage configuration is stored in the `storage` group via `SystemSetting::get`/`set` (no settings-schema; keys are driver plus provider-prefixed, e.g. `driver`, `s3_bucket`, `gcs_credentials_json`). All provider credentials and options use this single group so one active driver is configured at a time.
+
+**StorageService:** `App\Services\StorageService` defines `PROVIDERS` (id → label, driver), `getProviderConfig(provider)`, `getAvailableProviders()`, `testConnection(provider, config)`, and `buildDiskConfig(provider, config)`. Connection test: build disk config from request/DB keys, set a temporary disk name in config, `Storage::disk(name)->put()` then `delete()` a test path, clear the temp disk. For S3-compatible providers the driver is `s3` with custom `endpoint` and `use_path_style_endpoint`; for GCS/Azure the driver is `gcs`/`azure` and drivers are registered in AppServiceProvider via `Storage::extend()` when the Flysystem adapter package is installed.
+
+**Settings API and Test Connection:** StorageSettingController exposes `GET/PUT /storage-settings`, `POST /storage-settings/test`, `GET /storage-settings/stats`, `GET /storage-settings/paths`, `GET /storage-settings/health`. Test accepts `driver` and provider-prefixed keys in the body; controller calls `StorageService::testConnection($validated['driver'], $request->except(['driver']))`. Validation in `update()` uses `required_if:driver,{provider}` for each provider’s keys (e.g. `s3_bucket`, `gcs_credentials_json`, `minio_endpoint`).
+
+**Storage UI:** Configuration > Storage: driver dropdown (local, s3, gcs, azure, do_spaces, minio, b2) with ProviderIcon, dynamic form sections per driver, max upload size and allowed file types (shared), Test Connection button (non-local) with loading/success/error state, Save. Test payload must include `driver` and all visible provider fields so the backend can build disk config.
+
+**Adding a new storage provider:** See [Add storage provider](recipes/add-storage-provider.md). Summary: add to `StorageService::PROVIDERS` and `getSettingPrefix`, implement `buildDiskConfig()` branch; add disk in filesystems.php and optionally `Storage::extend()` for new driver types; add validation rules and frontend form section + test payload; add provider icon if needed.
 
 ### ScheduledTaskService Pattern (Manual Run of Scheduled Commands)
 
@@ -537,7 +797,7 @@ Use shared traits for consistent controller behavior. Location: `backend/app/Htt
 
 ### AdminAuthorizationTrait
 
-Prevents modifying or deleting the last admin. Use `ensureNotLastAdmin(User $user, string $action)` before delete/disable/demote actions on admin users.
+Prevents modifying or deleting the last admin. "Admin" means the user is in the `admin` group; "last admin" is the last user in that group. Use `ensureNotLastAdmin(User $user, string $action)` before delete/disable/demote actions on admin users.
 
 ```php
 use App\Http\Traits\AdminAuthorizationTrait;
@@ -849,7 +1109,7 @@ export default function LoginPage() {
 
 #### FormField
 
-Label + Input + error message combo for form fields:
+Label + optional description/help link + Input + error message combo for form fields:
 
 ```tsx
 import { FormField } from "@/components/ui/form-field";
@@ -862,13 +1122,11 @@ export default function MyForm() {
     <FormField
       id="email"
       label="Email"
+      description="We'll never share your email."
+      helpLink={{ label: "Help", url: "https://example.com/help" }}
       error={errors.email?.message}
     >
-      <Input
-        id="email"
-        type="email"
-        {...register("email")}
-      />
+      <Input id="email" type="email" {...register("email")} />
     </FormField>
   );
 }
@@ -877,6 +1135,8 @@ export default function MyForm() {
 **Props:**
 - `id: string` - Field ID (for label htmlFor)
 - `label: string | ReactNode` - Label text or custom label element
+- `description?: string` - Optional muted text below the label
+- `helpLink?: { label: string; url?: string; onClick?: () => void }` - Optional help link (url opens in new tab; onClick for modals)
 - `error?: string` - Error message to display
 - `children: ReactNode` - Input component
 - `className?: string` - Additional CSS classes
@@ -915,15 +1175,21 @@ export default function MyForm() {
 
 #### SSO Provider Display (Sign-In vs Setup)
 
-**Sign-in and register pages:** SSO buttons are rendered by `SSOButtons` (`frontend/components/auth/sso-buttons.tsx`), which fetches enabled providers from `GET /auth/sso/providers`. Each provider shows a "Continue with {name}" button with an icon. Icons come from the shared **`ProviderIcon`** component (`frontend/components/provider-icons.tsx`): the `icon` value from the API (e.g. `google`, `github`, `gitlab`) must exist in the icon map there; unknown icons fall back to the generic `key` icon. When adding a new SSO provider, add its icon to `provider-icons.tsx` (see [Recipe: Add SSO Provider](recipes/add-sso-provider.md) Step 7).
+**Sign-in and register pages:** SSO buttons are rendered by `SSOButtons` (`frontend/components/auth/sso-buttons.tsx`), which fetches **enabled** providers from `GET /auth/sso/providers`. A provider is shown only when it has credentials, has **passed** the connection test (`{provider}_test_passed`), and the per-provider `{provider}_enabled` flag is true. Each provider shows a "Continue with {name}" button with an icon. Icons come from the shared **`ProviderIcon`** component (`frontend/components/provider-icons.tsx`): the `icon` value from the API must exist in the icon map there; unknown icons fall back to the generic `key` icon. When adding a new SSO provider, add its icon to `provider-icons.tsx` (see [Recipe: Add SSO Provider](recipes/add-sso-provider.md) Step 7).
 
-**Setup page:** Configuration > SSO (`frontend/app/(dashboard)/configuration/sso/page.tsx`) is where admins configure provider credentials. Each provider card uses `CollapsibleCard` with `ProviderIcon` in the header. The `providers` array on that page controls which cards are shown. New providers must be added to the setup page and to `provider-icons.tsx`.
+**Setup page:** Configuration > SSO (`frontend/app/(dashboard)/configuration/sso/page.tsx`) is where admins configure provider credentials. The **Global options** card (Enable SSO, Allow account linking, etc.) has its own save button; each provider card has a **per-provider save** button so only that provider's settings are sent on save. Each provider card uses `CollapsibleCard` with `ProviderIcon` in the header, a "Setup instructions" button (opens `SSOSetupModal`), status badge (**Not configured** → **Test required** → **Test passed** / **Enabled**), per-provider **Enabled** toggle (shown only when credentials are set **and** test has passed), redirect URI (copyable), and "Test connection" button. The "Test connection" button is enabled only when both Client ID and Client secret are filled; on success, settings are refetched so `test_passed` updates and the Enable toggle appears. The `providers` array includes `enabledKey` and `testPassedKey`; schema and defaultValues include `{provider}_enabled` and `{provider}_test_passed`. New providers must be added to the setup page, to `provider-icons.tsx`, and to `frontend/components/admin/sso-setup-modal.tsx` (setup instructions content).
+
+**SSO Provider Enabled Toggle pattern:** Three conditions for a provider to appear on the login page: (1) **Credentials** (client_id and client_secret; for OIDC also issuer_url), (2) **Test passed** (`{provider}_test_passed` set by successful "Test connection"), (3) **Enabled** (`{provider}_enabled` is true). The admin can turn off a provider without removing credentials; changing credentials clears `test_passed` so the provider must be re-tested before it can be enabled again.
+
+**SSO Test Connection (Credential Validation) pattern:** The backend test endpoint (`POST /api/sso-settings/test/{provider}`) **validates credentials** at the provider's token endpoint; it must not pass with incorrect credentials. Implementation: POST to the provider's token endpoint with `grant_type=authorization_code`, `code=test_connection_validation`, `client_id`, `client_secret`, and `redirect_uri`. Interpret the response: **invalid_client** or HTTP 401 → credentials invalid (do not set `test_passed`); **invalid_grant**, **invalid_request**, or **bad_verification_code** (GitHub) → credentials accepted (set `test_passed = true`). Require client_secret for the test. See `SSOSettingController::test()` and `validateCredentialsAtTokenEndpoint()` in `backend/app/Http/Controllers/Api/SSOSettingController.php`. When adding a new provider, implement token-endpoint credential validation (discovery for OIDC/Google/Microsoft; known token URL for GitHub/Discord/GitLab; or custom logic for providers like Apple).
 
 **Key files:**
 - Icons: `frontend/components/provider-icons.tsx` (single source for SSO, LLM, backup icons)
 - Sign-in/register: `frontend/components/auth/sso-buttons.tsx` (uses ProviderIcon)
 - Setup: `frontend/app/(dashboard)/configuration/sso/page.tsx`
+- Setup modal: `frontend/components/admin/sso-setup-modal.tsx` (provider-specific setup instructions, redirect URI, links to provider consoles)
 - Backend config: `backend/config/sso.php` (name, icon, enabled, color)
+- Backend test: `backend/app/Http/Controllers/Api/SSOSettingController.php` (`test()`, `validateCredentialsAtTokenEndpoint()`)
 
 #### AuthDivider
 

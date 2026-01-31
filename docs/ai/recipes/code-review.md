@@ -73,6 +73,7 @@ See: [.cursor/rules/global-components.mdc](../../.cursor/rules/global-components
 - [ ] Using `api` utility from `@/lib/api` (not raw fetch where avoidable)
 - [ ] No hardcoded API URLs
 - [ ] If using fetch directly, `credentials: 'include'` is set (or use api utility)
+- [ ] Admin checks use `isAdminUser(user)` from `@/lib/auth` (not `user?.is_admin`) so UI stays correct if API changes
 
 ### Mobile and Responsive (ADR-013)
 
@@ -97,6 +98,7 @@ If any of these appear, recommend the preferred approach:
 | `SystemSetting::get/set` for mail (or other schema-backed group) | SettingService |
 | Inline `$request->validate()` in controller | FormRequest class |
 | Manual "last admin" check | AdminAuthorizationTrait |
+| `user?.is_admin` for admin UI | `isAdminUser(user)` from `@/lib/auth` |
 | `setValue()` for form initial load | `reset()` |
 | `mode: "onChange"` in useForm | `mode: "onBlur"` |
 | Hardcoded pagination (e.g. `15`, `20`) | `config('app.pagination.default')` |

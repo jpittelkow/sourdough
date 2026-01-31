@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\User;
+use App\Services\GroupService;
 use Illuminate\Console\Command;
 
 class MakeUserAdmin extends Command
@@ -15,12 +16,12 @@ class MakeUserAdmin extends Command
     /**
      * The console command description.
      */
-    protected $description = 'Promote a user to admin status';
+    protected $description = 'Promote a user to admin (add to admin group)';
 
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(GroupService $groupService): int
     {
         $email = $this->argument('email');
 
@@ -31,13 +32,13 @@ class MakeUserAdmin extends Command
             return Command::FAILURE;
         }
 
-        if ($user->is_admin) {
+        if ($user->inGroup('admin')) {
             $this->warn("User '{$user->name}' ({$email}) is already an admin.");
             return Command::SUCCESS;
         }
 
-        $user->is_admin = true;
-        $user->save();
+        $groupService->ensureDefaultGroupsExist();
+        $user->assignGroup('admin');
 
         $this->info("User '{$user->name}' ({$email}) has been promoted to admin.");
 

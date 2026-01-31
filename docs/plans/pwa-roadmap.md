@@ -41,9 +41,10 @@ Create the core service worker with caching strategies.
 
 | File | Purpose |
 |------|---------|
-| `frontend/public/sw.js` | Service worker (new) |
-| `frontend/public/offline.html` | Offline fallback page (new) |
-| `frontend/lib/service-worker.ts` | SW registration utility (new) |
+| `frontend/public/sw.js` | Service worker |
+| `frontend/public/offline.html` | Offline fallback page |
+| `frontend/lib/service-worker.ts` | SW registration utility |
+| `frontend/components/service-worker-setup.tsx` | SW registration component |
 
 ## Phase 2: Push Notifications
 

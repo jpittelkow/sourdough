@@ -6,7 +6,7 @@ describe('Backup & Restore', function () {
     
     describe('List Backups', function () {
         it('requires admin privileges', function () {
-            $user = User::factory()->create(['is_admin' => false]);
+            $user = User::factory()->create();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->getJson('/api/backup');
@@ -15,7 +15,7 @@ describe('Backup & Restore', function () {
         });
 
         it('returns backup list for admin', function () {
-            $user = User::factory()->create(['is_admin' => true]);
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->getJson('/api/backup');
@@ -29,7 +29,7 @@ describe('Backup & Restore', function () {
 
     describe('Create Backup', function () {
         it('requires admin privileges', function () {
-            $user = User::factory()->create(['is_admin' => false]);
+            $user = User::factory()->create();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/backup/create');
@@ -38,7 +38,7 @@ describe('Backup & Restore', function () {
         });
 
         it('can create backup as admin', function () {
-            $user = User::factory()->create(['is_admin' => true]);
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/backup/create');
@@ -52,7 +52,7 @@ describe('Backup & Restore', function () {
 
     describe('Download Backup', function () {
         it('requires admin privileges for download', function () {
-            $user = User::factory()->create(['is_admin' => false]);
+            $user = User::factory()->create();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->get('/api/backup/download/test.zip');
@@ -63,7 +63,7 @@ describe('Backup & Restore', function () {
 
     describe('Restore Backup', function () {
         it('requires admin privileges for restore', function () {
-            $user = User::factory()->create(['is_admin' => false]);
+            $user = User::factory()->create();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/backup/restore', [
@@ -76,7 +76,7 @@ describe('Backup & Restore', function () {
 
     describe('Delete Backup', function () {
         it('requires admin privileges for deletion', function () {
-            $user = User::factory()->create(['is_admin' => false]);
+            $user = User::factory()->create();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->deleteJson('/api/backup/test.zip');

@@ -22,11 +22,22 @@ echo "Setting up frontend build directories..."
 if [ "${APP_ENV}" = "local" ] || [ "${APP_ENV}" = "development" ]; then
     # In dev, clear .next so www-data can create/delete files (avoids EACCES from root-owned leftovers)
     echo "Development mode: Clearing .next for fresh dev build..."
-    find ${FRONTEND_DIR}/.next -mindepth 1 -maxdepth 1 -exec rm -rf {} \; 2>/dev/null || true
+    if [ -d "${FRONTEND_DIR}/.next" ]; then
+        # Show current ownership for debugging
+        echo "Current .next ownership:"
+        ls -la ${FRONTEND_DIR}/.next 2>/dev/null | head -5 || echo "  (empty or inaccessible)"
+        # Remove contents (may fail if volume is empty, that's OK)
+        find ${FRONTEND_DIR}/.next -mindepth 1 -maxdepth 1 -exec rm -rf {} \; 2>/dev/null || true
+    fi
 fi
 mkdir -p ${FRONTEND_DIR}/.next/cache
-chown -R www-data:www-data ${FRONTEND_DIR}/.next
-chmod -R 775 ${FRONTEND_DIR}/.next
+echo "Setting .next ownership to www-data..."
+if ! chown -R www-data:www-data ${FRONTEND_DIR}/.next; then
+    echo "WARNING: Failed to set .next ownership - Next.js may have permission issues"
+fi
+if ! chmod -R 775 ${FRONTEND_DIR}/.next; then
+    echo "WARNING: Failed to set .next permissions"
+fi
 
 # In development mode, remove BUILD_ID to force Next.js dev mode with hot reload
 if [ "${APP_ENV}" = "local" ] || [ "${APP_ENV}" = "development" ]; then
@@ -39,6 +50,11 @@ echo "Setting up data directory..."
 mkdir -p ${DATA_DIR}
 chown -R www-data:www-data ${DATA_DIR}
 chmod 755 ${DATA_DIR}
+
+# Setup Meilisearch data directory
+echo "Setting up Meilisearch data directory..."
+mkdir -p /var/lib/meilisearch/data
+chown -R www-data:www-data /var/lib/meilisearch
 
 # Ensure storage directories exist with proper permissions
 echo "Setting up storage directories..."

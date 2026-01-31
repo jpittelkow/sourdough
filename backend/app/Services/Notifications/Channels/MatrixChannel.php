@@ -3,12 +3,17 @@
 namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
+use App\Services\NotificationTemplateService;
 use Illuminate\Support\Facades\Http;
 
 class MatrixChannel implements ChannelInterface
 {
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
+        $resolved = $this->resolveContent($user, $type, $title, $message, $data);
+        $title = $resolved['title'];
+        $message = $resolved['body'];
+
         $roomId = $user->getSetting('matrix_room_id') ?? config('notifications.channels.matrix.default_room');
 
         if (!$roomId) {
@@ -71,5 +76,19 @@ class MatrixChannel implements ChannelInterface
             || !empty(config('notifications.channels.matrix.default_room'));
 
         return config('notifications.channels.matrix.enabled', false) && $hasRoom;
+    }
+
+    private function resolveContent(User $user, string $type, string $title, string $message, array $data): array
+    {
+        $service = app(NotificationTemplateService::class);
+        $template = $service->getByTypeAndChannel($type, 'chat');
+        if (!$template) {
+            return ['title' => $title, 'body' => $message];
+        }
+        $variables = array_merge([
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'app_name' => config('app.name', 'Sourdough'),
+        ], $data);
+        return $service->renderTemplate($template, $variables);
     }
 }

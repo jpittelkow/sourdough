@@ -77,9 +77,21 @@ docker-compose exec app bash
 # Run artisan command
 docker-compose exec app php /var/www/html/backend/artisan migrate
 
-# Run npm command
+# Run npm command (build runs as root; after build, fix permissions - see Permission Issues)
 docker-compose exec app npm --prefix /var/www/html/frontend run build
 ```
+
+### Meilisearch (Search)
+
+```bash
+# Check Meilisearch health
+docker-compose exec app curl -f http://127.0.0.1:7700/health
+
+# Rebuild search indexes
+docker-compose exec app php /var/www/html/backend/artisan search:reindex
+```
+
+**If search box shows errors or no results:** Hard refresh browser (Ctrl+Shift+R), reindex, and ensure you are logged in.
 
 ## Environment Configuration
 
@@ -126,11 +138,18 @@ docker-compose up -d --build
 
 ### Permission Issues
 
-The entrypoint script handles permissions. If issues persist:
+The entrypoint script sets ownership on startup. If you run **`npm run build` or `npm install`** inside the container via `docker-compose exec app`, those commands run as root and create root-owned files. The Next.js process runs as `www-data`, so you may see **EACCES: permission denied** on `.next/server/*` and 500 errors when loading pages.
+
+**After building or installing npm packages as root, fix frontend ownership:**
+
+```bash
+docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/.next
+```
+
+If backend storage or cache causes permission errors:
 
 ```bash
 docker-compose exec app chown -R www-data:www-data /var/www/html/backend/storage
-docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/.next
 ```
 
 ### Changes Not Being Picked Up
@@ -173,6 +192,7 @@ The development setup uses these volumes:
 | `frontend_next_cache` | Next.js build cache (isolated) |
 | `sourdough_data` | SQLite database |
 | `sourdough_storage` | Laravel storage |
+| `meilisearch_data` | Meilisearch search index |
 
 **Note:** Named volumes (`frontend_node_modules`, `frontend_next_cache`) isolate container dependencies from host, preventing conflicts.
 

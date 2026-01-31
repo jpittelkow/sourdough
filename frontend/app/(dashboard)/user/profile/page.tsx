@@ -35,6 +35,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { SaveButton } from "@/components/ui/save-button";
+import { Badge } from "@/components/ui/badge";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -183,6 +184,31 @@ export default function ProfilePage() {
             <SaveButton isDirty={isDirty} isSaving={isLoading} />
           </CardFooter>
         </form>
+      </Card>
+
+      {/* Group Memberships (from auth user) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Group Memberships</CardTitle>
+          <CardDescription>
+            Groups determine your permissions and access levels.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {user?.groups && user.groups.length > 0 ? (
+              user.groups.map((g) => (
+                <Badge key={g.id} variant="secondary">
+                  {g.name}
+                </Badge>
+              ))
+            ) : (
+              <span className="text-sm text-muted-foreground">
+                No groups assigned
+              </span>
+            )}
+          </div>
+        </CardContent>
       </Card>
 
       {/* Danger Zone */}

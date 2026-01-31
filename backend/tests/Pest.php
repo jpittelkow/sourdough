@@ -51,5 +51,5 @@ function createUser(array $attributes = []): \App\Models\User
 
 function createAdminUser(array $attributes = []): \App\Models\User
 {
-    return createUser(array_merge(['is_admin' => true], $attributes));
+    return \App\Models\User::factory()->admin()->create($attributes);
 }

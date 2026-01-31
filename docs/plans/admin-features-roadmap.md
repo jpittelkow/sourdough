@@ -44,14 +44,20 @@ Admin-focused settings expansions for comprehensive application management.
 - [ ] Track user logins and admin actions
 - [ ] Add log viewer with filtering
 
-### Message Templates (MEDIUM Priority)
-- [ ] Create Message Templates configuration page at `/configuration/messages`
-- [ ] Add rich text editor for email templates (TipTap, Lexical, or similar)
-- [ ] Create email template management (welcome, verification, password reset, etc.)
-- [ ] Create notification message templates for each channel (email, push, in-app)
-- [ ] Support template variables/placeholders ({{user.name}}, {{app.name}}, etc.)
-- [ ] Add preview functionality for templates
-- [ ] Add "Reset to Default" option for each template
+### Message Templates (MEDIUM Priority) — Email Complete
+- [x] Create Message Templates configuration page (email at `/configuration/email-templates`)
+- [x] Add rich text editor for email templates (TipTap)
+- [x] Create email template management (welcome, verification, password reset, notification)
+- [x] Support template variables/placeholders ({{user.name}}, {{app.name}}, etc.)
+- [x] Add preview functionality for templates
+- [x] Add "Reset to Default" option for each template
+
+### Per-Type Notification Templates (MEDIUM Priority)
+- [ ] Create Notification Templates configuration page at `/configuration/notification-templates`
+- [ ] Per-notification-type templates for push, in-app, and chat channel groups
+- [ ] NotificationTemplateService with render, preview, reset
+- [ ] Admin API and UI for editing notification templates
+- [ ] Orchestrator `sendByType()` and channel integration
 
 ---
 

@@ -3,13 +3,23 @@
 import { create } from "zustand";
 import { api } from "./api";
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
   avatar: string | null;
   is_admin: boolean;
   email_verified_at: string | null;
+  groups?: { id: number; name: string; slug: string }[];
+  permissions?: string[];
+}
+
+/** Whether the user is an admin (in admin group). Prefer over user.is_admin for resilience. */
+export function isAdminUser(user: User | null): boolean {
+  if (!user) return false;
+  const g = user.groups;
+  if (g?.length) return g.some((gr) => (typeof gr === "string" ? gr : gr.slug) === "admin");
+  return Boolean(user.is_admin);
 }
 
 interface AuthState {
@@ -34,7 +44,15 @@ export const useAuth = create<AuthState>((set, get) => ({
   fetchUser: async () => {
     try {
       const response = await api.get("/auth/user");
-      set({ user: response.data.user, isLoading: false, error: null });
+      const data = response.data as {
+        user: User;
+        groups?: string[];
+        permissions?: string[];
+      };
+      const user = data.user
+        ? { ...data.user, permissions: data.permissions ?? [] }
+        : null;
+      set({ user, isLoading: false, error: null });
     } catch (error) {
       set({ user: null, isLoading: false, error: null });
     }

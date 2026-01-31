@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Builder;
+use Laravel\Scout\Searchable;
 
 class EmailTemplate extends Model
 {
-    use HasFactory;
+    use HasFactory, Searchable;
 
     protected $fillable = [
         'key',
@@ -53,5 +54,29 @@ class EmailTemplate extends Model
     public static function findByKey(string $key): ?self
     {
         return static::where('key', $key)->active()->first();
+    }
+
+    /**
+     * Get the indexable data array for the model (Scout/Meilisearch).
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'key' => $this->key,
+            'name' => $this->name,
+            'description' => $this->description,
+            'subject' => $this->subject,
+            'is_active' => $this->is_active,
+            'is_system' => $this->is_system,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'email_templates';
     }
 }

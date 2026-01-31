@@ -361,26 +361,47 @@ CREATE TABLE llm_cached_models (
 - [x] Add Anthropic (Claude) discovery
 - [x] Add Google (Gemini) discovery
 - [x] Add Ollama discovery
-- [ ] Add Azure OpenAI discovery (requires endpoint config)
-- [ ] Add AWS Bedrock discovery (requires IAM config)
+- [x] Add Azure OpenAI discovery (requires endpoint config)
+- [x] Add AWS Bedrock discovery (requires IAM config)
 
 ### Phase 3: Polish & Caching
 - [x] Add server-side model caching (1h TTL)
-- [ ] Add client-side caching
-- [ ] Add "Refresh Models" button
+- [x] Add client-side caching (sessionStorage, 1h TTL)
+- [x] Add "Refresh Models" button
 - [x] Improve error messages per provider (sanitized in controller)
 - [x] Add model capability indicators (chat, vision, etc.)
 
 ### Phase 4: Documentation
 - [x] Update user docs for LLM configuration
-- [ ] Add troubleshooting guide for API key issues
+- [x] Add troubleshooting guide for API key issues (see Troubleshooting section below)
 - [x] Document supported providers and requirements
 
 ---
 
-## 8. Testing
+## 8. Troubleshooting
 
-### 8.1 Backend Tests
+### Azure OpenAI
+
+- **"Azure OpenAI endpoint is required"** — Enter the full base URL (e.g. `https://your-resource.openai.azure.com`) in the endpoint field. Do not include a path or trailing slash.
+- **"Azure OpenAI API error"** — Verify the API key is correct and has access to the Azure OpenAI resource. Ensure the key is from **Keys and Endpoint** in the Azure portal for your resource.
+- **No deployments returned** — Create at least one model deployment in the Azure OpenAI Studio (Models > Deployments) and ensure the API key has **Cognitive Services User** or equivalent role.
+
+### AWS Bedrock
+
+- **"AWS access key and secret key are required"** — Use IAM credentials with `bedrock:ListFoundationModels` (and at runtime `bedrock:InvokeModel`) permissions. Do not use root account keys.
+- **"AWS Bedrock API error"** — Check that the region supports Bedrock (e.g. `us-east-1`, `us-west-2`). Verify the IAM user/role has the required Bedrock permissions.
+- **No models returned** — Ensure the region is correct and that Bedrock model access is enabled in the AWS console for the models you need.
+
+### General
+
+- **"Failed to fetch models"** — Ensure your API key or credentials are valid and not expired. For cloud providers, check service status and network connectivity.
+- **Rate limits** — If you see throttling errors, wait a moment and use the **Refresh** button to retry.
+
+---
+
+## 9. Testing
+
+### 9.1 Backend Tests
 
 ```php
 public function test_discovers_openai_models_with_valid_key()
@@ -414,7 +435,7 @@ public function test_returns_error_for_invalid_key()
 }
 ```
 
-### 8.2 E2E Tests
+### 9.2 E2E Tests
 
 - Test entering valid API key shows models
 - Test entering invalid API key shows error
@@ -423,7 +444,7 @@ public function test_returns_error_for_invalid_key()
 
 ---
 
-## 9. Security Considerations
+## 10. Security Considerations
 
 - API keys stored encrypted in database (using existing `is_encrypted` column)
 - API keys never logged
@@ -433,7 +454,7 @@ public function test_returns_error_for_invalid_key()
 
 ---
 
-## 10. Files Reference
+## 11. Files Reference
 
 **Backend** (to create):
 - `backend/app/Services/LLMModelDiscoveryService.php`
@@ -447,7 +468,7 @@ public function test_returns_error_for_invalid_key()
 
 ---
 
-## 11. Related Roadmaps and Docs
+## 12. Related Roadmaps and Docs
 
 - [Env to Database Migration](env-to-database-roadmap.md) - Foundation for storing LLM credentials
 - [Integration Settings](integration-settings-roadmap.md) - Similar pattern for other integrations

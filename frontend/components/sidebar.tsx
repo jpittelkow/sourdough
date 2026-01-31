@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/logo";
@@ -49,6 +49,10 @@ export function Sidebar() {
     useSidebar();
   const isMobile = useIsMobile();
 
+  // Safe admin check (handles stale bundle where isAdminUser might not exist)
+  const isAdmin =
+    typeof isAdminUser === "function" ? isAdminUser(user) : Boolean(user?.is_admin);
+
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname, isMobile, setMobileMenuOpen]);
@@ -81,7 +85,7 @@ export function Sidebar() {
                   </Button>
                 </Link>
               </nav>
-              {user?.is_admin && (
+              {isAdmin && (
                 <>
                   <Separator orientation="horizontal" className="my-2" />
                   <nav className="flex flex-col gap-2">
@@ -171,7 +175,7 @@ export function Sidebar() {
 
         <Separator orientation="horizontal" className="my-2" />
 
-        {user?.is_admin && (
+        {isAdmin && (
           <nav className="flex flex-col gap-2">
             <Link href="/configuration">
               <Button

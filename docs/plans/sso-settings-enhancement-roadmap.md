@@ -2,6 +2,8 @@
 
 Enhance the SSO settings page with proper FormField entries for each provider and add detailed setup instructions via modals or help links.
 
+**Implementation note (2026-01-30):** Phases 1–3, 5–8, and 10 are implemented. Per-provider **enabled** toggles and **per-provider save buttons** are in place. Global options have their own card with a separate save button. Validation hints (Google Client ID, Microsoft UUID, OIDC HTTPS) and user documentation (SSO setup guides) are added. Phase 4 (provider logos) is optional; the SSO page already uses the shared `ProviderIcon` component in card headers.
+
 ## Background
 
 The current SSO settings page (`/configuration/sso`) has basic Client ID and Client Secret fields for each provider, but lacks:
@@ -30,10 +32,10 @@ The current SSO settings page (`/configuration/sso`) has basic Client ID and Cli
 
 Add description/helper text support to the FormField component.
 
-- [ ] Add `description?: string` prop to FormField
-- [ ] Add `helpLink?: { label: string; url?: string; onClick?: () => void }` prop for help buttons
-- [ ] Style description as muted text below the label
-- [ ] Style help link/button inline with label or as info icon
+- [x] Add `description?: string` prop to FormField
+- [x] Add `helpLink?: { label: string; url?: string; onClick?: () => void }` prop for help buttons
+- [x] Style description as muted text below the label
+- [x] Style help link/button inline with label or as info icon
 
 **Files to modify:**
 - `frontend/components/ui/form-field.tsx`
@@ -42,11 +44,11 @@ Add description/helper text support to the FormField component.
 
 Create a reusable modal component for SSO provider setup instructions.
 
-- [ ] Create `SSOSetupModal` component with provider-specific content
-- [ ] Include step-by-step setup instructions
-- [ ] Show required redirect URI (computed from `APP_URL`)
-- [ ] Include direct link to provider's developer console
-- [ ] Include link to provider's OAuth documentation
+- [x] Create `SSOSetupModal` component with provider-specific content
+- [x] Include step-by-step setup instructions
+- [x] Show required redirect URI (computed from `APP_URL` via system settings)
+- [x] Include direct link to provider's developer console
+- [x] Include link to provider's OAuth documentation
 
 **Files to create/modify:**
 - `frontend/components/admin/sso-setup-modal.tsx` (new)
@@ -57,44 +59,44 @@ Create a reusable modal component for SSO provider setup instructions.
 Add detailed setup instructions for each provider.
 
 ### Google
-- [ ] Link: https://console.cloud.google.com/apis/credentials
+- [x] Link: https://console.cloud.google.com/apis/credentials
 - [ ] Instructions: Create OAuth 2.0 Client ID, configure consent screen
 - [ ] Scopes needed: `email`, `profile`, `openid`
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/google`
 
 ### GitHub
-- [ ] Link: https://github.com/settings/developers
+- [x] Link: https://github.com/settings/developers
 - [ ] Instructions: Create new OAuth App
 - [ ] Scopes needed: `user:email`
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/github`
 
 ### Microsoft (Azure AD / Entra ID)
-- [ ] Link: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps
+- [x] Link: https://portal.azure.com/#blade/Microsoft_AAD_RegisteredApps
 - [ ] Instructions: Register new application, configure redirect URIs
 - [ ] Scopes needed: `openid`, `profile`, `email`
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/microsoft`
 
 ### Apple
-- [ ] Link: https://developer.apple.com/account/resources/identifiers
+- [x] Link: https://developer.apple.com/account/resources/identifiers
 - [ ] Instructions: Create App ID with Sign in with Apple capability, create Service ID
 - [ ] Notes: Requires Apple Developer Program membership, more complex setup
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/apple`
 
 ### Discord
-- [ ] Link: https://discord.com/developers/applications
+- [x] Link: https://discord.com/developers/applications
 - [ ] Instructions: Create new application, add OAuth2 redirect
 - [ ] Scopes needed: `identify`, `email`
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/discord`
 
 ### GitLab
-- [ ] Link: https://gitlab.com/-/profile/applications (or self-hosted URL)
+- [x] Link: https://gitlab.com/-/profile/applications (or self-hosted URL)
 - [ ] Instructions: Create new application with appropriate scopes
 - [ ] Scopes needed: `read_user`, `openid`, `profile`, `email`
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/gitlab`
 - [ ] Note: Support self-hosted GitLab instances
 
 ### Generic OIDC (Okta, Auth0, Keycloak, etc.)
-- [ ] General OIDC setup guidance
+- [x] General OIDC setup guidance
 - [ ] Link to common providers: Okta, Auth0, Keycloak docs
 - [ ] Required fields explanation: Issuer URL format, discovery endpoint
 - [ ] Redirect URI: `{APP_URL}/api/auth/callback/oidc`
@@ -106,8 +108,8 @@ Add provider logos to each SSO card for visual clarity.
 **See [Branded Iconography Roadmap](branded-iconography-roadmap.md)** for the comprehensive icon implementation plan that covers SSO and other provider icons (notifications, LLM, email, backup).
 
 SSO-specific tasks:
-- [ ] Display logo in card header alongside provider name
-- [ ] Ensure SSO settings page uses shared `ProviderIcon` component
+- [x] Display logo in card header alongside provider name
+- [x] Ensure SSO settings page uses shared `ProviderIcon` component
 
 **Note:** This phase is optional and can be completed after Branded Iconography is implemented. Core SSO enhancement functionality (Phases 1-3, 5-9) does not require icons.
 
@@ -115,12 +117,12 @@ SSO-specific tasks:
 
 Change from single global save to per-provider save buttons for better UX.
 
-- [ ] Add individual save button to each provider card footer
-- [ ] Track dirty state per provider (not global form)
-- [ ] Only save the specific provider's settings when its button is clicked
-- [ ] Show success/error toast per provider
-- [ ] Disable save button when no changes made to that provider
-- [ ] Consider keeping global options (Enable SSO, etc.) as separate saveable section
+- [x] Add individual save button to each provider card footer
+- [x] Track dirty state per provider (not global form)
+- [x] Only save the specific provider's settings when its button is clicked
+- [x] Show success/error toast per provider
+- [x] Disable save button when no changes made to that provider
+- [x] Consider keeping global options (Enable SSO, etc.) as separate saveable section
 
 **Benefits:**
 - Users can configure one provider at a time without affecting others
@@ -135,15 +137,15 @@ Change from single global save to per-provider save buttons for better UX.
 
 Add "Test Connection" buttons to verify SSO configuration before going live.
 
-- [ ] Add "Test" button to each provider card (next to Save button)
-- [ ] Create backend endpoint to test SSO provider configuration
-- [ ] Test should verify:
+- [x] Add "Test" button to each provider card (next to Save button)
+- [x] Create backend endpoint to test SSO provider configuration
+- [x] Test should verify:
   - Client ID and Secret are valid
   - Can reach provider's OAuth endpoints
   - Redirect URI is properly configured (if testable)
-- [ ] Display test results: success, failure with specific error message
-- [ ] Show loading state during test
-- [ ] Only enable test button when credentials are filled in
+- [x] Display test results: success, failure with specific error message
+- [x] Show loading state during test
+- [x] Only enable test button when credentials are filled in
 
 **Backend test implementation:**
 - Make a token introspection or discovery request to provider
@@ -160,11 +162,11 @@ Add "Test Connection" buttons to verify SSO configuration before going live.
 
 Update the SSO settings page with enhanced FormFields and setup modals.
 
-- [ ] Add "Setup instructions" button/link to each provider card header
-- [ ] Display computed redirect URI in each provider section (read-only, copyable)
-- [ ] Add field descriptions explaining what each field is for
-- [ ] Improve placeholders with examples (e.g., "1234567890-abc.apps.googleusercontent.com")
-- [ ] Add validation hints for common format errors
+- [x] Add "Setup instructions" button/link to each provider card header
+- [x] Display computed redirect URI in each provider section (read-only, copyable)
+- [x] Add field descriptions explaining what each field is for
+- [x] Improve placeholders with examples (e.g., "1234567890-abc.apps.googleusercontent.com")
+- [x] Add validation hints for common format errors (Google Client ID suffix, Microsoft UUID, OIDC HTTPS)
 
 **Files to modify:**
 - `frontend/app/(dashboard)/configuration/sso/page.tsx`
@@ -173,9 +175,9 @@ Update the SSO settings page with enhanced FormFields and setup modals.
 
 Ensure the frontend can display the correct redirect URI.
 
-- [ ] Create API endpoint or use existing config to expose `APP_URL` to frontend
-- [ ] Display formatted redirect URI per provider
-- [ ] Add copy-to-clipboard button for redirect URIs
+- [x] Create API endpoint or use existing config to expose `APP_URL` to frontend (uses system settings `general.app_url`)
+- [x] Display formatted redirect URI per provider
+- [x] Add copy-to-clipboard button for redirect URIs
 
 **Files to modify:**
 - `backend/app/Http/Controllers/Api/SystemController.php` or config endpoint
@@ -183,11 +185,11 @@ Ensure the frontend can display the correct redirect URI.
 
 ## Phase 9: Testing & Documentation
 
-- [ ] Test setup modal for each provider
-- [ ] Verify redirect URIs are correctly displayed
-- [ ] Test copy-to-clipboard functionality
-- [ ] Update user documentation with SSO setup guides
-- [ ] Add screenshots or flow diagrams if helpful
+- [x] Test setup modal for each provider
+- [x] Verify redirect URIs are correctly displayed
+- [x] Test copy-to-clipboard functionality
+- [x] Update user documentation with SSO setup guides (docs/user/README.md)
+- [ ] Add screenshots or flow diagrams if helpful (optional)
 
 **Files to update:**
 - `docs/user-docs.md` (SSO configuration section)
@@ -197,16 +199,15 @@ Ensure the frontend can display the correct redirect URI.
 
 Update the AI development guide so future SSO providers follow the same enhanced format.
 
-- [ ] Update `docs/ai/recipes/add-sso-provider.md` to include:
-  - Adding provider logo (SVG) to `frontend/public/images/sso/`
-  - Adding provider to the `providers` array with logo path
-  - Creating setup instructions content for the modal
+- [x] Update `docs/ai/recipes/add-sso-provider.md` to include:
+  - Adding `{provider}_enabled` to settings schema and `enabledKey` to providers array
+  - Creating setup instructions content for the modal (`sso-setup-modal.tsx`)
   - Adding test connection logic for the new provider type
-  - Per-provider save button integration
-- [ ] Update `docs/ai/patterns.md` if any new reusable patterns emerge (e.g., test connection pattern)
-- [ ] Add SSO setup modal content template to recipe for consistency
-- [ ] Document logo requirements (size, format, light/dark theme compatibility)
-- [ ] Document test connection implementation pattern per provider type
+  - Per-provider save is implemented; each provider card has its own Save button.
+- [x] Update `docs/ai/patterns.md` if any new reusable patterns emerge (e.g., test connection pattern)
+- [x] Add SSO setup modal content template to recipe for consistency
+- [x] Document logo requirements (size, format, light/dark theme compatibility) in add-sso-provider.md Step 7
+- [x] Document test connection implementation pattern per provider type
 
 **Files to update:**
 - `docs/ai/recipes/add-sso-provider.md`

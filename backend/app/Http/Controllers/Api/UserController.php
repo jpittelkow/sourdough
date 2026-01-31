@@ -6,8 +6,11 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\AdminAuthorizationTrait;
 use App\Http\Traits\ApiResponseTrait;
 use App\Models\User;
+use App\Models\UserGroup;
 use App\Services\AuditService;
 use App\Services\EmailConfigService;
+use App\Services\GroupService;
+use App\Services\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
@@ -19,7 +22,8 @@ class UserController extends Controller
     use ApiResponseTrait;
 
     public function __construct(
-        private AuditService $auditService
+        private AuditService $auditService,
+        private PermissionService $permissionService
     ) {}
 
     /**
@@ -29,13 +33,20 @@ class UserController extends Controller
     {
         $perPage = $request->input('per_page', config('app.pagination.default'));
         $search = $request->input('search');
+        $groupSlug = $request->input('group');
 
-        $query = User::query();
+        $query = User::query()->with('groups:id,name,slug');
 
         if ($search) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
                   ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
+
+        if ($groupSlug) {
+            $query->whereHas('groups', function ($q) use ($groupSlug) {
+                $q->where('slug', $groupSlug);
             });
         }
 
@@ -50,6 +61,8 @@ class UserController extends Controller
      */
     public function show(User $user): JsonResponse
     {
+        $user->load('groups:id,name,slug');
+
         return $this->dataResponse([
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
         ]);
@@ -58,22 +71,29 @@ class UserController extends Controller
     /**
      * Create a new user.
      */
-    public function store(Request $request, EmailConfigService $emailConfigService): JsonResponse
+    public function store(Request $request, EmailConfigService $emailConfigService, GroupService $groupService): JsonResponse
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
             'password' => ['required', 'string', 'min:8'],
-            'is_admin' => ['sometimes', 'boolean'],
+            'admin' => ['sometimes', 'boolean'],
             'skip_verification' => ['sometimes', 'boolean'],
         ]);
+
+        $groupService->ensureDefaultGroupsExist();
 
         $user = User::create([
             'name' => $validated['name'],
             'email' => $validated['email'],
             'password' => $validated['password'],
-            'is_admin' => $validated['is_admin'] ?? false,
         ]);
+
+        if ($validated['admin'] ?? false) {
+            $user->assignGroup('admin');
+        } else {
+            $groupService->assignDefaultGroupToUser($user);
+        }
 
         $skipVerification = $validated['skip_verification'] ?? false;
         if ($emailConfigService->isConfigured() && !$skipVerification) {
@@ -82,13 +102,15 @@ class UserController extends Controller
             $user->markEmailAsVerified();
         }
 
+        $user->load('groups:id,name,slug');
+
         return $this->createdResponse('User created successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
         ]);
     }
 
     /**
-     * Update a user.
+     * Update a user (name, email, password). Admin role is changed via updateGroups().
      */
     public function update(Request $request, User $user): JsonResponse
     {
@@ -96,7 +118,6 @@ class UserController extends Controller
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
             'password' => ['sometimes', 'string', 'min:8'],
-            'is_admin' => ['sometimes', 'boolean'],
         ]);
 
         $oldValues = $user->only(array_keys($validated));
@@ -104,6 +125,8 @@ class UserController extends Controller
         $newValues = $user->fresh()->only(array_keys($validated));
 
         $this->auditService->logModelChange($user, 'user.updated', $oldValues, $newValues);
+
+        $user->load('groups:id,name,slug');
 
         return $this->successResponse('User updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
@@ -134,7 +157,7 @@ class UserController extends Controller
     }
 
     /**
-     * Toggle admin status.
+     * Toggle admin group membership (add or remove from admin group).
      */
     public function toggleAdmin(User $user): JsonResponse
     {
@@ -146,15 +169,23 @@ class UserController extends Controller
             return $this->errorResponse('Cannot remove admin status from your own account', 400);
         }
 
-        $wasAdmin = $user->is_admin;
-        $user->update(['is_admin' => !$user->is_admin]);
+        $wasInAdminGroup = $user->inGroup('admin');
+        $adminGroup = UserGroup::where('slug', 'admin')->first();
 
-        $this->auditService->log(
-            $user->is_admin ? 'user.admin_granted' : 'user.admin_revoked',
-            $user,
-            ['is_admin' => $wasAdmin],
-            ['is_admin' => $user->is_admin]
-        );
+        if (!$adminGroup) {
+            return $this->errorResponse('Admin group not found', 500);
+        }
+
+        if ($wasInAdminGroup) {
+            $user->removeFromGroup('admin');
+            $this->auditService->log('user.admin_revoked', $user, ['group' => 'admin'], []);
+        } else {
+            $user->assignGroup('admin');
+            $this->auditService->log('user.admin_granted', $user, [], ['group' => 'admin']);
+        }
+
+        $this->permissionService->clearUserCache($user);
+        $user->load('groups:id,name,slug');
 
         return $this->successResponse('Admin status updated successfully', [
             'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
@@ -235,5 +266,33 @@ class UserController extends Controller
         $user->sendEmailVerificationNotification();
 
         return $this->successResponse('Verification email sent successfully');
+    }
+
+    /**
+     * Update a user's group memberships.
+     */
+    public function updateGroups(Request $request, User $user): JsonResponse
+    {
+        $validated = $request->validate([
+            'group_ids' => ['required', 'array'],
+            'group_ids.*' => ['integer', 'exists:user_groups,id'],
+        ]);
+
+        $oldGroupIds = $user->groups()->pluck('id')->all();
+        $user->groups()->sync($validated['group_ids']);
+        $user->load('groups:id,name,slug');
+
+        $this->auditService->log(
+            'user.groups_updated',
+            $user,
+            ['group_ids' => $oldGroupIds],
+            ['group_ids' => $validated['group_ids']]
+        );
+
+        $this->permissionService->clearUserCache($user);
+
+        return $this->successResponse('Groups updated successfully', [
+            'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes']),
+        ]);
     }
 }

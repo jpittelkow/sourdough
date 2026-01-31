@@ -804,6 +804,7 @@ components:
           nullable: true
         is_admin:
           type: boolean
+          description: Computed from admin group membership (no longer a stored column).
         two_factor_enabled:
           type: boolean
         created_at:

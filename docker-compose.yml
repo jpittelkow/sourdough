@@ -22,6 +22,7 @@ services:
       # Persist data
       - sourdough_data:/var/www/html/data
       - sourdough_storage:/var/www/html/backend/storage/app
+      - meilisearch_data:/var/lib/meilisearch
       # Development PHP config with opcache that detects file changes
       - ./docker/php-dev.ini:/usr/local/etc/php/conf.d/app.ini:ro
       # Development nginx config (override image config)
@@ -40,6 +41,14 @@ services:
       - SESSION_DRIVER=file
       - QUEUE_CONNECTION=database
       - SANCTUM_STATEFUL_DOMAINS=localhost,localhost:${APP_PORT:-8080},127.0.0.1,127.0.0.1:${APP_PORT:-8080},::1
+      # Meilisearch (search - runs inside container)
+      - MEILISEARCH_HOST=http://127.0.0.1:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY:-masterKey}
+      - MEILI_ENV=development
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY:-masterKey}
+      - SCOUT_DRIVER=meilisearch
+      # Auth: passkey mode (disabled | optional | required; requires HTTPS in production)
+      - AUTH_PASSKEY_MODE=${AUTH_PASSKEY_MODE:-disabled}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/api/health"]
@@ -56,4 +65,6 @@ volumes:
   frontend_node_modules:
     driver: local
   frontend_next_cache:
+    driver: local
+  meilisearch_data:
     driver: local

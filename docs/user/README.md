@@ -11,6 +11,7 @@ Welcome to Sourdough! This guide will help you get started with the application.
 5. [AI/LLM Features](#aillm-features)
 6. [Backup & Restore](#backup--restore)
 7. [Administration (Admins)](#administration-admins)
+   - [Single Sign-On (SSO)](#single-sign-on-sso)
 
 ---
 
@@ -152,6 +153,32 @@ When logging in:
 2. Click **Disable Two-Factor Authentication**
 3. Enter your password to confirm
 4. 2FA is now disabled
+
+### Passkeys (when enabled by your administrator)
+
+Passkeys let you sign in with your fingerprint, face, or a hardware security key instead of (or in addition to) your password. They are phishing-resistant and work on supported browsers.
+
+#### Adding a passkey
+
+1. Go to **Settings > Security**
+2. In the **Passkeys** section, click **Add Passkey**
+3. Enter a name (e.g. "MacBook" or "Phone")
+4. Follow your device prompt to create the passkey (fingerprint, face, or security key)
+5. The passkey is saved and can be used to sign in
+
+#### Signing in with a passkey
+
+1. On the login page, click **Sign in with Passkey**
+2. Use your device prompt when asked
+3. You'll be signed in
+
+#### Removing a passkey
+
+1. Go to **Settings > Security**
+2. In the **Passkeys** section, click the delete (trash) icon next to the passkey
+3. Confirm removal
+
+**Note**: Passkeys require a modern browser (Chrome, Safari, Edge, Firefox) and HTTPS in production.
 
 ### Connected Accounts (SSO)
 
@@ -369,11 +396,66 @@ Access via **Configuration > Users** (`/configuration/users`).
 
 - **List users**: View all users with pagination and search by name or email. Columns show user, email, status (Active/Disabled, Verified/Unverified), and created date.
 - **Create user**: Click **Create User**. Enter name, email, and password. Optionally grant admin privileges. Use **Skip email verification** to create the user as already verified; otherwise a verification email is sent if email is configured.
-- **Edit user**: Use the actions menu on a user row to edit name, email, password, and admin status.
+- **Edit user**: Use the actions menu on a user row to edit name, email, password, and group memberships (admin role is via the admin group).
 - **Disable/enable user**: Use **Disable User** or **Enable User** from the actions menu. Disabled users cannot log in. You cannot disable your own account or the last admin.
 - **Resend verification email**: For unverified users, use **Resend Verification Email** from the actions menu. Rate limited to once per 5 minutes per user.
 - **Reset password**: Use **Reset Password** from the actions menu and enter a new password for the user.
 - **Delete user**: Use **Delete** from the actions menu. You cannot delete your own account or the last admin.
+
+### Single Sign-On (SSO)
+
+Administrators can enable SSO providers so users can sign in with their existing accounts (Google, GitHub, Microsoft, etc.).
+
+#### Supported Providers
+
+- Google
+- GitHub
+- Microsoft (Azure AD / Entra ID)
+- Apple
+- Discord
+- GitLab
+- Generic OIDC (Okta, Auth0, Keycloak, etc.)
+
+#### Setting Up an SSO Provider
+
+1. Navigate to **Configuration > SSO**
+2. Click **Setup instructions** on the provider card
+3. Follow the steps to create an OAuth app in the provider's developer console
+4. Copy the redirect URI shown and add it to your OAuth app's allowed redirect URIs
+5. Enter the Client ID and Client Secret from the provider
+6. Click **Test connection** to verify credentials
+7. Enable the provider toggle to show it on the login page
+8. Click **Save** to apply changes for that provider
+
+Global options (Enable SSO, Allow account linking, Auto-register, Trust provider email) are in the **Global options** card; save them separately with that card's Save button.
+
+#### Provider-Specific Notes
+
+**Google**
+
+- Create OAuth 2.0 credentials in [Google Cloud Console](https://console.cloud.google.com/apis/credentials)
+- Use application type: Web application
+- Add the authorized redirect URI from the SSO page
+
+**Microsoft**
+
+- Register an app in [Azure Portal](https://portal.azure.com/) (App registrations)
+- Create a client secret under Certificates & secrets
+- Add API permissions for OpenID (openid, profile, email)
+
+**Apple**
+
+- Requires [Apple Developer Program](https://developer.apple.com/) membership
+- Create an App ID and Services ID for web sign-in
+- Generate a JWT client secret using your key (see Apple documentation)
+
+**Generic OIDC**
+
+- Works with Okta, Auth0, Keycloak, and other OIDC-compatible identity providers
+- Requires the Issuer URL (discovery endpoint base, e.g. `https://your-tenant.auth0.com/`)
+- The Provider name is shown on the login button (e.g. "Enterprise SSO")
+
+---
 
 ### Customizing System Emails
 

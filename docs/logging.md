@@ -104,7 +104,7 @@ Configuration > **Application Logs** includes an **Export** section. Admins can 
 
 **Access Logs** (`/configuration/access-logs`) track who accessed user data (PHI) for compliance:
 
-- **AccessLogService** and **LogResourceAccess** middleware log view/create/update/delete/export on profile, user, and user-settings routes. The middleware automatically extracts **fields accessed** from request bodies (create/update) and JSON responses (view); sensitive keys (e.g. password, token) are excluded.
+- **AccessLogService** and **LogResourceAccess** middleware log view/create/update/delete/export on profile, user, user-settings, and search routes (`GET /api/search`, `GET /api/search/suggestions`) when they return user data. The middleware automatically extracts **fields accessed** from request bodies (create/update) and JSON responses (view); sensitive keys (e.g. password, token) are excluded.
 - **HIPAA access logging** can be disabled via Configuration > Log retention (toggle “Enable HIPAA access logging”). When disabled, no new access logs are created. “Delete all access logs” is then available; it shows a HIPAA violation warning (6-year retention) before confirming.
 - **ACCESS_LOG_RETENTION_DAYS**: Retention in days (default 2190 = 6 years). Do not reduce below 6 years for HIPAA.
 - Access logs are included in backups and restored with merge-by-ID.

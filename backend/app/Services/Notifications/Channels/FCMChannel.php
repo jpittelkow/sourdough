@@ -3,6 +3,7 @@
 namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
+use App\Services\NotificationTemplateService;
 use Illuminate\Support\Facades\Http;
 
 class FCMChannel implements ChannelInterface
@@ -16,6 +17,10 @@ class FCMChannel implements ChannelInterface
 
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
+        $resolved = $this->resolveContent($user, $type, $title, $message, $data);
+        $title = $resolved['title'];
+        $message = $resolved['body'];
+
         $fcmToken = $user->getSetting('fcm_token');
 
         if (!$fcmToken) {
@@ -179,5 +184,19 @@ class FCMChannel implements ChannelInterface
     {
         return config('notifications.channels.fcm.enabled', false)
             && !empty($user->getSetting('fcm_token'));
+    }
+
+    private function resolveContent(User $user, string $type, string $title, string $message, array $data): array
+    {
+        $service = app(NotificationTemplateService::class);
+        $template = $service->getByTypeAndChannel($type, 'push');
+        if (!$template) {
+            return ['title' => $title, 'body' => $message];
+        }
+        $variables = array_merge([
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'app_name' => config('app.name', 'Sourdough'),
+        ], $data);
+        return $service->renderTemplate($template, $variables);
     }
 }

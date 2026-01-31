@@ -58,6 +58,19 @@ Before starting any task, consult these documentation files:
   - Check if it conflicts with planned work
   - Document your approach for future reference
 
+## Planning Phase Requirements
+
+**When creating a plan, you MUST consult patterns and recipes:**
+
+1. **Check `docs/ai/context-loading.md`** - Identify which files and recipes apply to your task type
+2. **Check `docs/ai/recipes/`** - Find applicable step-by-step guides
+3. **Check `docs/ai/patterns.md`** - Identify code patterns to follow
+
+**Plans must include:**
+- Names of applicable recipes that will guide implementation
+- References to relevant patterns for code style
+- Links to ADRs that govern the feature area
+
 ## Documentation Updates in Plans
 
 **All plans must include documentation updates** as part of the work:
@@ -119,7 +132,7 @@ The documentation is organized into focused files:
 1. **Start**: Read `CLAUDE.md` → `docs/overview.md`
 2. **Load Context**: Check `docs/ai/context-loading.md` for files to read
 3. **Understand**: Check `docs/architecture.md` for relevant ADRs
-4. **Plan**: Review `docs/roadmaps.md` for existing plans
-5. **Work**: Follow patterns from `docs/ai/patterns.md` and recipes from `docs/ai/recipes/`
+4. **Plan**: Review `docs/roadmaps.md`, identify applicable recipes from `docs/ai/recipes/`, reference patterns from `docs/ai/patterns.md`
+5. **Work**: Follow the identified patterns and recipes
 6. **Document**: Update relevant documentation files as part of the work
 7. **Journal**: Create journal entry for significant changes

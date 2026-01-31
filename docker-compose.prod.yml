@@ -12,6 +12,7 @@ services:
       - sourdough_data:/var/www/html/data
       - sourdough_storage:/var/www/html/backend/storage/app
       - sourdough_backups:/var/www/html/backend/storage/app/backups
+      - meilisearch_data:/var/lib/meilisearch
     environment:
       - APP_ENV=production
       - APP_DEBUG=false
@@ -39,6 +40,12 @@ services:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      # Meilisearch (search, runs inside container)
+      - MEILISEARCH_HOST=http://127.0.0.1:7700
+      - MEILISEARCH_KEY=${MEILI_MASTER_KEY}
+      - MEILI_ENV=production
+      - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
+      - SCOUT_DRIVER=meilisearch
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/api/health"]
@@ -53,4 +60,6 @@ volumes:
   sourdough_storage:
     driver: local
   sourdough_backups:
+    driver: local
+  meilisearch_data:
     driver: local

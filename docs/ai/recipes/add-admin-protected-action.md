@@ -6,9 +6,9 @@ Step-by-step guide to protect admin user actions (delete, disable, demote) so th
 
 - **Delete user**: UserController destroy, ProfileController destroy (account deletion)
 - **Disable user**: Toggle disabled status, soft-disable
-- **Demote admin**: Toggle admin status, remove admin role
+- **Demote admin**: Toggle admin group membership (add or remove from `admin` group)
 
-Use `AdminAuthorizationTrait` whenever an action could leave the system with zero admins.
+Admin status is determined only by membership in the `admin` group. "Last admin" means the last user in that group. Use `AdminAuthorizationTrait` whenever an action could leave the system with zero admins.
 
 ## Prerequisites
 
@@ -107,9 +107,13 @@ class UserController extends Controller
             return $this->errorResponse('Cannot remove admin status from your own account', 400);
         }
 
-        $user->update(['is_admin' => !$user->is_admin]);
+        if ($user->inGroup('admin')) {
+            $user->removeFromGroup('admin');
+        } else {
+            $user->assignGroup('admin');
+        }
         return $this->successResponse('Admin status updated successfully', [
-            'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh(),
+            'user' => $user->makeHidden(['password', 'two_factor_secret', 'two_factor_recovery_codes'])->fresh('groups'),
         ]);
     }
 }

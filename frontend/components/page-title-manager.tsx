@@ -33,6 +33,7 @@ const routeTitles: Record<string, string> = {
   "/configuration/logs": "Application Logs",
   "/configuration/access-logs": "Access Logs (HIPAA)",
   "/configuration/users": "User Management",
+  "/configuration/groups": "User Groups",
   "/configuration/security": "Security",
   "/configuration/profile": "Profile",
 

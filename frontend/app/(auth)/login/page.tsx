@@ -14,10 +14,13 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { SSOButtons } from "@/components/auth/sso-buttons";
 import { TwoFactorForm } from "@/components/auth/two-factor-form";
+import { PasskeyLoginButton } from "@/components/auth/passkey-login-button";
 import { AuthPageLayout } from "@/components/auth/auth-page-layout";
 import { AuthDivider } from "@/components/auth/auth-divider";
+import { isPasskeySupported } from "@/lib/use-passkeys";
 import { FormField } from "@/components/ui/form-field";
 import { LoadingButton } from "@/components/ui/loading-button";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -30,9 +33,12 @@ type LoginForm = z.infer<typeof loginSchema>;
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
-  const { features } = useAppConfig();
+  const { features, isLoading: isConfigLoading } = useAppConfig();
+  const passkeyMode = features?.passkeyMode ?? "disabled";
+  const showPasskeyLogin = passkeyMode !== "disabled" && isPasskeySupported();
   const [isLoading, setIsLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -85,9 +91,25 @@ export default function LoginPage() {
     >
       <SSOButtons />
 
+      {showPasskeyLogin && (
+        <>
+          <AuthDivider />
+          <PasskeyLoginButton
+            onSuccess={() => router.push("/dashboard")}
+            className="w-full"
+          />
+          <AuthDivider />
+        </>
+      )}
+
       <AuthDivider />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {formError && (
+          <Alert variant="destructive">
+            <AlertDescription>{formError}</AlertDescription>
+          </Alert>
+        )}
         <FormField
           id="email"
           label="Email"
@@ -110,14 +132,14 @@ export default function LoginPage() {
           label={
             <div className="flex items-center justify-between">
               <Label htmlFor="password">Password</Label>
-              {features?.passwordResetAvailable && (
-                <Link
-                  href="/forgot-password"
-                  className="text-sm text-primary hover:underline"
-                >
-                  Forgot password?
-                </Link>
-              )}
+            {!isConfigLoading && features?.passwordResetAvailable && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-primary hover:underline"
+                  >
+                    Forgot password?
+                  </Link>
+                )}
             </div>
           }
           error={errors.password?.message}

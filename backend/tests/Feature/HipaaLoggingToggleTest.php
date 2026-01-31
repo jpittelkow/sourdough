@@ -10,7 +10,7 @@ describe('HIPAA access logging toggle', function () {
     });
 
     it('log retention GET returns hipaa_access_logging_enabled', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $res = $this->actingAs($admin, 'sanctum')
             ->getJson('/api/log-retention')
@@ -21,7 +21,7 @@ describe('HIPAA access logging toggle', function () {
     });
 
     it('log retention PUT accepts and saves hipaa_access_logging_enabled', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->putJson('/api/log-retention', ['hipaa_access_logging_enabled' => false])
@@ -32,7 +32,7 @@ describe('HIPAA access logging toggle', function () {
     });
 
     it('DELETE access-logs returns 422 when HIPAA logging enabled', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
         Config::set('logging.hipaa_access_logging_enabled', true);
 
         $this->actingAs($admin, 'sanctum')
@@ -42,7 +42,7 @@ describe('HIPAA access logging toggle', function () {
     });
 
     it('DELETE access-logs deletes all when HIPAA logging disabled', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
         AccessLog::create([
             'user_id' => $admin->id,
             'action' => 'view',
@@ -63,7 +63,7 @@ describe('HIPAA access logging toggle', function () {
     });
 
     it('does not create access logs when HIPAA logging disabled', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
         Config::set('logging.hipaa_access_logging_enabled', false);
 
         $this->actingAs($admin, 'sanctum')->getJson('/api/profile')->assertStatus(200);

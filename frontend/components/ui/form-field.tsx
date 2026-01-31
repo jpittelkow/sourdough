@@ -1,9 +1,19 @@
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { ExternalLink, HelpCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+export interface FormFieldHelpLink {
+  label: string;
+  url?: string;
+  onClick?: () => void;
+}
 
 interface FormFieldProps {
   id: string;
   label: string | React.ReactNode;
+  description?: string;
+  helpLink?: FormFieldHelpLink;
   error?: string;
   children: React.ReactNode;
   className?: string;
@@ -12,16 +22,61 @@ interface FormFieldProps {
 export function FormField({
   id,
   label,
+  description,
+  helpLink,
   error,
   children,
   className,
 }: FormFieldProps) {
   return (
     <div className={cn("space-y-2", className)}>
-      {typeof label === "string" ? (
-        <Label htmlFor={id}>{label}</Label>
-      ) : (
-        label
+      <div className="flex items-center gap-2">
+        {typeof label === "string" ? (
+          <Label htmlFor={id} className="flex-1">
+            {label}
+          </Label>
+        ) : (
+          <span className="flex-1">{label}</span>
+        )}
+        {helpLink && (
+          helpLink.url ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              asChild
+            >
+              <a
+                href={helpLink.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={helpLink.label}
+              >
+                <HelpCircle className="h-3.5 w-3.5" aria-hidden />
+                <span className="text-xs">{helpLink.label}</span>
+                <ExternalLink className="h-3 w-3" aria-hidden />
+              </a>
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              onClick={helpLink.onClick}
+              aria-label={helpLink.label}
+            >
+              <HelpCircle className="h-3.5 w-3.5" aria-hidden />
+              <span className="text-xs">{helpLink.label}</span>
+            </Button>
+          )
+        )}
+      </div>
+      {description && (
+        <p id={`${id}-description`} className="text-sm text-muted-foreground">
+          {description}
+        </p>
       )}
       {children}
       {error && (

@@ -116,10 +116,14 @@ class LLMController extends Controller
     public function storeProvider(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'provider' => ['required', 'string', 'in:claude,openai,gemini,ollama'],
+            'provider' => ['required', 'string', 'in:claude,openai,gemini,ollama,azure,bedrock'],
             'model' => ['required', 'string'],
             'api_key' => ['sometimes', 'nullable', 'string'],
             'base_url' => ['sometimes', 'nullable', 'string'],
+            'endpoint' => ['sometimes', 'nullable', 'string'],
+            'region' => ['sometimes', 'nullable', 'string'],
+            'access_key' => ['sometimes', 'nullable', 'string'],
+            'secret_key' => ['sometimes', 'nullable', 'string'],
         ]);
 
         $user = $request->user();
@@ -133,8 +137,31 @@ class LLMController extends Controller
         }
 
         $settings = [];
-        if (isset($validated['base_url']) && !empty($validated['base_url'])) {
+        if (isset($validated['base_url']) && ! empty($validated['base_url'])) {
             $settings['base_url'] = $validated['base_url'];
+        }
+        if (isset($validated['endpoint']) && ! empty($validated['endpoint'])) {
+            $settings['endpoint'] = $validated['endpoint'];
+        }
+        if (isset($validated['region']) && ! empty($validated['region'])) {
+            $settings['region'] = $validated['region'];
+        }
+        if (isset($validated['access_key']) && ! empty($validated['access_key'])) {
+            $settings['access_key'] = $validated['access_key'];
+        }
+        if (isset($validated['secret_key']) && ! empty($validated['secret_key'])) {
+            $settings['secret_key'] = $validated['secret_key'];
+        }
+        if ($validated['provider'] === 'azure' && ! empty($validated['model'])) {
+            $settings['deployment'] = $validated['model'];
+        }
+        if ($validated['provider'] === 'bedrock') {
+            if (! empty($validated['access_key'])) {
+                $settings['access_key_id'] = $validated['access_key'];
+            }
+            if (! empty($validated['secret_key'])) {
+                $settings['secret_access_key'] = $validated['secret_key'];
+            }
         }
 
         $provider = $user->aiProviders()->create([

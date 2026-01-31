@@ -5,10 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Laravel\Scout\Searchable;
 
 class AIProvider extends Model
 {
-    use HasFactory;
+    use HasFactory, Searchable;
 
     /**
      * The table associated with the model.
@@ -74,5 +75,27 @@ class AIProvider extends Model
     public function scopePrimary($query)
     {
         return $query->where('is_primary', true);
+    }
+
+    /**
+     * Get the indexable data array for the model (Scout/Meilisearch).
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'provider' => $this->provider,
+            'model' => $this->model,
+            'is_enabled' => $this->is_enabled,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'ai_providers';
     }
 }

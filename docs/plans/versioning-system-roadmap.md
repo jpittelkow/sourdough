@@ -3,8 +3,8 @@
 Implement a versioning system that displays the application version in the settings/configuration area and provides automated version management via GitHub Actions.
 
 **Priority**: MEDIUM  
-**Status**: Phase 1 Complete (Version Display) ✅ - Phase 2 & 3 Pending (Future Work)  
-**Last Updated**: 2026-01-27
+**Status**: Phase 1–3 Complete (Version Display, Bump Script, GitHub Actions) ✅ - Phase 4 Pending (Version Checking)  
+**Last Updated**: 2026-01-30
 
 **Dependencies**:
 - [Settings Restructure](settings-restructure-roadmap.md) - Configuration page where version is displayed
@@ -21,18 +21,18 @@ Implement a versioning system that displays the application version in the setti
 - [x] Add version to API health check endpoint (backend endpoint exists at `/api/version`)
 - [x] Show version in "About" section or modal
 
-### Version Management (HIGH Priority)
-- [ ] Create VERSION file in project root
-- [ ] Create script to update version across codebase
-- [ ] Update package.json version (frontend)
-- [ ] Update composer.json version (backend)
-- [ ] Generate CHANGELOG entries
+### Version Management (HIGH Priority) ✅ COMPLETE
+- [x] Create VERSION file in project root
+- [x] Create script to update version across codebase ([scripts/bump-version.sh](../../scripts/bump-version.sh))
+- [x] Update package.json version (frontend)
+- [ ] Update composer.json version (backend) — skipped (not standard for Laravel)
+- [ ] Generate CHANGELOG entries — manual for now
 
-### GitHub Action Automation (MEDIUM Priority)
-- [ ] Create GitHub Action for version bump on release
-- [ ] Support semantic versioning (major.minor.patch)
-- [ ] Auto-generate release notes
-- [ ] Tag releases automatically
+### GitHub Action Automation (MEDIUM Priority) ✅ COMPLETE
+- [x] Create GitHub Action for version bump on release
+- [x] Support semantic versioning (major.minor.patch)
+- [x] Auto-generate release notes
+- [x] Tag releases automatically
 - [ ] Optional: Auto-update CHANGELOG.md
 
 ### Version Checking (LOW Priority)

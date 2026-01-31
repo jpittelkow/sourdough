@@ -6,16 +6,17 @@ Development roadmaps and implementation history.
 
 Currently in progress. Complete these before starting new work.
 
-_None._
+| Roadmap | Priority | Status |
+|---------|----------|--------|
+| [Progressive Web App (PWA)](plans/pwa-roadmap.md) | MEDIUM | Phase 1 complete; Phase 2 next |
 
 ## Next Up
 
 Ready to start. These are unblocked and can begin immediately.
 
-| Item | Priority | Source | Notes |
-|------|----------|--------|-------|
-| LLM Provider Expansion | LOW | [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | Azure OpenAI, AWS Bedrock discovery |
-| Version Automation | LOW | [Versioning System](plans/versioning-system-roadmap.md) | Bump scripts, GitHub Actions, auto-release |
+| Roadmap | Priority | Remaining Work |
+|---------|----------|----------------|
+| [Storage Settings Enhancement](plans/storage-settings-roadmap.md) | MEDIUM | Phase 4 (analytics, alerts, cleanup tools) |
 
 ## Planned Features
 
@@ -23,30 +24,29 @@ Requires foundation work or longer-term planning.
 
 | Roadmap | Priority | Dependencies |
 |---------|----------|--------------|
-| [Progressive Web App (PWA)](plans/pwa-roadmap.md) | MEDIUM | None |
+| [Meilisearch Configuration](plans/meilisearch-configuration-roadmap.md) | MEDIUM | ✅ Meilisearch Integration (complete) |
+| [Docker Container Audit](plans/docker-audit-roadmap.md) | MEDIUM | None |
 | [Web Push Notifications](plans/web-push-notifications-roadmap.md) | MEDIUM | Incorporated into PWA roadmap |
-| [SSO Settings Enhancement](plans/sso-settings-enhancement-roadmap.md) | MEDIUM | None |
-| [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | MEDIUM | ✅ Email Config (complete) |
 | [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Audit Logs (complete) |
-| [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | MEDIUM | None |
 | [Documentation Audit](plans/documentation-audit-roadmap.md) | MEDIUM | None |
 | [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
 | [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
 
 ## Completed (Core Done)
 
-High-priority work complete. Some optional/lower-priority items remain—see "Next Up" or individual roadmaps.
+High-priority work complete. Only optional/lower-priority items remain.
 
 | Roadmap | Completed | Remaining Work |
 |---------|-----------|----------------|
 | [Auth UI Redesign](plans/auth-ui-redesign-roadmap.md) | 2026-01-29 | Optional: illustrations, page transitions |
 | [Logging](plans/logging-roadmap.md) | 2026-01-29 | Optional: archival, aggregation, scheduled export |
 | [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Optional: external storage, aggregation |
-| [Admin Features](plans/admin-features-roadmap.md) | 2026-01-29 | Message Templates, notification digest settings |
-| [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | 2026-01-29 | Azure/Bedrock providers, client caching |
-| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | User docs (optional) |
-| [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-27 | Phases 2-4 (automation, scripts, actions) |
-| [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 | QA/testing items (optional) |
+| [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | 2026-01-29 | Optional: troubleshooting E2E, additional regions for Bedrock |
+| [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | Optional: user docs |
+| [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-30 | Optional: Phase 4 (version check, update notification) |
+| [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 | Optional: QA/testing items |
+| [SSO Settings Enhancement](plans/sso-settings-enhancement-roadmap.md) | 2026-01-30 | Optional: Phase 4 branded logos, Phase 9 screenshots |
+| [Admin Features](plans/admin-features-roadmap.md) | 2026-01-30 | Optional: Per-type notification templates, notification digest settings |
 
 ## Completed (Fully Done)
 
@@ -54,6 +54,10 @@ All tasks complete.
 
 | Roadmap | Completed |
 |---------|-----------|
+| [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | 2026-01-30 |
+| [Dashboard Improvements](plans/dashboard-improvements-roadmap.md) | 2026-01-30 |
+| [User Groups](plans/user-groups-roadmap.md) | 2026-01-30 |
+| [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | 2026-01-30 |
 | [Integration Settings](plans/integration-settings-roadmap.md) | 2026-01-29 |
 | [Email Configuration Dependencies](plans/email-configuration-dependencies-roadmap.md) | 2026-01-29 |
 | [Env to Database Migration](plans/env-to-database-roadmap.md) | 2026-01-29 |
@@ -72,6 +76,16 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-01-30 | [Dashboard Static Simplification](journal/2026-01-30-dashboard-static-simplification.md) |
+| 2026-01-30 | [Alpine to Debian Migration for Meilisearch](journal/2026-01-30-alpine-to-debian-meilisearch.md) |
+| 2026-01-30 | [User Groups Phase 4: Admin UI](journal/2026-01-30-user-groups-phase-4-admin-ui.md) |
+| 2026-01-30 | [Search documentation update](journal/2026-01-30-search-documentation-update.md) |
+| 2026-01-30 | [Meilisearch Integration (Phases 4–6)](journal/2026-01-30-meilisearch-phases-4-6.md) |
+| 2026-01-30 | [Meilisearch Integration (Phases 1–3)](journal/2026-01-30-meilisearch-phases-1-3.md) |
+| 2026-01-30 | [Configurable Auth Features](journal/2026-01-30-configurable-auth-features.md) |
+| 2026-01-30 | [Storage Settings Phase 2 (Additional Providers)](journal/2026-01-30-storage-providers-phase-2.md) |
+| 2026-01-30 | [Storage Settings Phase 1 (Local Storage Transparency)](journal/2026-01-30-storage-settings-phase-1.md) |
+| 2026-01-30 | [SSO Settings Enhancement](journal/2026-01-30-sso-settings-enhancement.md) |
 | 2026-01-29 | [Configuration Navigation Redesign](journal/2026-01-29-config-nav-redesign.md) |
 | 2026-01-29 | [Scheduled Tasks/Jobs UI (Run Now & History)](journal/2026-01-29-scheduled-jobs-ui.md) |
 | 2026-01-29 | [Live Console Logs & HIPAA Access Logging](journal/2026-01-29-live-logs-hipaa-logging.md) |

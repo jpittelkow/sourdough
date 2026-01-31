@@ -43,6 +43,29 @@ class ConfigServiceProvider extends ServiceProvider
         if (isset($settings['logging'])) {
             $this->injectLoggingConfig($settings['logging']);
         }
+
+        if (isset($settings['search'])) {
+            $this->injectSearchConfig($settings['search']);
+        }
+    }
+
+    /**
+     * Inject search settings into config.
+     */
+    private function injectSearchConfig(array $settings): void
+    {
+        if (array_key_exists('results_per_page', $settings)) {
+            $v = (int) ($settings['results_per_page'] ?? 15);
+            config(['search.results_per_page' => max(5, min(50, $v))]);
+        }
+        if (array_key_exists('suggestions_limit', $settings)) {
+            $v = (int) ($settings['suggestions_limit'] ?? 5);
+            config(['search.suggestions_limit' => max(3, min(10, $v))]);
+        }
+        if (array_key_exists('min_query_length', $settings)) {
+            $v = (int) ($settings['min_query_length'] ?? 2);
+            config(['search.min_query_length' => max(1, min(5, $v))]);
+        }
     }
 
     /**
@@ -272,23 +295,27 @@ class ConfigServiceProvider extends ServiceProvider
             $clientSecretKey = $provider . '_client_secret';
             if (array_key_exists($clientIdKey, $settings)) {
                 config(['services.' . $provider . '.client_id' => $settings[$clientIdKey] ?? config('services.' . $provider . '.client_id')]);
-                config(['sso.providers.' . $provider . '.enabled' => !empty($settings[$clientIdKey])]);
             }
             if (array_key_exists($clientSecretKey, $settings)) {
                 config(['services.' . $provider . '.client_secret' => $settings[$clientSecretKey] ?? config('services.' . $provider . '.client_secret')]);
             }
+            $hasCredentials = !empty($settings[$clientIdKey] ?? config('services.' . $provider . '.client_id'));
+            $explicitlyEnabled = $settings[$provider . '_enabled'] ?? true;
+            config(['sso.providers.' . $provider . '.enabled' => $hasCredentials && $explicitlyEnabled]);
         }
 
         // OIDC
         if (array_key_exists('oidc_client_id', $settings)) {
             config(['services.oidc.client_id' => $settings['oidc_client_id'] ?? config('services.oidc.client_id')]);
-            config(['sso.providers.oidc.enabled' => !empty($settings['oidc_client_id'] ?? null) && !empty($settings['oidc_issuer_url'] ?? null)]);
-        }
-        if (array_key_exists('oidc_client_secret', $settings)) {
-            config(['services.oidc.client_secret' => $settings['oidc_client_secret'] ?? config('services.oidc.client_secret')]);
         }
         if (array_key_exists('oidc_issuer_url', $settings)) {
             config(['services.oidc.issuer_url' => $settings['oidc_issuer_url'] ?? config('services.oidc.issuer_url')]);
+        }
+        $oidcHasCredentials = !empty($settings['oidc_client_id'] ?? config('services.oidc.client_id')) && !empty($settings['oidc_issuer_url'] ?? config('services.oidc.issuer_url'));
+        $oidcExplicitlyEnabled = $settings['oidc_enabled'] ?? true;
+        config(['sso.providers.oidc.enabled' => $oidcHasCredentials && $oidcExplicitlyEnabled]);
+        if (array_key_exists('oidc_client_secret', $settings)) {
+            config(['services.oidc.client_secret' => $settings['oidc_client_secret'] ?? config('services.oidc.client_secret')]);
         }
         if (array_key_exists('oidc_provider_name', $settings)) {
             config(['sso.providers.oidc.name' => $settings['oidc_provider_name'] ?? config('sso.providers.oidc.name')]);

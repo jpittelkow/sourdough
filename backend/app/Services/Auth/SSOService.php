@@ -4,6 +4,7 @@ namespace App\Services\Auth;
 
 use App\Models\User;
 use App\Models\SocialAccount;
+use App\Services\GroupService;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
@@ -252,13 +253,26 @@ class SSOService
      */
     public function createUserFromSocial(string $provider, SocialiteUser $socialUser): User
     {
-        return User::create([
+        $groupService = app(GroupService::class);
+        $isFirstUser = User::count() === 0;
+        if ($isFirstUser) {
+            $groupService->ensureDefaultGroupsExist();
+        }
+
+        $user = User::create([
             'name' => $socialUser->getName() ?? $socialUser->getNickname() ?? 'User',
             'email' => $socialUser->getEmail(),
             'avatar' => $socialUser->getAvatar(),
             'email_verified_at' => config('sso.trust_provider_email') ? now() : null,
-            'is_admin' => User::count() === 0, // First user is admin
         ]);
+
+        if ($isFirstUser) {
+            $user->assignGroup('admin');
+        } else {
+            $groupService->assignDefaultGroupToUser($user);
+        }
+
+        return $user;
     }
 
     /**

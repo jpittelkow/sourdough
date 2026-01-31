@@ -9,14 +9,16 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Mail;
-use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
+use Laravel\Sanctum\HasApiTokens;
+use Laravel\Scout\Searchable;
+use Laragear\WebAuthn\WebAuthnAuthenticatable;
 use App\Models\ApiToken;
+use App\Traits\HasGroups;
 
 class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, MustVerifyEmail, Notifiable;
+    use HasApiTokens, HasFactory, HasGroups, MustVerifyEmail, Notifiable, Searchable, WebAuthnAuthenticatable;
 
     /**
      * The attributes that are mass assignable.
@@ -28,12 +30,13 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
         'avatar',
         'email_verified_at',
         'disabled_at',
-        'is_admin',
         'two_factor_enabled',
         'two_factor_secret',
         'two_factor_recovery_codes',
         'two_factor_confirmed_at',
     ];
+
+    protected $appends = ['is_admin'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -54,11 +57,31 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
             'email_verified_at' => 'datetime',
             'disabled_at' => 'datetime',
             'password' => 'hashed',
-            'is_admin' => 'boolean',
             'two_factor_enabled' => 'boolean',
             'two_factor_confirmed_at' => 'datetime',
             'two_factor_recovery_codes' => 'encrypted:array',
         ];
+    }
+
+    /**
+     * Get the indexable data array for the model (Scout/Meilisearch).
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'email' => $this->email,
+            'created_at' => $this->created_at?->timestamp,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'users';
     }
 
     /**
@@ -187,11 +210,22 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     }
 
     /**
-     * Check if user has admin privileges.
+     * Computed: true if user is in the admin group (for API/frontend compatibility).
+     */
+    public function getIsAdminAttribute(): bool
+    {
+        if (array_key_exists('groups', $this->relations) && $this->relationLoaded('groups')) {
+            return $this->groups->contains('slug', 'admin');
+        }
+        return $this->inGroup('admin');
+    }
+
+    /**
+     * Check if user has admin privileges (in admin group).
      */
     public function isAdmin(): bool
     {
-        return $this->is_admin === true;
+        return $this->inGroup('admin');
     }
 
     /**

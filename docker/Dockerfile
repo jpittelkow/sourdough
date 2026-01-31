@@ -23,7 +23,7 @@ RUN npm run build
 #==============================================================================
 # Stage 2: Production Image
 #==============================================================================
-FROM php:8.3-fpm-alpine
+FROM php:8.3-fpm
 
 LABEL maintainer="Sourdough"
 LABEL description="Sourdough - Foundation Application Framework"
@@ -42,24 +42,24 @@ ENV APP_DEBUG=false
 ENV LOG_CHANNEL=stderr
 
 # Install system dependencies
-RUN apk add --no-cache \
+RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
     nodejs \
     npm \
-    sqlite \
-    sqlite-dev \
+    sqlite3 \
+    libsqlite3-dev \
     git \
     curl \
     zip \
     unzip \
     libpng-dev \
-    libjpeg-turbo-dev \
-    freetype-dev \
+    libjpeg-dev \
+    libfreetype6-dev \
     libzip-dev \
-    oniguruma-dev \
-    icu-dev \
-    postgresql-dev \
+    libonig-dev \
+    libicu-dev \
+    libpq-dev \
     && docker-php-ext-configure gd --with-freetype --with-jpeg \
     && docker-php-ext-install -j$(nproc) \
         pdo_mysql \
@@ -70,7 +70,12 @@ RUN apk add --no-cache \
         bcmath \
         intl \
         opcache \
-    && rm -rf /var/cache/apk/*
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Meilisearch binary (Debian/glibc required; Alpine/musl incompatible)
+RUN cd /tmp && curl -L https://install.meilisearch.com | sh \
+    && mv ./meilisearch /usr/local/bin/ \
+    && chmod +x /usr/local/bin/meilisearch
 
 # Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
@@ -112,7 +117,9 @@ RUN mkdir -p /var/www/html/backend/storage/app/public \
     && mkdir -p /var/www/html/backend/database \
     && mkdir -p /var/www/html/data \
     && mkdir -p /var/log/supervisor \
-    && mkdir -p /run/nginx
+    && mkdir -p /run/nginx \
+    && mkdir -p /var/lib/meilisearch \
+    && chown -R www-data:www-data /var/lib/meilisearch
 
 # Set permissions and fix line endings for shell scripts
 RUN chown -R www-data:www-data /var/www/html \

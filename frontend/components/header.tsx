@@ -1,13 +1,20 @@
 "use client";
 
-import { Menu } from "lucide-react";
+import { Menu, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserDropdown } from "@/components/user-dropdown";
 import { useSidebar } from "@/components/sidebar-context";
+import { useSearch } from "@/components/search/search-provider";
+import { SearchInline } from "@/components/search/search-inline";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+
+const isMac =
+  typeof navigator !== "undefined" &&
+  /Mac|iPod|iPhone|iPad/.test(navigator.platform);
 
 export function Header() {
   const { setMobileMenuOpen } = useSidebar();
+  const { setOpen: setSearchOpen } = useSearch();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -23,6 +30,22 @@ export function Header() {
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-1 ml-auto md:ml-0">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="md:hidden h-9 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+            onClick={() => setSearchOpen(true)}
+            title="Search"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+            <span className="hidden sm:inline text-xs">
+              {isMac ? "⌘K" : "Ctrl+K"}
+            </span>
+          </Button>
+          <div className="hidden md:block">
+            <SearchInline />
+          </div>
           <NotificationBell />
           <UserDropdown />
         </div>

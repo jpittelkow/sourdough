@@ -7,6 +7,9 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { useAppConfig } from "@/lib/app-config";
+import { usePasskeys } from "@/lib/use-passkeys";
+import { PasskeyRegisterDialog } from "@/components/auth/passkey-register-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -35,6 +38,8 @@ import {
   Shield,
   Smartphone,
   Key,
+  Fingerprint,
+  Trash2,
   Link as LinkIcon,
   Unlink,
   Copy,
@@ -80,6 +85,19 @@ export default function SecurityPage() {
   const [showRecoveryDialog, setShowRecoveryDialog] = useState(false);
   const [verificationCode, setVerificationCode] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showPasskeyRegisterDialog, setShowPasskeyRegisterDialog] = useState(false);
+
+  const { features } = useAppConfig();
+  const passkeyMode = features?.passkeyMode ?? "disabled";
+  const passkeysEnabled = passkeyMode !== "disabled";
+  const {
+    passkeys,
+    loading: passkeysLoading,
+    supported: passkeySupported,
+    registerPasskey,
+    deletePasskey,
+    fetchPasskeys,
+  } = usePasskeys();
 
   const {
     register,
@@ -338,6 +356,88 @@ export default function SecurityPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Passkeys */}
+      {passkeysEnabled && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Fingerprint className="h-5 w-5" />
+              Passkeys
+            </CardTitle>
+            <CardDescription>
+              Sign in with your fingerprint, face, or hardware security key.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {!passkeySupported ? (
+              <Alert>
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Not supported</AlertTitle>
+                <AlertDescription>
+                  Passkeys are not supported in this browser. Use a modern browser
+                  (Chrome, Safari, Edge, Firefox) with WebAuthn support.
+                </AlertDescription>
+              </Alert>
+            ) : passkeysLoading ? (
+              <p className="text-sm text-muted-foreground">Loading passkeys...</p>
+            ) : (
+              <div className="space-y-4">
+                {passkeys.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    No passkeys registered. Add one to sign in with your device.
+                  </p>
+                ) : (
+                  <ul className="space-y-2">
+                    {passkeys.map((pk) => (
+                      <li
+                        key={pk.id}
+                        className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                      >
+                        <div>
+                          <p className="font-medium">{pk.alias}</p>
+                          {pk.created_at && (
+                            <p className="text-xs text-muted-foreground">
+                              Added {new Date(pk.created_at).toLocaleDateString()}
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="text-destructive hover:text-destructive"
+                          onClick={async () => {
+                            const ok = await deletePasskey(pk.id);
+                            if (ok) toast.success("Passkey removed");
+                            else toast.error("Failed to remove passkey");
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </CardContent>
+          {passkeySupported && (
+            <CardFooter>
+              <Button onClick={() => setShowPasskeyRegisterDialog(true)}>
+                <Fingerprint className="mr-2 h-4 w-4" />
+                Add Passkey
+              </Button>
+            </CardFooter>
+          )}
+        </Card>
+      )}
+
+      <PasskeyRegisterDialog
+        open={showPasskeyRegisterDialog}
+        onOpenChange={setShowPasskeyRegisterDialog}
+        onSuccess={fetchPasskeys}
+        registerPasskey={registerPasskey}
+      />
 
       {/* SSO Connections */}
       <Card>

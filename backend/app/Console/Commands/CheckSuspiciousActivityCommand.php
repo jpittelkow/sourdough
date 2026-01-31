@@ -25,7 +25,7 @@ class CheckSuspiciousActivityCommand extends Command
         $title = 'Suspicious activity detected';
         $message = implode(' ', array_column($alerts, 'message'));
 
-        $admins = User::where('is_admin', true)->get();
+        $admins = User::whereHas('groups', fn ($q) => $q->where('slug', 'admin'))->get();
 
         foreach ($admins as $admin) {
             try {

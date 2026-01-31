@@ -19,6 +19,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Loader2 } from "lucide-react";
+import { UserGroupPicker } from "./user-group-picker";
+import { useGroups } from "@/lib/use-groups";
 
 const userSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -34,7 +36,8 @@ interface User {
   id: number;
   name: string;
   email: string;
-  is_admin: boolean;
+  is_admin?: boolean;
+  groups?: { id: number; name: string; slug: string }[];
 }
 
 interface UserDialogProps {
@@ -42,10 +45,25 @@ interface UserDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSuccess: () => void;
+  currentUserId?: number;
 }
 
-export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogProps) {
+/** Admin status is determined by admin group membership. */
+function isInAdminGroup(user: User | null): boolean {
+  return user?.groups?.some((g) => g.slug === "admin") ?? false;
+}
+
+export function UserDialog({
+  user,
+  open,
+  onOpenChange,
+  onSuccess,
+  currentUserId,
+}: UserDialogProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedGroupIds, setSelectedGroupIds] = useState<number[]>([]);
+  const { groups } = useGroups();
+  const adminGroupId = groups.find((g) => g.slug === "admin")?.id;
   const isEditing = !!user;
 
   const {
@@ -66,14 +84,17 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
     },
   });
 
+  const adminChecked = adminGroupId != null && selectedGroupIds.includes(adminGroupId);
+
   useEffect(() => {
     if (user) {
       reset({
         name: user.name,
         email: user.email,
         password: "",
-        is_admin: user.is_admin,
+        is_admin: isInAdminGroup(user),
       });
+      setSelectedGroupIds(user.groups?.map((g) => g.id) ?? []);
     } else {
       reset({
         name: "",
@@ -82,22 +103,35 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
         is_admin: false,
         skip_verification: false,
       });
+      setSelectedGroupIds([]);
     }
   }, [user, reset]);
+
+  const onAdminSwitchChange = (checked: boolean) => {
+    if (adminGroupId == null) return;
+    if (checked) {
+      setSelectedGroupIds((prev) => (prev.includes(adminGroupId) ? prev : [...prev, adminGroupId]));
+    } else {
+      setSelectedGroupIds((prev) => prev.filter((id) => id !== adminGroupId));
+    }
+    setValue("is_admin", checked);
+  };
 
   const onSubmit = async (data: UserForm) => {
     setIsSaving(true);
     try {
       if (isEditing) {
-        const updateData: any = {
+        const updateData: Record<string, unknown> = {
           name: data.name,
           email: data.email,
-          is_admin: data.is_admin,
         };
         if (data.password) {
           updateData.password = data.password;
         }
         await api.put(`/users/${user.id}`, updateData);
+        await api.put(`/users/${user.id}/groups`, {
+          group_ids: selectedGroupIds,
+        });
         toast.success("User updated successfully");
       } else {
         if (!data.password) {
@@ -109,7 +143,7 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
           name: data.name,
           email: data.email,
           password: data.password,
-          is_admin: data.is_admin,
+          admin: data.is_admin,
           skip_verification: data.skip_verification ?? false,
         });
         toast.success("User created successfully");
@@ -180,14 +214,29 @@ export function UserDialog({ user, open, onOpenChange, onSuccess }: UserDialogPr
               <div className="space-y-0.5">
                 <Label>Admin</Label>
                 <p className="text-sm text-muted-foreground">
-                  Grant administrator privileges
+                  Grant administrator privileges (admin group)
                 </p>
               </div>
               <Switch
-                checked={watch("is_admin")}
-                onCheckedChange={(checked) => setValue("is_admin", checked)}
+                checked={isEditing ? adminChecked : watch("is_admin")}
+                onCheckedChange={isEditing ? onAdminSwitchChange : (checked) => setValue("is_admin", checked)}
               />
             </div>
+
+            {isEditing && (
+              <div className="space-y-2">
+                <Label>Group Memberships</Label>
+                <UserGroupPicker
+                  selectedGroupIds={selectedGroupIds}
+                  onChange={setSelectedGroupIds}
+                  currentUserId={currentUserId}
+                  editedUserId={user?.id}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Assign this user to groups for permission management.
+                </p>
+              </div>
+            )}
 
             {!isEditing && (
               <div className="flex items-center justify-between">

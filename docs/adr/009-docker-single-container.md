@@ -34,19 +34,18 @@ We will package all services in a **single Docker container** using Supervisor f
 │  │                     Supervisor                          │ │
 │  │            (Process Manager - PID 1)                    │ │
 │  └─────────────────────┬──────────────────────────────────┘ │
-│              ┌─────────┼─────────┬─────────┐                │
-│              ▼         ▼         ▼         ▼                │
-│         ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐        │
-│         │ Nginx  │ │PHP-FPM │ │ Node   │ │ Queue  │        │
-│         │ :80    │ │ :9000  │ │ :3000  │ │Worker  │        │
-│         └────────┘ └────────┘ └────────┘ └────────┘        │
-│              │         │         │                          │
-│              │         │         │                          │
-│         ┌────┴─────────┴─────────┘                          │
+│       ┌────────┬───────┼────────┬────────┐                  │
+│       ▼        ▼       ▼        ▼        ▼                  │
+│  ┌────────┐ ┌────────┐ ┌────────┐ ┌────────┐ ┌────────────┐ │
+│  │ Nginx  │ │PHP-FPM │ │ Node   │ │ Queue  │ │ Meilisearch│ │
+│  │ :80    │ │ :9000  │ │ :3000  │ │Worker  │ │ :7700      │ │
+│  └────────┘ └────────┘ └────────┘ └────────┘ └────────────┘ │
+│       │        │         │         │                          │
+│       └────────┴─────────┴─────────┘                          │
 │         ▼                                                   │
 │  ┌─────────────────────────────────────────────────────────┐│
 │  │                      Volumes                             ││
-│  │  /data/database.sqlite  /data/storage  /data/backups    ││
+│  │  /data  /data/backups  /var/lib/meilisearch (search)     ││
 │  └─────────────────────────────────────────────────────────┘│
 │                                                              │
 └─────────────────────────────────────────────────────────────┘
@@ -54,18 +53,27 @@ We will package all services in a **single Docker container** using Supervisor f
 
 ### Process Management
 
-Supervisor manages four processes:
+Supervisor manages five main process types (plus scheduler in the actual config):
 
 1. **Nginx** - Reverse proxy, static files, SSL termination
 2. **PHP-FPM** - Laravel API execution
 3. **Node** - Next.js frontend (production build)
 4. **Queue Worker** - Background job processing
+5. **Meilisearch** - Search engine (listens on 127.0.0.1:7700, data in `/var/lib/meilisearch`)
 
 ```ini
-# supervisord.conf
+# supervisord.conf (excerpt)
 [supervisord]
 nodaemon=true
 user=root
+
+[program:meilisearch]
+command=/usr/local/bin/meilisearch --db-path /var/lib/meilisearch/data --http-addr 127.0.0.1:7700
+autorestart=true
+priority=1
+user=www-data
+stdout_logfile=/dev/stdout
+stderr_logfile=/dev/stderr
 
 [program:nginx]
 command=nginx -g "daemon off;"
@@ -126,9 +134,11 @@ server {
 
 ### Multi-Stage Build
 
+The production image uses Debian (not Alpine) because embedded Meilisearch requires glibc; Alpine's musl is incompatible with Meilisearch binaries.
+
 ```dockerfile
 # Stage 1: Build frontend
-FROM node:20-alpine AS frontend-builder
+FROM node:20-slim AS frontend-builder
 WORKDIR /build
 COPY frontend/package*.json ./
 RUN npm ci
@@ -141,11 +151,12 @@ WORKDIR /build
 COPY backend/composer.* ./
 RUN composer install --no-dev --optimize-autoloader
 
-# Stage 3: Production image
-FROM php:8.3-fpm-alpine
+# Stage 3: Production image (Debian for Meilisearch/glibc)
+FROM php:8.3-fpm
 
 # Install system dependencies
-RUN apk add --no-cache nginx supervisor nodejs npm sqlite
+RUN apt-get update && apt-get install -y --no-install-recommends nginx supervisor nodejs npm sqlite3 curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy application
 COPY --from=backend-builder /build/vendor /app/backend/vendor
@@ -212,6 +223,7 @@ exec "$@"
 | `/data/database.sqlite` | SQLite database | Inside /data |
 | `/data/storage` | Uploaded files | Inside /data |
 | `/data/backups` | Backup files | Inside /data |
+| `/var/lib/meilisearch` | Meilisearch index data | Named volume `meilisearch_data` |
 
 ### docker-compose Files
 

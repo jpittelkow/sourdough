@@ -68,6 +68,7 @@ export function useAuditStream(
           new_values: data.new_values ?? null,
           ip_address: data.ip_address ?? null,
           user_agent: data.user_agent ?? null,
+          correlation_id: data.correlation_id ?? null,
           created_at: data.created_at ?? new Date().toISOString(),
           user: data.user,
         });

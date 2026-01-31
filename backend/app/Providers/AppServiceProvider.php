@@ -4,6 +4,8 @@ namespace App\Providers;
 
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
+use App\Enums\Permission;
 use App\Models\User;
 
 class AppServiceProvider extends ServiceProvider
@@ -18,9 +20,16 @@ class AppServiceProvider extends ServiceProvider
             return new \App\Services\LLM\LLMOrchestrator();
         });
 
+        // Register Notification Template Service
+        $this->app->singleton(\App\Services\NotificationTemplateService::class, function ($app) {
+            return new \App\Services\NotificationTemplateService();
+        });
+
         // Register Notification Orchestrator
         $this->app->singleton(\App\Services\Notifications\NotificationOrchestrator::class, function ($app) {
-            return new \App\Services\Notifications\NotificationOrchestrator();
+            return new \App\Services\Notifications\NotificationOrchestrator(
+                $app->make(\App\Services\NotificationTemplateService::class)
+            );
         });
 
         // Register Backup Service
@@ -47,6 +56,12 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(\App\Services\AuditService::class, function ($app) {
             return new \App\Services\AuditService();
         });
+
+        // Register Storage Service
+        $this->app->singleton(\App\Services\StorageService::class, function ($app) {
+            return new \App\Services\StorageService();
+        });
+
     }
 
     /**
@@ -54,19 +69,53 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Define admin gate
-        Gate::define('admin', function (User $user) {
-            return $user->isAdmin();
-        });
+        // Register all permissions as Gates (for can:permission.name)
+        foreach (Permission::cases() as $perm) {
+            Gate::define($perm->value, fn (User $user) => $user->hasPermission($perm));
+        }
 
-        // Define backup management gate
-        Gate::define('manage-backups', function (User $user) {
-            return $user->isAdmin();
-        });
+        // Admin gate for backwards compatibility (super-permission)
+        Gate::define('admin', fn (User $user) => $user->isAdmin());
 
-        // Define settings management gate
-        Gate::define('manage-settings', function (User $user) {
-            return $user->isAdmin();
-        });
+        $this->registerCustomFilesystemDrivers();
+    }
+
+    /**
+     * Register custom filesystem drivers (GCS, Azure) when packages are installed.
+     */
+    private function registerCustomFilesystemDrivers(): void
+    {
+        if (class_exists(\League\Flysystem\GoogleCloudStorage\GoogleCloudStorageAdapter::class)
+            && class_exists(\Google\Cloud\Storage\StorageClient::class)) {
+            Storage::extend('gcs', function ($app, $config) {
+                $clientOptions = array_filter([
+                    'projectId' => $config['project_id'] ?? null,
+                    'keyFilePath' => $config['key_file_path'] ?? null,
+                    'keyFile' => $config['credentials'] ?? null,
+                ]);
+                $client = new \Google\Cloud\Storage\StorageClient($clientOptions);
+                $bucket = $client->bucket($config['bucket'] ?? '');
+                $adapter = new \League\Flysystem\GoogleCloudStorage\GoogleCloudStorageAdapter($bucket);
+                return new \Illuminate\Filesystem\FilesystemAdapter(
+                    new \League\Flysystem\Filesystem($adapter, ['visibility' => $config['visibility'] ?? \League\Flysystem\Visibility::PRIVATE]),
+                    $adapter,
+                    $config
+                );
+            });
+        }
+
+        if (class_exists(\League\Flysystem\AzureBlobStorage\AzureBlobStorageAdapter::class)
+            && class_exists(\MicrosoftAzure\Storage\Blob\BlobRestProxy::class)) {
+            Storage::extend('azure', function ($app, $config) {
+                $connectionString = $config['connection_string'] ?? '';
+                $client = \MicrosoftAzure\Storage\Blob\BlobRestProxy::createBlobService($connectionString);
+                $adapter = new \League\Flysystem\AzureBlobStorage\AzureBlobStorageAdapter($client, $config['container'] ?? '');
+                return new \Illuminate\Filesystem\FilesystemAdapter(
+                    new \League\Flysystem\Filesystem($adapter, ['visibility' => $config['visibility'] ?? \League\Flysystem\Visibility::PRIVATE]),
+                    $adapter,
+                    $config
+                );
+            });
+        }
     }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isAdminUser } from "@/lib/auth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -56,7 +56,7 @@ export function UserDropdown() {
           <div className="flex items-center gap-2">
             <div className="flex flex-col items-start">
               <span className="text-sm font-medium leading-tight">{user.name}</span>
-              {user.is_admin && (
+              {isAdminUser(user) && (
                 <Badge variant="secondary" className="text-xs h-4 px-1.5 mt-0.5">
                   Admin
                 </Badge>

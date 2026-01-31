@@ -3,6 +3,7 @@
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
 import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
+import { SearchProvider } from "@/components/search/search-provider";
 import { PageTitleManager } from "@/components/page-title-manager";
 import { cn } from "@/lib/utils";
 
@@ -34,7 +35,9 @@ function AppShellContent({ children }: AppShellProps) {
 export function AppShell({ children }: AppShellProps) {
   return (
     <SidebarProvider>
-      <AppShellContent>{children}</AppShellContent>
+      <SearchProvider>
+        <AppShellContent>{children}</AppShellContent>
+      </SearchProvider>
     </SidebarProvider>
   );
 }

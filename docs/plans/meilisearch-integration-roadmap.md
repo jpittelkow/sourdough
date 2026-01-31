@@ -2,6 +2,8 @@
 
 Full-text search implementation using Meilisearch and Laravel Scout.
 
+**All phases complete (2026-01-30):** Docker setup, Scout/Meilisearch backend, User searchable, SearchService, SearchController, SearchAdminController, global search modal (Cmd+K), Configuration > Search admin page, recipe and patterns for adding searchable models. **Model expansion (2026-01-30):** Notification, EmailTemplate, ApiToken, AIProvider, Webhook searchable; index settings configured; admin search settings (results per page, suggestions limit, min query length) in Configuration > Search. **Phase 7 (2026-01-30):** Page content search (config/search-pages.php, Meilisearch `pages` index), UserGroup searchable, getSuggestions returns pages + groups + users, add-searchable-page recipe, patterns and roadmap updated.
+
 ## Overview
 
 Integrate Meilisearch as the search engine for Sourdough, providing fast full-text search across all searchable content. Uses Laravel Scout for backend integration and provides a unified search experience in the frontend.
@@ -20,18 +22,19 @@ Integrate Meilisearch as the search engine for Sourdough, providing fast full-te
 
 ## Phase 1: Docker Setup
 
-Add Meilisearch container to Docker Compose.
+Meilisearch runs **embedded in the main app container** (managed by Supervisor), not as a separate container. This aligns with ADR-009 single-container architecture.
 
-- [ ] Add Meilisearch service to `docker-compose.yml`
-- [ ] Add Meilisearch service to `docker-compose.prod.yml`
-- [ ] Add Meilisearch volume for data persistence
-- [ ] Configure environment variables (`MEILI_MASTER_KEY`, `MEILI_ENV`)
-- [ ] Add health check for Meilisearch service
-- [ ] Update `docs/docker.md` with Meilisearch configuration
-- [ ] Test container startup and connectivity
+- [x] Add Meilisearch binary to Dockerfile and run via Supervisor
+- [x] Add Meilisearch volume for data persistence (`meilisearch_data` → `/var/lib/meilisearch`)
+- [x] Configure environment variables (`MEILI_MASTER_KEY`, `MEILI_ENV`)
+- [x] Update `docs/docker.md` with Meilisearch configuration
+- [x] Test container startup and connectivity
 
 **Key files:**
-- `docker-compose.yml`
+- `docker/Dockerfile` (Meilisearch binary install)
+- `docker/supervisord.conf` (meilisearch program)
+- `docker/entrypoint.sh` (Meilisearch data directory setup)
+- `docker-compose.yml` (app volumes: `meilisearch_data`)
 - `docker-compose.prod.yml`
 - `.env.example`
 
@@ -39,20 +42,20 @@ Add Meilisearch container to Docker Compose.
 
 Install and configure Laravel Scout with Meilisearch driver.
 
-- [ ] Install Laravel Scout: `composer require laravel/scout`
-- [ ] Install Meilisearch driver: `composer require meilisearch/meilisearch-php`
-- [ ] Publish Scout config: `php artisan vendor:publish --provider="Laravel\Scout\ScoutServiceProvider"`
-- [ ] Configure Scout for Meilisearch in `config/scout.php`
-- [ ] Add Scout environment variables to `.env.example`
-- [ ] Create `SearchService` for centralized search logic
-- [ ] Add search configuration to settings system (admin-configurable)
+- [x] Install Laravel Scout: `composer require laravel/scout`
+- [x] Install Meilisearch driver: `composer require meilisearch/meilisearch-php`
+- [x] Configure Scout for Meilisearch in `config/scout.php`
+- [x] Add Scout environment variables to `.env.example`
+- [x] Create `SearchService` for centralized search logic
+- [x] Add search configuration to settings system (admin-configurable)
 
 **Environment variables:**
 ```env
 SCOUT_DRIVER=meilisearch
-MEILISEARCH_HOST=http://meilisearch:7700
+MEILISEARCH_HOST=http://127.0.0.1:7700
 MEILISEARCH_KEY=your-master-key
 ```
+(Meilisearch runs inside the app container on 127.0.0.1:7700.)
 
 **Key files:**
 - `backend/config/scout.php`
@@ -63,13 +66,13 @@ MEILISEARCH_KEY=your-master-key
 
 Make models searchable with Scout.
 
-- [ ] Add `Searchable` trait to User model
-- [ ] Configure searchable attributes for User
-- [ ] Add `Searchable` trait to any other content models
-- [ ] Configure index settings (filterable attributes, sortable attributes)
-- [ ] Create artisan command for bulk indexing: `php artisan scout:import`
-- [ ] Add model observers for automatic index updates
-- [ ] Test search index synchronization
+- [x] Add `Searchable` trait to User model
+- [x] Configure searchable attributes for User
+- [x] Add `Searchable` trait to any other content models (Notification, EmailTemplate, ApiToken, AIProvider, Webhook)
+- [x] Configure index settings (filterable attributes, sortable attributes)
+- [x] Create artisan command for bulk indexing: `php artisan search:reindex`
+- [x] Add model observers for automatic index updates (Scout trait handles create/update/delete)
+- [x] Test search index synchronization
 
 **Example model configuration:**
 ```php
@@ -104,20 +107,21 @@ class User extends Authenticatable
 
 Create search API for frontend consumption.
 
-- [ ] Create `SearchController` with global search endpoint
-- [ ] Add endpoint for searching specific model types
-- [ ] Implement search filters (date range, type, etc.)
-- [ ] Add pagination support for search results
-- [ ] Implement search highlighting in results
-- [ ] Add search suggestions/autocomplete endpoint
-- [ ] Create API tests for search endpoints
-- [ ] Document search API in `docs/api-reference.md`
+- [x] Create `SearchController` with global search endpoint
+- [x] Add endpoint for searching specific model types
+- [x] Implement search filters (type=users)
+- [x] Add pagination support for search results
+- [x] Implement search highlighting in results
+- [x] Add search suggestions/autocomplete endpoint
+- [x] Create API tests for search endpoints
+- [x] Document search API in `docs/api-reference.md`
 
 **API endpoints:**
 ```
-GET /api/search?q={query}&type={type}&page={page}
-GET /api/search/suggestions?q={query}
+GET /api/search?q={query}&type={type}&page={page}&per_page={n}
+GET /api/search/suggestions?q={query}&limit={n}
 ```
+Both routes use `log.access:User` middleware (access logged when returning user data).
 
 **Key files:**
 - `backend/app/Http/Controllers/Api/SearchController.php`
@@ -128,48 +132,77 @@ GET /api/search/suggestions?q={query}
 
 Build search UI components.
 
-- [ ] Create `SearchService` in frontend for API calls
-- [ ] Build `SearchInput` component with debounced input
-- [ ] Build `SearchResults` component with highlighting
-- [ ] Build `SearchModal` (Cmd+K) for global search
-- [ ] Add search to header/navigation
-- [ ] Implement search result type icons/badges
-- [ ] Add keyboard navigation for search results
-- [ ] Add recent searches (localStorage)
-- [ ] Add "no results" state with suggestions
-- [ ] Test search UX across different screen sizes
+- [x] Create search service in frontend for API calls (`frontend/lib/search.ts`)
+- [x] Debounced input in SearchModal (Command component)
+- [x] SearchModal with result highlighting
+- [x] SearchModal (Cmd+K) for global search via SearchProvider
+- [x] Add search button to header/navigation
+- [x] Implement search result type icons (`search-result-icon.tsx`)
+- [x] Add keyboard navigation for search results (cmdk)
+- [x] Add recent searches (localStorage)
+- [x] Add "no results" state with suggestions
+- [x] Search UX in modal (responsive)
 
 **Key files:**
 - `frontend/lib/search.ts`
-- `frontend/components/search/search-input.tsx`
-- `frontend/components/search/search-results.tsx`
 - `frontend/components/search/search-modal.tsx`
+- `frontend/components/search/search-provider.tsx`
+- `frontend/components/search/search-result-icon.tsx`
 - `frontend/components/header.tsx`
 
 ## Phase 6: Admin Configuration
 
 Add admin settings for search configuration.
 
-- [ ] Add search settings to admin panel
-- [ ] Configure which models are searchable (toggle)
-- [ ] Set search result limits
-- [ ] Rebuild index button in admin
-- [ ] View index statistics
+- [x] Add search settings to admin panel (Configuration > Search)
+- [ ] Configure which models are searchable (toggle) — future
+- [x] Set search result limits (results per page, suggestions limit, min query length via Configuration > Search Settings)
+- [x] Rebuild index button in admin (per model and Reindex all)
+- [x] View index statistics
 - [ ] Configure search synonyms (optional)
 
 **Key files:**
-- `frontend/app/(dashboard)/admin/search/page.tsx`
+- `frontend/app/(dashboard)/configuration/search/page.tsx`
 - `backend/app/Http/Controllers/Api/Admin/SearchAdminController.php`
+
+## Phase 7: Page Content Search and UserGroup
+
+Index static navigation pages in Meilisearch with rich content so users can find pages by features/providers (e.g. "AWS" finds AI/LLM and Storage pages). Add UserGroup as a searchable model for admin user management.
+
+- [x] Create `config/search-pages.php` with all 24 pages and rich content keywords
+- [x] Add `syncPagesToIndex()` to SearchService
+- [x] Add `searchPages()` method (filter by admin_only for non-admins)
+- [x] Add Searchable trait to UserGroup model
+- [x] Add `searchUserGroups()` method (admin only)
+- [x] Update `getSuggestions()` to include pages and groups
+- [x] Update `search:reindex` command for pages and user_groups
+- [x] Add pages and user_groups to admin search stats and reindex
+- [x] Create [add-searchable-page.md](../../ai/recipes/add-searchable-page.md) recipe
+- [x] Update [add-searchable-model.md](../../ai/recipes/add-searchable-model.md) with UserGroup example
+- [x] Update patterns documentation
+
+**Key files:**
+- `backend/config/search-pages.php`
+- `backend/app/Models/UserGroup.php`
+- `backend/app/Services/Search/SearchService.php`
+- `backend/app/Console/Commands/SearchReindexCommand.php`
+- `frontend/components/search/search-modal.tsx`
+- `frontend/components/search/search-result-icon.tsx`
 
 ## Success Criteria
 
-- [ ] Meilisearch runs in Docker alongside app
-- [ ] Models indexed automatically on create/update/delete
-- [ ] Search returns results in < 50ms
-- [ ] Cmd+K opens global search modal
-- [ ] Search supports typo tolerance
-- [ ] Admin can rebuild indexes from UI
-- [ ] Search documented in API reference
+- [x] Meilisearch runs inside the app container (Phase 1)
+- [x] Models indexed automatically on create/update/delete (Scout trait on User)
+- [x] Search returns results via API (Phase 4)
+- [x] Cmd+K opens global search modal (Phase 5)
+- [x] Search supports typo tolerance (Meilisearch)
+- [x] Admin can rebuild indexes from UI (Phase 6; CLI `search:reindex` exists)
+- [x] Search documented in API reference and recipe for adding searchable models
+
+## Post-Implementation Notes
+
+- **Access logging (HIPAA):** `GET /api/search` and `GET /api/search/suggestions` use `log.access:User` middleware because they return user data (name, email, id). See [Logging Compliance](../../.cursor/rules/logging-compliance.mdc).
+- **SearchModal race condition:** The modal uses a ref (`latestQueryRef`) so that only the response matching the current query updates results; stale responses are ignored. Loading is always cleared in `finally`.
 
 ## Future Enhancements
 

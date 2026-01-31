@@ -100,7 +100,7 @@ return response()->json([
 
 ```php
 // BAD - duplicated logic (UserController, ProfileController, etc.)
-if ($user->isAdmin() && User::where('is_admin', true)->count() === 1) {
+if ($user->inGroup('admin') && User::whereHas('groups', fn ($q) => $q->where('slug', 'admin'))->count() === 1) {
     return response()->json(['message' => 'Cannot delete the last admin account'], 400);
 }
 
@@ -177,6 +177,78 @@ class NewLLMProvider implements LLMProviderInterface
 }
 ```
 
+### Don't: Create Widgets Without Loading/Error States
+
+```tsx
+// BAD - no loading or error handling
+function StatsWidget() {
+  const { data } = useQuery({ queryKey: ["stats"], queryFn: fetchStats });
+  return <div>{data?.total}</div>;
+}
+
+// GOOD - handle loading and error states
+function StatsWidget() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["stats"],
+    queryFn: fetchStats,
+  });
+
+  if (isLoading) return <WidgetSkeleton />;
+  if (error) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center py-4">
+          <AlertCircle className="h-6 w-6 text-destructive" />
+          <p className="text-sm text-muted-foreground">Failed to load</p>
+          <Button variant="outline" size="sm" onClick={() => refetch()}>
+            Retry
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return <div>{data?.total}</div>;
+}
+```
+
+### Don't: Forget Permission Checks for Admin Widgets
+
+```tsx
+// BAD - admin-only widget shown to all users
+function Dashboard() {
+  return (
+    <div className="grid gap-4">
+      <WelcomeWidget />
+      <SystemHealthWidget /> {/* Should be admin-only! */}
+    </div>
+  );
+}
+
+// GOOD - use permission checks for sensitive widgets
+function Dashboard() {
+  const { hasPermission } = usePermission();
+  return (
+    <div className="grid gap-4">
+      <WelcomeWidget />
+      {hasPermission("admin") && <SystemHealthWidget />}
+      {hasPermission("audit.view") && <RecentActivityWidget />}
+    </div>
+  );
+}
+```
+
+### Don't: Create User-Configurable Widget Infrastructure
+
+Widgets are static and developer-defined. Do not add:
+
+- Database tables for widgets or user widget layout
+- Backend registries or handler interfaces for widget types
+- Frontend modals for adding/removing widgets or drag-and-drop layout
+- Permissions for "widgets.view" or "widgets.configure"
+
+To add a new widget, create a React component in `frontend/components/dashboard/widgets/`, add it to the dashboard page, and optionally add a data endpoint in `DashboardController`. See [Recipe: Add Dashboard Widget](recipes/add-dashboard-widget.md).
+
 ## Frontend Anti-Patterns
 
 ### Don't: Duplicate Logic Across Pages
@@ -221,6 +293,32 @@ export default function RegisterPage() {
 1. Does this functionality exist elsewhere in the codebase?
 2. Could another page need this same functionality?
 3. Should this be a shared component in `frontend/components/`?
+
+### Don't: Duplicate Groups Fetch
+
+```tsx
+// BAD - fetching groups inline in multiple components
+// user-group-picker.tsx
+const [groups, setGroups] = useState([]);
+useEffect(() => {
+  api.get("/groups").then(res => setGroups(res.data?.data ?? []));
+}, []);
+
+// users/page.tsx - SAME FETCH DUPLICATED
+const [groups, setGroups] = useState([]);
+useEffect(() => {
+  api.get("/groups").then(res => setGroups(res.data?.data ?? []));
+}, []);
+```
+
+```tsx
+// GOOD - use shared useGroups() hook
+import { useGroups } from "@/lib/use-groups";
+
+const { groups, isLoading, error } = useGroups();
+```
+
+Use **`useGroups()`** from `frontend/lib/use-groups.ts` for any component that needs the group list (filter dropdown, picker, etc.). See [Recipe: Assign user to groups](recipes/assign-user-to-groups.md).
 
 ### Don't: Create Page-Specific Utilities
 

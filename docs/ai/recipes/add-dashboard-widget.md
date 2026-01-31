@@ -1,12 +1,17 @@
 # Recipe: Add Dashboard Widget
 
-Step-by-step guide to add a new widget to the dashboard.
+Step-by-step guide to add a new static widget to the dashboard.
+
+> **Note**: This project uses static, developer-defined widgets. Widgets are React components added directly to the dashboard page—no user configuration or widget selection system. This approach prioritizes simplicity and AI-friendly patterns.
+
+**Reference implementations:** See `frontend/components/dashboard/widgets/` for sample widgets: `welcome-widget.tsx` (static content), `stats-widget.tsx` (data-fetching), `quick-actions-widget.tsx` (navigation links).
 
 ## Files to Create/Modify
 
 | File | Action | Purpose |
 |------|--------|---------|
-| `frontend/components/dashboard/{name}-widget.tsx` | Create | Widget component |
+| `frontend/components/dashboard/widgets/{name}-widget.tsx` | Create | Widget component |
+| `frontend/components/dashboard/widgets/index.ts` | Modify | Export new widget |
 | `frontend/app/(dashboard)/dashboard/page.tsx` | Modify | Add widget to layout |
 | `backend/routes/api.php` | Modify | Add data endpoint (if needed) |
 | `backend/app/Http/Controllers/Api/DashboardController.php` | Modify | Add data method |
@@ -14,7 +19,7 @@ Step-by-step guide to add a new widget to the dashboard.
 ## Step 1: Create the Widget Component
 
 ```tsx
-// frontend/components/dashboard/example-widget.tsx
+// frontend/components/dashboard/widgets/example-widget.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -379,6 +384,59 @@ export function ActionWidget() {
 </div>
 ```
 
+## React Query Pattern (Recommended)
+
+For better caching, refetching, and loading states, use React Query:
+
+```tsx
+import { useQuery } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+
+export function StatsWidget() {
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: ["dashboard", "stats"],
+    queryFn: () => api.get("/dashboard/stats").then((r) => r.data),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  });
+
+  if (isLoading) return <WidgetSkeleton />;
+  if (error) return <WidgetError onRetry={refetch} />;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-sm font-medium">Stats</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="text-2xl font-bold">{data?.total}</div>
+      </CardContent>
+    </Card>
+  );
+}
+```
+
+## Permission-Based Widget Visibility
+
+Show widgets only to users with specific permissions:
+
+```tsx
+import { usePermission } from "@/lib/use-permission";
+
+export default function DashboardPage() {
+  const { hasPermission } = usePermission();
+
+  return (
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <WelcomeWidget />
+      <StatsWidget />
+      {hasPermission("admin") && <SystemHealthWidget />}
+      {hasPermission("audit.view") && <RecentActivityWidget />}
+    </div>
+  );
+}
+```
+
 ## See also
 
+- **Dashboard Improvements Roadmap** – [docs/plans/dashboard-improvements-roadmap.md](../plans/dashboard-improvements-roadmap.md)
 - **Audit dashboard widget** – Real-world example: stats cards, severity donut + activity trends charts (shadcn), recent-warnings list, “View all” link. Uses `GET /audit-logs/stats`. See `frontend/components/audit/audit-dashboard-widget.tsx`, `audit-severity-chart.tsx`, `audit-trends-chart.tsx`, and [Audit Dashboard Analytics](../../journal/2026-01-29-audit-dashboard-analytics.md).

@@ -5,6 +5,7 @@ namespace App\Services\Notifications;
 use App\Models\User;
 use App\Models\Notification;
 use App\Models\SystemSetting;
+use App\Services\NotificationTemplateService;
 use App\Services\Notifications\Channels\ChannelInterface;
 use App\Services\Notifications\Channels\DatabaseChannel;
 use App\Services\Notifications\Channels\EmailChannel;
@@ -25,6 +26,101 @@ class NotificationOrchestrator
 {
     use NotificationChannelMetadata;
     private array $channelInstances = [];
+
+    public function __construct(
+        private NotificationTemplateService $notificationTemplateService
+    ) {}
+
+    /**
+     * Map channel identifier to channel group for template lookup.
+     */
+    private function channelToGroup(string $channel): string
+    {
+        return match ($channel) {
+            'database' => 'inapp',
+            'email' => 'email',
+            'webpush', 'fcm', 'ntfy' => 'push',
+            'telegram', 'discord', 'slack', 'twilio', 'signal', 'matrix', 'vonage', 'sns' => 'chat',
+            default => 'inapp',
+        };
+    }
+
+    /**
+     * Send a notification by type using per-channel templates (push, inapp, chat).
+     * For email, variables must include 'title' and 'message'.
+     * Variables are merged with user and app_name; templates are rendered for push/inapp/chat.
+     */
+    public function sendByType(
+        User $user,
+        string $type,
+        array $variables = [],
+        ?array $channels = null
+    ): array {
+        $channels = $channels ?? $this->getDefaultChannels();
+        $baseVariables = [
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'app_name' => config('app.name', 'Sourdough'),
+        ];
+        $variables = array_merge($baseVariables, $variables);
+        $results = [];
+
+        foreach ($channels as $channel) {
+            try {
+                $channelInstance = $this->getChannelInstance($channel);
+
+                if (!$channelInstance || !$this->isChannelEnabled($channel)) {
+                    continue;
+                }
+
+                if (!$this->isChannelAvailableToUsers($channel)) {
+                    continue;
+                }
+
+                if (!$this->isUserChannelEnabled($user, $channel)) {
+                    continue;
+                }
+
+                if (!$channelInstance->isAvailableFor($user)) {
+                    continue;
+                }
+
+                $channelGroup = $this->channelToGroup($channel);
+                $title = null;
+                $message = null;
+
+                if ($channelGroup === 'email') {
+                    $title = $variables['title'] ?? $type;
+                    $message = $variables['message'] ?? '';
+                } else {
+                    try {
+                        $rendered = $this->notificationTemplateService->render($type, $channelGroup, $variables);
+                        $title = $rendered['title'];
+                        $message = $rendered['body'];
+                    } catch (\InvalidArgumentException $e) {
+                        continue;
+                    }
+                }
+
+                $result = $channelInstance->send($user, $type, $title, $message, $variables);
+                $results[$channel] = [
+                    'success' => true,
+                    'result' => $result,
+                ];
+            } catch (\Exception $e) {
+                Log::error("Notification channel {$channel} failed", [
+                    'user' => $user->id,
+                    'type' => $type,
+                    'error' => $e->getMessage(),
+                ]);
+                $results[$channel] = [
+                    'success' => false,
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $results;
+    }
 
     /**
      * Send a notification to a user via specified channels.

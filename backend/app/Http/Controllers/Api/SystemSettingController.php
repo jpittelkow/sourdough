@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Services\AuditService;
 use App\Services\EmailConfigService;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -14,7 +15,8 @@ use Illuminate\Support\Facades\Validator;
 class SystemSettingController extends Controller
 {
     public function __construct(
-        private AuditService $auditService
+        private AuditService $auditService,
+        private SettingService $settingService
     ) {}
     /**
      * Get all system settings (admin only).
@@ -39,12 +41,18 @@ class SystemSettingController extends Controller
             return SystemSetting::getPublic();
         });
 
+        $emailConfigured = $emailConfigService->isConfigured();
+        $passwordResetEnabled = $this->settingService->get('auth', 'password_reset_enabled', true);
+
         return response()->json([
             'settings' => $settings,
             'features' => [
-                'email_configured' => $emailConfigService->isConfigured(),
-                'password_reset_available' => $emailConfigService->isConfigured(),
-                'email_verification_available' => $emailConfigService->isConfigured(),
+                'email_configured' => $emailConfigured,
+                'password_reset_available' => $emailConfigured && $passwordResetEnabled,
+                'email_verification_available' => $emailConfigured,
+                'email_verification_mode' => $this->settingService->get('auth', 'email_verification_mode', 'optional'),
+                'two_factor_mode' => $this->settingService->get('auth', 'two_factor_mode', 'optional'),
+                'passkey_mode' => $this->settingService->get('auth', 'passkey_mode', 'disabled'),
             ],
         ]);
     }

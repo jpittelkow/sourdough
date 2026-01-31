@@ -10,6 +10,7 @@ import { VersionProvider } from "@/lib/version-provider";
 import { NotificationProvider } from "@/lib/notifications";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { ErrorHandlerSetup } from "@/components/error-handler-setup";
+import { ServiceWorkerSetup } from "@/components/service-worker-setup";
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, isInitialized } = useAuth();
@@ -44,6 +45,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <VersionProvider>
             <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
               <ErrorHandlerSetup />
+              <ServiceWorkerSetup />
               <AuthInitializer>
                 <NotificationProvider>{children}</NotificationProvider>
               </AuthInitializer>

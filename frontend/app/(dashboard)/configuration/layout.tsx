@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isAdminUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/lib/use-mobile";
 import { useVersion } from "@/lib/version-provider";
@@ -40,6 +40,10 @@ import {
   Terminal,
   ChevronDown,
   ChevronRight,
+  ShieldCheck,
+  Search,
+  UsersRound,
+  MessageSquareText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -50,6 +54,8 @@ type NavItem = {
   href: string;
   icon: LucideIcon;
   description: string;
+  /** Permission required to see this item (e.g. settings.view). Omit for items visible to all config users. */
+  permission?: string;
 };
 
 type NavGroup = {
@@ -63,143 +69,93 @@ const navigationGroups: NavGroup[] = [
     name: "General",
     icon: Globe,
     items: [
-      {
-        name: "System",
-        href: "/configuration/system",
-        icon: Globe,
-        description: "Application-wide settings",
-      },
-      {
-        name: "Theme & Branding",
-        href: "/configuration/branding",
-        icon: Palette,
-        description: "Visual customization",
-      },
+      { name: "System", href: "/configuration/system", icon: Globe, description: "Application-wide settings", permission: "settings.view" },
+      { name: "Theme & Branding", href: "/configuration/branding", icon: Palette, description: "Visual customization", permission: "settings.edit" },
     ],
   },
   {
     name: "Users & Access",
     icon: Users,
     items: [
-      {
-        name: "Users",
-        href: "/configuration/users",
-        icon: Users,
-        description: "Manage application users",
-      },
-      {
-        name: "SSO",
-        href: "/configuration/sso",
-        icon: LogIn,
-        description: "Single sign-on providers",
-      },
-      {
-        name: "API & Webhooks",
-        href: "/configuration/api",
-        icon: Key,
-        description: "API tokens and webhooks",
-      },
+      { name: "Users", href: "/configuration/users", icon: Users, description: "Manage application users", permission: "users.view" },
+      { name: "Groups", href: "/configuration/groups", icon: UsersRound, description: "User groups and permissions", permission: "groups.view" },
+      { name: "Security", href: "/configuration/security", icon: ShieldCheck, description: "Auth and security settings", permission: "settings.view" },
+      { name: "SSO", href: "/configuration/sso", icon: LogIn, description: "Single sign-on providers", permission: "settings.view" },
+      { name: "API & Webhooks", href: "/configuration/api", icon: Key, description: "API tokens and webhooks", permission: "settings.view" },
     ],
   },
   {
     name: "Communications",
     icon: Bell,
     items: [
-      {
-        name: "Notifications",
-        href: "/configuration/notifications",
-        icon: Bell,
-        description: "Configure notification channels",
-      },
-      {
-        name: "Email",
-        href: "/configuration/email",
-        icon: Mail,
-        description: "Email delivery configuration",
-      },
-      {
-        name: "Email Templates",
-        href: "/configuration/email-templates",
-        icon: MailOpen,
-        description: "Customize system emails",
-      },
+      { name: "Notifications", href: "/configuration/notifications", icon: Bell, description: "Configure notification channels", permission: "settings.view" },
+      { name: "Email", href: "/configuration/email", icon: Mail, description: "Email delivery configuration", permission: "settings.view" },
+      { name: "Email Templates", href: "/configuration/email-templates", icon: MailOpen, description: "Customize system emails", permission: "settings.view" },
+      { name: "Notification Templates", href: "/configuration/notification-templates", icon: MessageSquareText, description: "Per-type push, in-app, chat templates", permission: "settings.view" },
     ],
   },
   {
     name: "Integrations",
     icon: Brain,
     items: [
-      {
-        name: "AI / LLM",
-        href: "/configuration/ai",
-        icon: Brain,
-        description: "LLM providers and modes",
-      },
-      {
-        name: "Storage",
-        href: "/configuration/storage",
-        icon: HardDrive,
-        description: "File storage configuration",
-      },
+      { name: "AI / LLM", href: "/configuration/ai", icon: Brain, description: "LLM providers and modes", permission: "settings.view" },
+      { name: "Storage", href: "/configuration/storage", icon: HardDrive, description: "File storage configuration", permission: "settings.view" },
+      { name: "Search", href: "/configuration/search", icon: Search, description: "Manage search indexes", permission: "settings.view" },
     ],
   },
   {
     name: "Logs & Monitoring",
     icon: FileText,
     items: [
-      {
-        name: "Audit Log",
-        href: "/configuration/audit",
-        icon: FileText,
-        description: "View system activity logs",
-      },
-      {
-        name: "Application Logs",
-        href: "/configuration/logs",
-        icon: Terminal,
-        description: "Real-time console log viewer",
-      },
-      {
-        name: "Access Logs (HIPAA)",
-        href: "/configuration/access-logs",
-        icon: FileText,
-        description: "PHI access audit trail",
-      },
-      {
-        name: "Log retention",
-        href: "/configuration/log-retention",
-        icon: FileText,
-        description: "Retention and cleanup config",
-      },
-      {
-        name: "Jobs",
-        href: "/configuration/jobs",
-        icon: Clock,
-        description: "Monitor scheduled jobs",
-      },
+      { name: "Audit Log", href: "/configuration/audit", icon: FileText, description: "View system activity logs", permission: "audit.view" },
+      { name: "Application Logs", href: "/configuration/logs", icon: Terminal, description: "Real-time console log viewer", permission: "logs.view" },
+      { name: "Access Logs (HIPAA)", href: "/configuration/access-logs", icon: FileText, description: "PHI access audit trail", permission: "logs.view" },
+      { name: "Log retention", href: "/configuration/log-retention", icon: FileText, description: "Retention and cleanup config", permission: "settings.view" },
+      { name: "Jobs", href: "/configuration/jobs", icon: Clock, description: "Monitor scheduled jobs", permission: "settings.view" },
     ],
   },
   {
     name: "Data",
     icon: Database,
     items: [
-      {
-        name: "Backup & Restore",
-        href: "/configuration/backup",
-        icon: Database,
-        description: "Manage system backups",
-      },
+      { name: "Backup & Restore", href: "/configuration/backup", icon: Database, description: "Manage system backups", permission: "backups.view" },
     ],
   },
+];
+
+const CONFIG_ACCESS_PERMISSIONS = [
+  "settings.view",
+  "settings.edit",
+  "users.view",
+  "groups.view",
+  "audit.view",
+  "logs.view",
+  "backups.view",
 ];
 
 function getGroupId(group: NavGroup, index: number): string {
   return `group-${index}-${group.name.replace(/\s+/g, "-").toLowerCase()}`;
 }
 
-function getDefaultExpanded(pathname: string): Set<string> {
+function filterGroupsByPermission(
+  groups: NavGroup[],
+  permissions: string[] | undefined
+): NavGroup[] {
+  if (!permissions) return [];
+  const hasPermission = (p: string) => permissions.includes(p);
+  return groups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter(
+        (item) => !item.permission || hasPermission(item.permission)
+      ),
+    }))
+    .filter((group) => group.items.length > 0);
+}
+
+function getDefaultExpanded(pathname: string, groups: NavGroup[]): Set<string> {
   const expanded = new Set<string>();
-  navigationGroups.forEach((group, index) => {
+  groups.forEach((group, index) => {
     const hasActive = group.items.some((item) => item.href === pathname);
     if (hasActive) {
       expanded.add(getGroupId(group, index));
@@ -208,15 +164,15 @@ function getDefaultExpanded(pathname: string): Set<string> {
   return expanded;
 }
 
-function loadStoredExpanded(pathname: string): Set<string> {
-  if (typeof window === "undefined") return getDefaultExpanded(pathname);
+function loadStoredExpanded(pathname: string, groups: NavGroup[]): Set<string> {
+  if (typeof window === "undefined") return getDefaultExpanded(pathname, groups);
   try {
     const raw = localStorage.getItem(CONFIG_NAV_STORAGE_KEY);
-    if (!raw) return getDefaultExpanded(pathname);
+    if (!raw) return getDefaultExpanded(pathname, groups);
     const stored = JSON.parse(raw) as string[];
     return new Set(stored);
   } catch {
-    return getDefaultExpanded(pathname);
+    return getDefaultExpanded(pathname, groups);
   }
 }
 
@@ -232,33 +188,38 @@ function saveStoredExpanded(expanded: Set<string>) {
   }
 }
 
-// Grouped navigation with collapsible sections
+// Grouped navigation with collapsible sections (filtered by user permissions)
 function GroupedNavigation({ pathname }: { pathname: string }) {
+  const { user } = useAuth();
+  const filteredGroups = useMemo(
+    () => filterGroupsByPermission(navigationGroups, user?.permissions),
+    [user?.permissions]
+  );
   const [expanded, setExpanded] = useState<Set<string>>(() =>
-    getDefaultExpanded(pathname)
+    getDefaultExpanded(pathname, filteredGroups)
   );
 
   // Hydrate from localStorage after mount
   useEffect(() => {
     setExpanded((prev) => {
-      const stored = loadStoredExpanded(pathname);
+      const stored = loadStoredExpanded(pathname, filteredGroups);
       return stored.size > 0 ? stored : prev;
     });
-  }, [pathname]);
+  }, [pathname, filteredGroups]);
 
   // Ensure active group is expanded when pathname changes
   useEffect(() => {
-    const defaultExpanded = getDefaultExpanded(pathname);
+    const defaultExpanded = getDefaultExpanded(pathname, filteredGroups);
     setExpanded((prev) => {
       const next = new Set(prev);
       defaultExpanded.forEach((id) => next.add(id));
       return next;
     });
-  }, [pathname]);
+  }, [pathname, filteredGroups]);
 
   return (
     <nav className="space-y-1" aria-label="Configuration navigation">
-      {navigationGroups.map((group, groupIndex) => {
+      {filteredGroups.map((group, groupIndex) => {
         const groupId = getGroupId(group, groupIndex);
         const isExpanded = expanded.has(groupId);
         const hasActive = group.items.some((item) => item.href === pathname);
@@ -388,12 +349,15 @@ export default function ConfigurationLayout({
   const { user, isLoading } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const isMobile = useIsMobile();
+  const hasConfigAccess =
+    isAdminUser(user) ||
+    CONFIG_ACCESS_PERMISSIONS.some((p) => user?.permissions?.includes(p));
 
   useEffect(() => {
-    if (!isLoading && (!user || !user.is_admin)) {
+    if (!isLoading && (!user || !hasConfigAccess)) {
       router.push("/dashboard");
     }
-  }, [user, isLoading, router]);
+  }, [user, isLoading, hasConfigAccess, router]);
 
   // Close drawer on navigation
   useEffect(() => {
@@ -408,7 +372,7 @@ export default function ConfigurationLayout({
     );
   }
 
-  if (!user?.is_admin) {
+  if (!hasConfigAccess) {
     return null;
   }
 

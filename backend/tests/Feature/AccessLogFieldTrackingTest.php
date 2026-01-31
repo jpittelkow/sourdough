@@ -10,7 +10,7 @@ describe('Access log field tracking', function () {
     });
 
     it('logs fields_accessed for profile view', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->getJson('/api/profile')
@@ -29,7 +29,7 @@ describe('Access log field tracking', function () {
     });
 
     it('logs fields_accessed for user settings view', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->getJson('/api/user/settings')
@@ -48,7 +48,7 @@ describe('Access log field tracking', function () {
     });
 
     it('logs fields_accessed for user settings update', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->putJson('/api/user/settings', [
@@ -70,7 +70,7 @@ describe('Access log field tracking', function () {
     });
 
     it('excludes sensitive keys from fields_accessed', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->putJson('/api/user/settings', [
@@ -91,7 +91,7 @@ describe('Access log field tracking', function () {
     });
 
     it('returns null fields_accessed when all keys are sensitive', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
 
         $this->actingAs($admin, 'sanctum')
             ->putJson('/api/user/settings', [
@@ -111,7 +111,7 @@ describe('Access log field tracking', function () {
     });
 
     it('access-logs API returns fields_accessed for UI display', function () {
-        $admin = User::factory()->create(['is_admin' => true]);
+        $admin = createAdminUser();
         $this->actingAs($admin, 'sanctum')->getJson('/api/profile')->assertStatus(200);
 
         $res = $this->actingAs($admin, 'sanctum')

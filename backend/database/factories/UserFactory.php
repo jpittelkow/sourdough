@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Services\GroupService;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -30,7 +31,6 @@ class UserFactory extends Factory
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
             'avatar' => null,
-            'is_admin' => false,
             'two_factor_secret' => null,
             'two_factor_confirmed_at' => null,
             'two_factor_recovery_codes' => null,
@@ -49,13 +49,14 @@ class UserFactory extends Factory
     }
 
     /**
-     * Indicate that the user is an admin.
+     * Indicate that the user is an admin (in admin group).
      */
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => [
-            'is_admin' => true,
-        ]);
+        return $this->afterCreating(function (User $user) {
+            app(GroupService::class)->ensureDefaultGroupsExist();
+            $user->assignGroup('admin');
+        });
     }
 
     /**

@@ -20,9 +20,13 @@ class LLMModelController extends Controller
     public function testKey(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama'],
-            'api_key' => ['required_unless:provider,ollama', 'nullable', 'string'],
+            'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama,azure,bedrock'],
+            'api_key' => ['required_unless:provider,ollama,bedrock', 'nullable', 'string'],
             'host' => ['required_if:provider,ollama', 'nullable', 'string'],
+            'endpoint' => ['required_if:provider,azure', 'nullable', 'string'],
+            'region' => ['required_if:provider,bedrock', 'nullable', 'string'],
+            'access_key' => ['required_if:provider,bedrock', 'nullable', 'string'],
+            'secret_key' => ['required_if:provider,bedrock', 'nullable', 'string'],
         ]);
 
         $credentials = $this->credentialsFromRequest($validated);
@@ -48,9 +52,13 @@ class LLMModelController extends Controller
     public function discover(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama'],
-            'api_key' => ['required_unless:provider,ollama', 'nullable', 'string'],
+            'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama,azure,bedrock'],
+            'api_key' => ['required_unless:provider,ollama,bedrock', 'nullable', 'string'],
             'host' => ['required_if:provider,ollama', 'nullable', 'string'],
+            'endpoint' => ['required_if:provider,azure', 'nullable', 'string'],
+            'region' => ['required_if:provider,bedrock', 'nullable', 'string'],
+            'access_key' => ['required_if:provider,bedrock', 'nullable', 'string'],
+            'secret_key' => ['required_if:provider,bedrock', 'nullable', 'string'],
         ]);
 
         $credentials = $this->credentialsFromRequest($validated);
@@ -75,8 +83,8 @@ class LLMModelController extends Controller
     }
 
     /**
-     * @param array{provider: string, api_key?: string, host?: string} $validated
-     * @return array{api_key?: string, host?: string}
+     * @param array{provider: string, api_key?: string, host?: string, endpoint?: string, region?: string, access_key?: string, secret_key?: string} $validated
+     * @return array{api_key?: string, host?: string, endpoint?: string, region?: string, access_key?: string, secret_key?: string}
      */
     private function credentialsFromRequest(array $validated): array
     {
@@ -86,6 +94,18 @@ class LLMModelController extends Controller
         }
         if (isset($validated['host']) && $validated['host'] !== null && $validated['host'] !== '') {
             $credentials['host'] = $validated['host'];
+        }
+        if (isset($validated['endpoint']) && $validated['endpoint'] !== null && $validated['endpoint'] !== '') {
+            $credentials['endpoint'] = $validated['endpoint'];
+        }
+        if (isset($validated['region']) && $validated['region'] !== null && $validated['region'] !== '') {
+            $credentials['region'] = $validated['region'];
+        }
+        if (isset($validated['access_key']) && $validated['access_key'] !== null && $validated['access_key'] !== '') {
+            $credentials['access_key'] = $validated['access_key'];
+        }
+        if (isset($validated['secret_key']) && $validated['secret_key'] !== null && $validated['secret_key'] !== '') {
+            $credentials['secret_key'] = $validated['secret_key'];
         }
         if ($validated['provider'] === 'ollama' && empty($credentials['host'])) {
             $credentials['host'] = 'http://localhost:11434';
@@ -103,6 +123,12 @@ class LLMModelController extends Controller
         }
         if (str_contains($message, 'generativelanguage.googleapis.com')) {
             return 'Gemini API error. Check your API key.';
+        }
+        if (str_contains($message, 'Azure OpenAI')) {
+            return 'Azure OpenAI error. Check endpoint and API key.';
+        }
+        if (str_contains($message, 'Bedrock') || str_contains($message, 'bedrock')) {
+            return 'AWS Bedrock error. Check region and IAM credentials.';
         }
         if (str_contains($message, 'Connection') || str_contains($message, 'timed out')) {
             return 'Connection failed. Check host (e.g. http://localhost:11434 for Ollama).';

@@ -7,7 +7,7 @@ use App\Models\Notification;
 describe('NotificationOrchestrator', function () {
     
     beforeEach(function () {
-        $this->orchestrator = new NotificationOrchestrator();
+        $this->orchestrator = app(NotificationOrchestrator::class);
     });
 
     describe('send', function () {

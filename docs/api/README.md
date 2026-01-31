@@ -32,7 +32,7 @@ const response = await fetch('/api/auth/user', {
 | POST | `/auth/login` | Login with email/password |
 | POST | `/auth/logout` | Logout current user |
 | GET | `/auth/user` | Get current user |
-| POST | `/auth/forgot-password` | Request password reset |
+| POST | `/auth/forgot-password` | Request password reset (returns 503 if email not configured or password reset disabled by admin) |
 | POST | `/auth/reset-password` | Reset password with token |
 | POST | `/auth/verify-email` | Verify email address |
 | POST | `/auth/resend-verification` | Resend verification email |
@@ -70,6 +70,16 @@ const response = await fetch('/api/auth/user', {
 | PUT | `/profile/password` | Update password |
 | DELETE | `/profile` | Delete account |
 
+### Dashboard
+
+Dashboard uses static, developer-defined widgets. Data endpoints for widgets:
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/dashboard/stats` | Metrics for stats widget (Total Users, Storage Used). Returns `{ metrics: [{ label, value }] }`. |
+
+See [Recipe: Add Dashboard Widget](../ai/recipes/add-dashboard-widget.md) for adding new widgets and endpoints.
+
 ### User Management (Admin)
 
 Requires `admin` ability. Admin CRUD for users; disabled users cannot log in.
@@ -77,11 +87,12 @@ Requires `admin` ability. Admin CRUD for users; disabled users cannot log in.
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/users` | List users (query: `page`, `per_page`, `search`) |
-| POST | `/users` | Create user (body: name, email, password, is_admin, skip_verification) |
+| POST | `/users` | Create user (body: name, email, password, admin, skip_verification). Admin role is assigned via `admin` boolean (admin group vs default group). |
 | GET | `/users/{user}` | Get user |
-| PUT | `/users/{user}` | Update user (body: name, email, password, is_admin) |
+| PUT | `/users/{user}` | Update user (body: name, email, password). Admin role is changed via `PUT /users/{user}/groups`. |
+| PUT | `/users/{user}/groups` | Update user's groups (body: group_ids). Include admin group id to grant admin. |
 | DELETE | `/users/{user}` | Delete user |
-| POST | `/users/{user}/toggle-admin` | Toggle admin status |
+| POST | `/users/{user}/toggle-admin` | Toggle admin group membership (add or remove from admin group) |
 | POST | `/users/{user}/reset-password` | Reset password (body: password) |
 | POST | `/users/{user}/disable` | Toggle disabled status |
 | POST | `/users/{user}/resend-verification` | Resend verification email (rate limited: 1 per 5 min per user) |
@@ -126,6 +137,28 @@ Settings are stored in the database with env fallback (see [ADR-014](../adr/014-
 | PUT | `/mail-settings` | Update mail settings (same keys as GET) |
 | POST | `/mail-settings/test` | Send test email (body: `{ "to": "email@example.com" }`) |
 | DELETE | `/mail-settings/keys/{key}` | Reset one setting to env default. `{key}` must be the **schema key** (e.g. `smtp_password`, `mailer`, `from_address`), not the frontend key. |
+
+### SSO Settings (Admin)
+
+Requires `manage-settings` ability. SSO configuration is stored in the database with env fallback ([ADR-014](../adr/014-database-settings-env-fallback.md)). Keys match the `sso` group in `backend/config/settings-schema.php` (e.g. per-provider `{provider}_client_id`, `{provider}_client_secret`, `{provider}_enabled`, `{provider}_test_passed`; OIDC: `oidc_issuer_url`, etc.). Client secrets are encrypted at rest. A provider appears on the login page only when it has credentials, has passed the test, and is enabled.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/sso-settings` | Get SSO settings (all provider keys, including `*_enabled`, `*_test_passed`) |
+| PUT | `/sso-settings` | Update SSO settings. **Partial payload supported:** send only global keys (`enabled`, `allow_linking`, `auto_register`, `trust_provider_email`) or one provider's keys (e.g. `google_enabled`, `google_client_id`, `google_client_secret`) to save that section. Changing credentials clears `*_test_passed` for that provider. |
+| POST | `/sso-settings/test/{provider}` | Test provider credentials (validates at token endpoint). Sets `{provider}_test_passed` on success. `{provider}`: e.g. `google`, `github`, `microsoft`, `apple`, `discord`, `gitlab`, `oidc`. |
+| DELETE | `/sso-settings/keys/{key}` | Reset one setting to env default. `{key}` must be the **schema key**. |
+
+### Auth Settings (Admin)
+
+Requires `manage-settings` ability. Authentication feature toggles are stored in the database with env fallback ([ADR-014](../adr/014-database-settings-env-fallback.md)). Keys match the `auth` group in `backend/config/settings-schema.php`.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/auth-settings` | Get auth settings (`email_verification_mode`, `password_reset_enabled`, `two_factor_mode`) |
+| PUT | `/auth-settings` | Update auth settings. Body: `email_verification_mode` (disabled\|optional\|required), `password_reset_enabled` (boolean), `two_factor_mode` (disabled\|optional\|required). |
+
+**Public features:** `GET /system-settings/public` (no auth) returns a `features` object used by the frontend: `email_configured`, `password_reset_available` (email configured and password reset enabled), `email_verification_mode`, `two_factor_mode`. Login and forgot-password pages use these to show/hide the "Forgot password?" link and to enforce 2FA setup when required.
 
 ### Email Templates (Admin)
 
@@ -199,6 +232,19 @@ Requires `manage-settings` ability. Backup configuration is stored in the databa
 | POST | `/backup-settings/reset/{key}` | Reset one setting to env default. `{key}` must be a schema key (e.g. `s3_bucket`, `retention_days`) |
 | POST | `/backup-settings/test/{destination}` | Test connection. `{destination}`: `s3`, `sftp`, or `google_drive`. Uses currently saved settings. |
 
+### Storage Settings (Admin)
+
+Requires `manage-settings` ability. Storage configuration (driver, max upload size, allowed file types; provider-specific credentials) is stored in the database with env fallback ([ADR-014](../adr/014-database-settings-env-fallback.md)). Supported drivers: local, s3, gcs, azure, do_spaces, minio, b2. Phase 1 adds paths, health, and usage breakdown; Phase 2 adds multiple cloud providers and connection test.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/storage-settings` | Get storage settings (response: `settings` object) |
+| PUT | `/storage-settings` | Update storage settings (driver, max_upload_size, allowed_file_types; provider-specific keys: s3_*, gcs_*, azure_*, do_spaces_*, minio_*, b2_*) |
+| POST | `/storage-settings/test` | Test connection for current driver and config. Body: `driver` plus provider-specific fields. Returns `{ success: true }` or `{ success: false, error: "message" }` (422 on failure). |
+| GET | `/storage-settings/stats` | Get usage stats (driver, total_size, total_size_formatted, file_count). Local driver only: includes `breakdown` (directory path → size, size_formatted). |
+| GET | `/storage-settings/paths` | Get storage location paths and descriptions (app, public, backups, cache, sessions, logs). |
+| GET | `/storage-settings/health` | Get storage health (status: healthy\|warning, writable, disk_used_percent, disk_free_formatted, disk_total_formatted). Warning when not writable or usage ≥ 90%. |
+
 ### Jobs / Scheduled Tasks (Admin)
 
 Requires `admin` ability. Monitor scheduled tasks and run whitelisted commands manually. See [Features: Scheduled Jobs](../features.md#scheduled-jobs).
@@ -250,6 +296,7 @@ Response:
   "message": "Registration successful"
 }
 ```
+(`is_admin` is computed from admin group membership.)
 
 ### Send LLM Query
 

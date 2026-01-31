@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -55,6 +55,7 @@ import {
   Settings2,
   Info,
   Cpu,
+  RefreshCw,
 } from "lucide-react";
 
 interface AIProvider {
@@ -79,6 +80,8 @@ interface ProviderTemplate {
   requires_api_key: boolean;
   supports_vision: boolean;
   supports_discovery: boolean;
+  requires_endpoint?: boolean;
+  requires_aws_credentials?: boolean;
 }
 
 const providerTemplates: ProviderTemplate[] = [
@@ -110,6 +113,22 @@ const providerTemplates: ProviderTemplate[] = [
     supports_vision: false,
     supports_discovery: true,
   },
+  {
+    id: "azure",
+    name: "Azure OpenAI",
+    requires_api_key: true,
+    requires_endpoint: true,
+    supports_vision: true,
+    supports_discovery: true,
+  },
+  {
+    id: "bedrock",
+    name: "AWS Bedrock",
+    requires_api_key: false,
+    requires_aws_credentials: true,
+    supports_vision: true,
+    supports_discovery: true,
+  },
 ];
 
 type LLMMode = "single" | "aggregation" | "council";
@@ -127,7 +146,7 @@ type CouncilStrategy = "majority" | "weighted" | "synthesize";
 
 export default function AISettingsPage() {
   const { user } = useAuth();
-  const isAdmin = user?.is_admin ?? false;
+  const isAdmin = isAdminUser(user);
 
   const [providers, setProviders] = useState<AIProvider[]>([]);
   const [mode, setMode] = useState<LLMMode>("single");
@@ -154,6 +173,10 @@ export default function AISettingsPage() {
   const [newProviderModel, setNewProviderModel] = useState<string>("");
   const [newProviderApiKey, setNewProviderApiKey] = useState<string>("");
   const [newProviderBaseUrl, setNewProviderBaseUrl] = useState<string>("");
+  const [newProviderEndpoint, setNewProviderEndpoint] = useState<string>("");
+  const [newProviderRegion, setNewProviderRegion] = useState<string>("us-east-1");
+  const [newProviderAccessKey, setNewProviderAccessKey] = useState<string>("");
+  const [newProviderSecretKey, setNewProviderSecretKey] = useState<string>("");
 
   // API key validation state (Add Provider dialog)
   const [isTestingKey, setIsTestingKey] = useState(false);
@@ -164,6 +187,49 @@ export default function AISettingsPage() {
   const [discoveredModels, setDiscoveredModels] = useState<DiscoveredModel[]>([]);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
+
+  const LLM_MODELS_CACHE_KEY = "llm_discovered_models";
+  const LLM_MODELS_CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+  const getCachedModels = (provider: string): DiscoveredModel[] | null => {
+    if (typeof sessionStorage === "undefined") return null;
+    try {
+      const raw = sessionStorage.getItem(`${LLM_MODELS_CACHE_KEY}_${provider}`);
+      if (!raw) return null;
+      const { models, ts } = JSON.parse(raw) as { models: DiscoveredModel[]; ts: number };
+      if (Date.now() - ts > LLM_MODELS_CACHE_TTL_MS) return null;
+      return models;
+    } catch {
+      return null;
+    }
+  };
+
+  const setCachedModels = (provider: string, models: DiscoveredModel[]) => {
+    try {
+      sessionStorage.setItem(
+        `${LLM_MODELS_CACHE_KEY}_${provider}`,
+        JSON.stringify({ models, ts: Date.now() })
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  const clearCachedModels = (provider: string) => {
+    try {
+      sessionStorage.removeItem(`${LLM_MODELS_CACHE_KEY}_${provider}`);
+    } catch {
+      // ignore
+    }
+  };
+
+  const refreshModels = () => {
+    if (selectedTemplate) {
+      clearCachedModels(selectedTemplate);
+    }
+    setDiscoveryError(null);
+    discoverModels();
+  };
 
   const fetchAIConfig = useCallback(async () => {
     try {
@@ -259,8 +325,16 @@ export default function AISettingsPage() {
     }
 
     const template = providerTemplates.find((t) => t.id === selectedTemplate);
-    if (template?.requires_api_key && !newProviderApiKey) {
+    if (template?.requires_api_key && !newProviderApiKey && selectedTemplate !== "bedrock") {
       toast.error("API key is required for this provider");
+      return;
+    }
+    if (selectedTemplate === "azure" && !newProviderEndpoint?.trim()) {
+      toast.error("Azure OpenAI endpoint is required");
+      return;
+    }
+    if (selectedTemplate === "bedrock" && (!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim())) {
+      toast.error("AWS access key and secret key are required for Bedrock");
       return;
     }
 
@@ -271,7 +345,11 @@ export default function AISettingsPage() {
         provider: selectedTemplate,
         model: newProviderModel,
         api_key: newProviderApiKey || undefined,
-        base_url: newProviderBaseUrl || undefined,
+        base_url: selectedTemplate === "ollama" ? (newProviderBaseUrl || undefined) : undefined,
+        endpoint: selectedTemplate === "azure" ? newProviderEndpoint || undefined : undefined,
+        region: selectedTemplate === "bedrock" ? newProviderRegion || undefined : undefined,
+        access_key: selectedTemplate === "bedrock" ? newProviderAccessKey || undefined : undefined,
+        secret_key: selectedTemplate === "bedrock" ? newProviderSecretKey || undefined : undefined,
       });
 
       setProviders((prev) => [...prev, response.data.provider]);
@@ -290,6 +368,10 @@ export default function AISettingsPage() {
     setNewProviderModel("");
     setNewProviderApiKey("");
     setNewProviderBaseUrl("");
+    setNewProviderEndpoint("");
+    setNewProviderRegion("us-east-1");
+    setNewProviderAccessKey("");
+    setNewProviderSecretKey("");
     setKeyValid(null);
     setKeyError(null);
     setDiscoveredModels([]);
@@ -300,6 +382,20 @@ export default function AISettingsPage() {
     if (selectedTemplate === "ollama") {
       if (!newProviderBaseUrl?.trim()) {
         setKeyError("Enter Ollama host (e.g. http://localhost:11434)");
+        return;
+      }
+    } else if (selectedTemplate === "azure") {
+      if (!newProviderEndpoint?.trim()) {
+        setKeyError("Enter Azure OpenAI endpoint (e.g. https://your-resource.openai.azure.com)");
+        return;
+      }
+      if (!newProviderApiKey?.trim()) {
+        setKeyError("Enter your API key");
+        return;
+      }
+    } else if (selectedTemplate === "bedrock") {
+      if (!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim()) {
+        setKeyError("Enter AWS access key and secret key");
         return;
       }
     } else if (!newProviderApiKey?.trim()) {
@@ -314,6 +410,10 @@ export default function AISettingsPage() {
         provider: selectedTemplate,
         api_key: newProviderApiKey || undefined,
         host: selectedTemplate === "ollama" ? (newProviderBaseUrl || "http://localhost:11434") : undefined,
+        endpoint: selectedTemplate === "azure" ? newProviderEndpoint || undefined : undefined,
+        region: selectedTemplate === "bedrock" ? newProviderRegion || undefined : undefined,
+        access_key: selectedTemplate === "bedrock" ? newProviderAccessKey || undefined : undefined,
+        secret_key: selectedTemplate === "bedrock" ? newProviderSecretKey || undefined : undefined,
       });
       setKeyValid(response.data.valid);
       if (!response.data.valid && response.data.error) {
@@ -336,6 +436,20 @@ export default function AISettingsPage() {
         setDiscoveryError("Enter Ollama host first");
         return;
       }
+    } else if (selectedTemplate === "azure") {
+      if (!newProviderEndpoint?.trim()) {
+        setDiscoveryError("Enter Azure OpenAI endpoint first");
+        return;
+      }
+      if (!newProviderApiKey?.trim()) {
+        setDiscoveryError("Enter your API key first");
+        return;
+      }
+    } else if (selectedTemplate === "bedrock") {
+      if (!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim()) {
+        setDiscoveryError("Enter AWS access key and secret key first");
+        return;
+      }
     } else if (!newProviderApiKey?.trim()) {
       setDiscoveryError("Enter your API key first");
       return;
@@ -347,9 +461,17 @@ export default function AISettingsPage() {
         provider: selectedTemplate,
         api_key: newProviderApiKey || undefined,
         host: selectedTemplate === "ollama" ? (newProviderBaseUrl || "http://localhost:11434") : undefined,
+        endpoint: selectedTemplate === "azure" ? newProviderEndpoint || undefined : undefined,
+        region: selectedTemplate === "bedrock" ? newProviderRegion || undefined : undefined,
+        access_key: selectedTemplate === "bedrock" ? newProviderAccessKey || undefined : undefined,
+        secret_key: selectedTemplate === "bedrock" ? newProviderSecretKey || undefined : undefined,
       });
-      setDiscoveredModels(response.data.models ?? []);
-      if ((response.data.models ?? []).length === 0) {
+      const models = response.data.models ?? [];
+      setDiscoveredModels(models);
+      if (selectedTemplate) {
+        setCachedModels(selectedTemplate, models);
+      }
+      if (models.length === 0) {
         setDiscoveryError("No models returned. Check your API key or host.");
       }
     } catch (err: unknown) {
@@ -557,10 +679,15 @@ export default function AISettingsPage() {
                       onValueChange={(v) => {
                         setSelectedTemplate(v);
                         setNewProviderModel("");
+                        setNewProviderEndpoint("");
+                        setNewProviderRegion("us-east-1");
+                        setNewProviderAccessKey("");
+                        setNewProviderSecretKey("");
                         setKeyValid(null);
                         setKeyError(null);
-                        setDiscoveredModels([]);
                         setDiscoveryError(null);
+                        const cached = getCachedModels(v);
+                        setDiscoveredModels(cached ?? []);
                       }}
                     >
                       <SelectTrigger>
@@ -606,7 +733,10 @@ export default function AISettingsPage() {
                               type="button"
                               variant="outline"
                               onClick={testApiKey}
-                              disabled={!newProviderApiKey.trim() || isTestingKey}
+                              disabled={
+                                (selectedTemplate === "azure" ? !newProviderEndpoint?.trim() || !newProviderApiKey?.trim() : !newProviderApiKey?.trim()) ||
+                                isTestingKey
+                              }
                             >
                               {isTestingKey ? (
                                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -619,6 +749,108 @@ export default function AISettingsPage() {
                             <p className="text-sm text-destructive">{keyError}</p>
                           )}
                         </div>
+                      )}
+
+                      {selectedTemplate === "azure" && (
+                        <div className="space-y-2">
+                          <Label>Azure OpenAI endpoint</Label>
+                          <Input
+                            type="url"
+                            value={newProviderEndpoint}
+                            onChange={(e) => {
+                              setNewProviderEndpoint(e.target.value);
+                              setKeyValid(null);
+                              setKeyError(null);
+                              setDiscoveredModels([]);
+                              setDiscoveryError(null);
+                            }}
+                            placeholder="https://your-resource.openai.azure.com"
+                          />
+                        </div>
+                      )}
+
+                      {selectedTemplate === "bedrock" && (
+                        <>
+                          <div className="space-y-2">
+                            <Label>AWS Region</Label>
+                            <Select
+                              value={newProviderRegion}
+                              onValueChange={(v) => {
+                                setNewProviderRegion(v);
+                                setKeyValid(null);
+                                setKeyError(null);
+                                setDiscoveredModels([]);
+                                setDiscoveryError(null);
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="us-east-1">us-east-1</SelectItem>
+                                <SelectItem value="us-west-2">us-west-2</SelectItem>
+                                <SelectItem value="eu-west-1">eu-west-1</SelectItem>
+                                <SelectItem value="eu-central-1">eu-central-1</SelectItem>
+                                <SelectItem value="ap-northeast-1">ap-northeast-1</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Access Key ID</Label>
+                            <div className="flex gap-2">
+                              <div className="relative flex-1">
+                                <Input
+                                  type="password"
+                                  value={newProviderAccessKey}
+                                  onChange={(e) => {
+                                    setNewProviderAccessKey(e.target.value);
+                                    setKeyValid(null);
+                                    setKeyError(null);
+                                    setDiscoveredModels([]);
+                                    setDiscoveryError(null);
+                                  }}
+                                  placeholder="AKIA..."
+                                />
+                                {keyValid === true && (
+                                  <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                                )}
+                                {keyValid === false && (
+                                  <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                                )}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                onClick={testApiKey}
+                                disabled={!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim() || isTestingKey}
+                              >
+                                {isTestingKey ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  "Test"
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <Label>Secret Access Key</Label>
+                            <Input
+                              type="password"
+                              value={newProviderSecretKey}
+                              onChange={(e) => {
+                                setNewProviderSecretKey(e.target.value);
+                                setKeyValid(null);
+                                setKeyError(null);
+                                setDiscoveredModels([]);
+                                setDiscoveryError(null);
+                              }}
+                              placeholder="Enter secret key"
+                            />
+                          </div>
+                          {keyError && (
+                            <p className="text-sm text-destructive">{keyError}</p>
+                          )}
+                        </>
                       )}
 
                       {selectedTemplate === "ollama" && (
@@ -666,7 +898,7 @@ export default function AISettingsPage() {
 
                       {selectedTemplateData.supports_discovery && (
                         <div className="space-y-2">
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-2 flex-wrap">
                             <Label className="mb-0">Models</Label>
                             <Button
                               type="button"
@@ -676,6 +908,8 @@ export default function AISettingsPage() {
                               disabled={
                                 (selectedTemplateData.requires_api_key && !newProviderApiKey?.trim()) ||
                                 (selectedTemplate === "ollama" && !newProviderBaseUrl?.trim()) ||
+                                (selectedTemplate === "azure" && (!newProviderEndpoint?.trim() || !newProviderApiKey?.trim())) ||
+                                (selectedTemplate === "bedrock" && (!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim())) ||
                                 isDiscovering
                               }
                             >
@@ -684,6 +918,18 @@ export default function AISettingsPage() {
                               ) : null}
                               Fetch Models
                             </Button>
+                            {discoveredModels.length > 0 && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                onClick={refreshModels}
+                                disabled={isDiscovering}
+                              >
+                                <RefreshCw className={`mr-1 h-3 w-3 ${isDiscovering ? "animate-spin" : ""}`} />
+                                Refresh
+                              </Button>
+                            )}
                           </div>
                           {discoveryError && (
                             <p className="text-sm text-destructive">{discoveryError}</p>

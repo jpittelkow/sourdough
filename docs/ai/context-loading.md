@@ -99,7 +99,12 @@ backend/config/llm.php
 **Also useful:**
 ```
 backend/app/Http/Controllers/Api/LLMController.php
+backend/app/Services/LLMModelDiscoveryService.php   # Model discovery (Test Key / Fetch Models)
+backend/app/Http/Controllers/Api/LLMModelController.php
+frontend/app/(dashboard)/configuration/ai/page.tsx  # AI/LLM settings UI, providerTemplates
 ```
+
+For adding a new LLM provider with model discovery, use [Recipe: Add LLM Provider](recipes/add-llm-provider.md).
 
 ## Settings/Configuration Work
 
@@ -160,6 +165,37 @@ frontend/app/(dashboard)/configuration/layout.tsx
 **Recipes:**
 - [Add Email Template](recipes/add-email-template.md)
 
+## Notification Template Work
+
+**Read first:**
+```
+docs/adr/017-notification-template-system.md
+backend/app/Models/NotificationTemplate.php
+backend/app/Services/NotificationTemplateService.php
+backend/database/seeders/NotificationTemplateSeeder.php
+```
+
+**Also useful (backend):**
+```
+backend/app/Http/Controllers/Api/NotificationTemplateController.php
+backend/routes/api.php
+backend/app/Services/Notifications/NotificationOrchestrator.php
+backend/app/Services/Notifications/Channels/DatabaseChannel.php
+backend/app/Services/Notifications/Channels/WebPushChannel.php
+backend/app/Services/Notifications/Channels/EmailChannel.php
+```
+
+**Frontend (Admin UI):**
+```
+frontend/app/(dashboard)/configuration/notification-templates/page.tsx
+frontend/app/(dashboard)/configuration/notification-templates/[id]/page.tsx
+frontend/app/(dashboard)/configuration/layout.tsx
+```
+
+**Recipes:**
+- [Add Notification Template](recipes/add-notification-template.md)
+- [Trigger Notifications](recipes/trigger-notifications.md) — sendByType()
+
 ## Authentication Work
 
 **Read first:**
@@ -181,8 +217,11 @@ frontend/components/auth/                       # Auth components
   - auth-page-layout.tsx                        # Layout wrapper
   - auth-divider.tsx                            # SSO/email divider
   - auth-state-card.tsx                         # Success/error states
+  - sso-buttons.tsx                             # SSO provider buttons (login/register)
+frontend/components/admin/
+  - sso-setup-modal.tsx                         # SSO setup instructions per provider
 frontend/components/ui/
-  - form-field.tsx                              # Label + Input + error
+  - form-field.tsx                              # Label + description/helpLink + Input + error
   - loading-button.tsx                           # Button with spinner
 ```
 
@@ -200,8 +239,52 @@ frontend/components/admin/user-dialog.tsx
 
 **Also useful:**
 ```
-backend/routes/api.php                          # users routes (can:admin)
+backend/routes/api.php                          # users routes (can:admin), PUT /users/{user}/groups
 backend/app/Http/Traits/AdminAuthorizationTrait.php
+frontend/components/admin/user-group-picker.tsx # Group assignment in user edit
+frontend/lib/use-groups.ts                      # useGroups() for filter/picker
+frontend/lib/auth.ts                            # isAdminUser(user) for admin checks (group-based)
+```
+
+## User Groups Work
+
+**Read first:**
+```
+backend/app/Models/UserGroup.php
+backend/app/Models/GroupPermission.php
+backend/app/Traits/HasGroups.php
+backend/app/Services/GroupService.php
+backend/app/Services/PermissionService.php
+backend/app/Enums/Permission.php
+```
+
+**Also useful (backend):**
+```
+backend/app/Http/Controllers/Api/GroupController.php
+backend/routes/api.php                          # groups, permissions routes
+backend/app/Http/Resources/GroupResource.php
+```
+
+**Frontend (Admin UI):**
+```
+frontend/app/(dashboard)/configuration/groups/page.tsx
+frontend/components/admin/group-table.tsx
+frontend/components/admin/group-dialog.tsx
+frontend/components/admin/member-manager.tsx
+frontend/components/admin/permission-matrix.tsx
+frontend/components/admin/user-group-picker.tsx   # Group multi-select (user edit)
+frontend/app/(dashboard)/configuration/layout.tsx  # Groups nav item (permission-based filtering)
+frontend/lib/use-groups.ts                        # useGroups() hook
+frontend/lib/use-permission.ts                    # usePermission(), usePermissions()
+frontend/components/permission-gate.tsx           # PermissionGate component
+```
+
+**User Management (groups integration):**
+```
+backend/app/Http/Controllers/Api/UserController.php  # index (groups + filter), show (groups), updateGroups
+frontend/app/(dashboard)/configuration/users/page.tsx
+frontend/components/admin/user-table.tsx             # Groups column
+frontend/components/admin/user-dialog.tsx            # UserGroupPicker
 ```
 
 ## Backup System Work
@@ -226,6 +309,75 @@ frontend/app/(dashboard)/configuration/backup/page.tsx       # Backups tab + Set
 **Recipes:**
 - [Add backup destination](recipes/add-backup-destination.md)
 - [Extend backup and restore features](recipes/extend-backup-restore.md)
+
+## Storage Settings Work
+
+**Read first:**
+```
+backend/app/Services/StorageService.php                       # Provider config, testConnection, buildDiskConfig
+backend/app/Http/Controllers/Api/StorageSettingController.php  # Settings, paths, health, stats, test endpoint
+backend/config/filesystems.php                                # Disk configuration (local, s3, gcs, azure, do_spaces, minio, b2)
+frontend/app/(dashboard)/configuration/storage/page.tsx        # Storage settings UI (driver dropdown, dynamic forms, Test Connection)
+```
+
+**Also useful:**
+```
+backend/app/Providers/AppServiceProvider.php  # GCS/Azure Storage::extend() when packages installed
+frontend/components/provider-icons.tsx        # Storage provider icons (s3, gdrive, azure, do_spaces, minio, b2)
+docs/plans/storage-settings-roadmap.md       # Phases 1–2 done; Phases 3–4 (file manager, analytics) planned
+```
+
+**Recipes:**
+- [Add storage provider](recipes/add-storage-provider.md)
+
+## Search Work
+
+**Read first:**
+```
+backend/app/Services/Search/SearchService.php
+backend/app/Http/Controllers/Api/SearchController.php
+backend/config/scout.php
+backend/routes/api.php                    # search, search/suggestions (log.access:User)
+frontend/components/search/search-modal.tsx
+frontend/components/search/search-provider.tsx
+frontend/lib/search.ts
+frontend/lib/search-pages.ts              # Static page search (Pages group in Cmd+K)
+```
+
+**Also useful:**
+```
+backend/app/Console/Commands/SearchReindexCommand.php
+backend/app/Http/Controllers/Api/Admin/SearchAdminController.php
+frontend/app/(dashboard)/configuration/search/page.tsx
+frontend/components/search/search-result-icon.tsx
+```
+
+**Compliance:** Search and suggestions endpoints return user data; they use `log.access:User` middleware. Transform methods must escape title/subtitle (XSS). See [Patterns: SearchService](patterns.md#searchservice-pattern) and [Recipe: Add searchable model](recipes/add-searchable-model.md).
+
+**Recipes:**
+- [Add searchable model](recipes/add-searchable-model.md)
+
+## Dashboard/Widget Work
+
+> **Note**: Dashboard uses static, developer-defined widgets (no user configuration).
+> Widgets are React components added directly to the dashboard page.
+
+**Read first:**
+```
+frontend/app/(dashboard)/dashboard/page.tsx         # Main dashboard layout
+frontend/components/dashboard/                      # Widget components
+docs/ai/recipes/add-dashboard-widget.md             # Widget creation guide
+```
+
+**Also useful:**
+```
+backend/app/Http/Controllers/Api/DashboardController.php  # Data endpoints for widgets
+frontend/components/dashboard/widgets/                    # Reference: welcome, stats, quick-actions
+frontend/lib/use-permission.ts                            # Permission-based visibility
+```
+
+**Recipes:**
+- [Add Dashboard Widget](recipes/add-dashboard-widget.md)
 
 ## Audit Logging Work
 

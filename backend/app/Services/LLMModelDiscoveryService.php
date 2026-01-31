@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Aws\Bedrock\BedrockClient;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
@@ -48,14 +49,44 @@ class LLMModelDiscoveryService
             'claude' => $this->discoverAnthropicModels($credentials['api_key'] ?? ''),
             'gemini' => $this->discoverGeminiModels($credentials['api_key'] ?? ''),
             'ollama' => $this->discoverOllamaModels($credentials['host'] ?? 'http://localhost:11434'),
+            'azure' => $this->discoverAzureModels(
+                $credentials['endpoint'] ?? '',
+                $credentials['api_key'] ?? ''
+            ),
+            'bedrock' => $this->discoverBedrockModels(
+                $credentials['region'] ?? 'us-east-1',
+                $credentials['access_key'] ?? '',
+                $credentials['secret_key'] ?? ''
+            ),
             default => throw new \InvalidArgumentException("Unknown or unsupported provider: {$provider}"),
         };
     }
 
     private function cacheKey(string $provider, array $credentials): string
     {
-        $key = $credentials['api_key'] ?? $credentials['host'] ?? '';
-        $hash = strlen($key) > 8 ? md5($key) : $key;
+        $parts = [];
+        if (! empty($credentials['api_key'])) {
+            $parts[] = strlen($credentials['api_key']) > 8 ? md5($credentials['api_key']) : $credentials['api_key'];
+        }
+        if (! empty($credentials['host'])) {
+            $parts[] = $credentials['host'];
+        }
+        if (! empty($credentials['endpoint'])) {
+            $parts[] = md5($credentials['endpoint']);
+        }
+        if (! empty($credentials['region'])) {
+            $parts[] = $credentials['region'];
+        }
+        if (! empty($credentials['access_key'])) {
+            $parts[] = md5($credentials['access_key']);
+        }
+        if (! empty($credentials['secret_key'])) {
+            $parts[] = md5($credentials['secret_key']);
+        }
+        $hash = implode(':', $parts) ?: 'default';
+        if (strlen($hash) > 32) {
+            $hash = md5($hash);
+        }
         return "llm_models:{$provider}:{$hash}";
     }
 
@@ -256,5 +287,119 @@ class LLMModelDiscoveryService
             $name = explode(':', $name)[0];
         }
         return ucfirst(str_replace(['-', '_'], ' ', $name));
+    }
+
+    /**
+     * @return array<int, array{id: string, name: string, provider: string, capabilities?: array<string>}>
+     */
+    private function discoverAzureModels(string $endpoint, string $apiKey): array
+    {
+        $baseUrl = rtrim($endpoint, '/');
+        if ($baseUrl === '') {
+            throw new \InvalidArgumentException('Azure OpenAI endpoint is required.');
+        }
+
+        $url = str_contains($baseUrl, '://') ? $baseUrl : 'https://' . $baseUrl;
+        $response = Http::timeout(15)
+            ->withHeaders(['api-key' => $apiKey])
+            ->get("{$url}/openai/deployments", ['api-version' => '2024-02-01']);
+
+        if (! $response->successful()) {
+            $body = $response->json();
+            $message = $body['error']['message'] ?? $body['message'] ?? $response->body();
+            throw new \RuntimeException('Azure OpenAI API error: ' . $message);
+        }
+
+        $data = $response->json('data', []);
+        $models = [];
+
+        foreach ($data as $m) {
+            $id = $m['id'] ?? $m['deployment_name'] ?? '';
+            if ($id === '') {
+                continue;
+            }
+            $modelName = $m['model'] ?? $m['model_name'] ?? $id;
+            $displayName = $m['display_name'] ?? $this->formatAzureModelName($modelName);
+            $models[] = [
+                'id' => $id,
+                'name' => $displayName,
+                'provider' => 'azure',
+                'capabilities' => $this->azureCapabilities($modelName),
+            ];
+        }
+
+        usort($models, fn ($a, $b) => strcmp($a['name'], $b['name']));
+        return array_values($models);
+    }
+
+    private function formatAzureModelName(string $model): string
+    {
+        return preg_replace('/^gpt-/', 'GPT-', ucfirst(str_replace(['-', '_'], ' ', $model)));
+    }
+
+    /**
+     * @return array<string>
+     */
+    private function azureCapabilities(string $model): array
+    {
+        $capabilities = ['chat'];
+        if (str_contains($model, 'vision') || str_contains($model, '4o')) {
+            $capabilities[] = 'vision';
+        }
+        return $capabilities;
+    }
+
+    /**
+     * @return array<int, array{id: string, name: string, provider: string, capabilities?: array<string>}>
+     */
+    private function discoverBedrockModels(string $region, string $accessKey, string $secretKey): array
+    {
+        if ($accessKey === '' || $secretKey === '') {
+            throw new \InvalidArgumentException('AWS access key and secret key are required for Bedrock.');
+        }
+
+        $config = [
+            'region' => $region,
+            'version' => 'latest',
+            'credentials' => [
+                'key' => $accessKey,
+                'secret' => $secretKey,
+            ],
+        ];
+
+        $client = new BedrockClient($config);
+
+        try {
+            $result = $client->listFoundationModels([
+                'byOutputModality' => 'TEXT',
+            ]);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('AWS Bedrock API error: ' . $e->getMessage());
+        }
+
+        $summaries = $result->get('modelSummaries') ?? $result->get('ModelSummaries') ?? [];
+        $models = [];
+
+        foreach ($summaries as $m) {
+            $modelId = $m['modelId'] ?? '';
+            if ($modelId === '') {
+                continue;
+            }
+            $modelName = $m['modelName'] ?? $this->formatBedrockModelName($modelId);
+            $models[] = [
+                'id' => $modelId,
+                'name' => $modelName,
+                'provider' => 'bedrock',
+                'capabilities' => ['chat'],
+            ];
+        }
+
+        usort($models, fn ($a, $b) => strcmp($a['name'], $b['name']));
+        return array_values($models);
+    }
+
+    private function formatBedrockModelName(string $modelId): string
+    {
+        return preg_replace('/^anthropic\.|^amazon\.|^meta\./i', '', ucfirst(str_replace(['-', '_', '.'], ' ', $modelId)));
     }
 }

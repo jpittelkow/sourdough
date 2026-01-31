@@ -3,12 +3,17 @@
 namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
+use App\Services\NotificationTemplateService;
 use Illuminate\Support\Facades\Http;
 
 class TwilioChannel implements ChannelInterface
 {
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
+        $resolved = $this->resolveContent($user, $type, $title, $message, $data);
+        $title = $resolved['title'];
+        $message = $resolved['body'];
+
         $phoneNumber = $user->getSetting('notifications', 'twilio_phone_number')
             ?? $user->getSetting('phone_number');
 
@@ -48,6 +53,20 @@ class TwilioChannel implements ChannelInterface
     public function getName(): string
     {
         return 'SMS (Twilio)';
+    }
+
+    private function resolveContent(User $user, string $type, string $title, string $message, array $data): array
+    {
+        $service = app(NotificationTemplateService::class);
+        $template = $service->getByTypeAndChannel($type, 'chat');
+        if (!$template) {
+            return ['title' => $title, 'body' => $message];
+        }
+        $variables = array_merge([
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'app_name' => config('app.name', 'Sourdough'),
+        ], $data);
+        return $service->renderTemplate($template, $variables);
     }
 
     public function isAvailableFor(User $user): bool

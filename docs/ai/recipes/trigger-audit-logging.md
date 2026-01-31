@@ -75,7 +75,8 @@ $this->auditService->log('user.created', $user, [], ['name' => $user->name, 'ema
 $this->auditService->logModelChange($user, 'user.updated', $oldValues, $newValues);
 $this->auditService->log('user.deleted', $user, ['name' => $user->name], []);
 $this->auditService->log('user.disabled', $user, ['disabled_at' => $old], ['disabled_at' => $new]);
-$this->auditService->log('user.admin_granted', $user, ['is_admin' => false], ['is_admin' => true]);
+$this->auditService->log('user.admin_granted', $user, [], ['group' => 'admin']);
+$this->auditService->log('user.admin_revoked', $user, ['group' => 'admin'], []);
 ```
 
 ### Settings

@@ -78,6 +78,27 @@ $this->orchestrator->send(
 );
 ```
 
+### Template-based send (sendByType)
+
+When per-type notification templates exist for push, inapp, and chat, use `sendByType()` so each channel gets content from its template. Variables are merged with user and app_name; templates are looked up by (type, channel_group). For email, variables must include `title` and `message`.
+
+```php
+$this->orchestrator->sendByType(
+    $user,
+    'backup.completed',
+    [
+        'backup_name' => $backup->name,
+        // For email channel, also pass: 'title' => '...', 'message' => '...'
+    ],
+    ['database', 'webpush']  // optional; defaults from config
+);
+```
+
+- **send($user, $type, $title, $message, $data, $channels)**: Backward compatible; channels use passed title/message, or resolve a template for (type, channel_group) when one exists.
+- **sendByType($user, $type, $variables, $channels)**: Template-first; for push/inapp/chat the orchestrator resolves the template per channel group and sends; for email, variables must include `title` and `message`.
+
+See [Add Notification Template](add-notification-template.md) for adding new types and [ADR-017: Notification Template System](../../adr/017-notification-template-system.md).
+
 ## Step 3: Use Appropriate Types
 
 | Type | Use case |

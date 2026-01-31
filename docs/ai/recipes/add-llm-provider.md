@@ -175,11 +175,19 @@ private function fetchModelsFromProvider(string $provider, array $credentials): 
         'claude' => $this->discoverAnthropicModels($credentials['api_key'] ?? ''),
         'gemini' => $this->discoverGeminiModels($credentials['api_key'] ?? ''),
         'ollama' => $this->discoverOllamaModels($credentials['host'] ?? 'http://localhost:11434'),
-        'example' => $this->discoverExampleModels($credentials['api_key'] ?? ''),  // add
+        'azure' => $this->discoverAzureModels($credentials['endpoint'] ?? '', $credentials['api_key'] ?? ''),
+        'bedrock' => $this->discoverBedrockModels(
+            $credentials['region'] ?? 'us-east-1',
+            $credentials['access_key'] ?? '',
+            $credentials['secret_key'] ?? ''
+        ),
+        'example' => $this->discoverExampleModels($credentials['api_key'] ?? ''),  // add your provider
         default => throw new \InvalidArgumentException("Unknown or unsupported provider: {$provider}"),
     };
 }
 ```
+
+Also update `cacheKey()` to include any credential fields your provider uses (e.g. `endpoint` for Azure, `region`/`access_key`/`secret_key` for Bedrock) so different accounts do not share cached model lists.
 
 2. Add a private method that returns the same shape as other discover methods:
 
@@ -221,10 +229,10 @@ Use the provider’s real models/list endpoint and normalize to `id`, `name`, `p
 
 In `backend/app/Http/Controllers/Api/LLMModelController.php`, allow the new provider in both endpoints:
 
-- `testKey()`: validation rule `'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama,example']`
+- `testKey()`: validation rule `'provider' => ['required', 'string', 'in:openai,claude,gemini,ollama,azure,bedrock,example']`
 - `discover()`: same `'provider' => ... 'in:...,example'`
 
-Add `example` (or your provider id) to the existing `in:` list in both places.
+Add `example` (or your provider id) to the existing `in:` list in both places. For Azure include `endpoint` in validation and credentials; for Bedrock include `region`, `access_key`, `secret_key`.
 
 ---
 
@@ -234,19 +242,22 @@ In `frontend/app/(dashboard)/configuration/ai/page.tsx`, add an entry to `provid
 
 ```ts
 const providerTemplates: ProviderTemplate[] = [
-  // ... existing (claude, openai, gemini, ollama) ...
+  // ... existing (claude, openai, gemini, ollama, azure, bedrock) ...
   {
     id: "example",
     name: "Example LLM",
     requires_api_key: true,
     supports_vision: false,
     supports_discovery: true,
+    // Optional: requires_endpoint: true (Azure-style), or requires_aws_credentials: true (Bedrock-style)
   },
 ];
 ```
 
 - `id` must match the backend provider key (e.g. `config/llm.php` and orchestrator).
 - Use `supports_discovery: true` only if you implemented Step 4; otherwise the Add Provider dialog will not show Test / Fetch Models for this provider.
+- For Azure-style providers (endpoint + API key), set `requires_endpoint: true` and add endpoint input UI and request payload.
+- For AWS-style providers (region + access key + secret key), set `requires_aws_credentials: true` and add region/credentials UI and request payload.
 
 ---
 
@@ -266,13 +277,13 @@ const providerTemplates: ProviderTemplate[] = [
 
 ## Existing Providers for Reference
 
-| Provider | Class | Discovery |
-|----------|--------|-----------|
-| OpenAI | `OpenAIProvider.php` | `discoverOpenAIModels()` |
-| Claude | `AnthropicProvider.php` | `discoverAnthropicModels()` |
-| Gemini | `GeminiProvider.php` | `discoverGeminiModels()` |
-| Ollama | `OllamaProvider.php` | `discoverOllamaModels()` (uses `host`) |
-| Azure OpenAI | `AzureOpenAIProvider.php` | Not in discovery (deferred) |
-| AWS Bedrock | `BedrockProvider.php` | Not in discovery (deferred) |
+| Provider | Class | Discovery | Credentials |
+|----------|--------|-----------|-------------|
+| OpenAI | `OpenAIProvider.php` | `discoverOpenAIModels()` | `api_key` |
+| Claude | `AnthropicProvider.php` | `discoverAnthropicModels()` | `api_key` |
+| Gemini | `GeminiProvider.php` | `discoverGeminiModels()` | `api_key` |
+| Ollama | `OllamaProvider.php` | `discoverOllamaModels()` | `host` |
+| Azure OpenAI | `AzureOpenAIProvider.php` | `discoverAzureModels()` | `endpoint`, `api_key` |
+| AWS Bedrock | `BedrockProvider.php` | `discoverBedrockModels()` | `region`, `access_key`, `secret_key` |
 
 Use the existing discover methods in `LLMModelDiscoveryService` as templates for your provider’s models API and response shape.

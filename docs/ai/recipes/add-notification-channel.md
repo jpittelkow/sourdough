@@ -48,7 +48,7 @@ Sourdough uses a **two-layer notification configuration**:
 
 ## Step 1: Create the Channel Class
 
-Create a class implementing `ChannelInterface`:
+Create a class implementing `ChannelInterface`. If your channel belongs to **push** (WebPush, FCM, ntfy), **inapp** (DatabaseChannel), or **chat** (Telegram, Discord, Slack, Twilio, etc.), add **template resolution** so per-type notification templates are used when present: at the start of `send()`, call a private `resolveContent($user, $type, $title, $message, $data)` that uses `NotificationTemplateService::getByTypeAndChannel($type, $channelGroup)` and, if found, `renderTemplate()` with merged variables (user, app_name, $data); then use the returned title/body. Otherwise use the passed title/message. See existing channels (e.g. `DatabaseChannel.php`, `WebPushChannel.php`, `TelegramChannel.php`) for the `resolveContent()` pattern. Map your channel to one of: `push`, `inapp`, `chat` (and add it to `NotificationOrchestrator::channelToGroup()` if you add a new channel identifier).
 
 ```php
 <?php
@@ -360,5 +360,7 @@ interface ChannelInterface
 ## Related Documentation
 
 - [ADR-005: Notification System Architecture](../../adr/005-notification-system-architecture.md)
-- [Recipe: Trigger Notifications](trigger-notifications.md)
+- [ADR-017: Notification Template System](../../adr/017-notification-template-system.md) — Per-type templates for push, inapp, chat; channels resolve content when a template exists.
+- [Recipe: Trigger Notifications](trigger-notifications.md) — `send()` and `sendByType()` usage.
+- [Recipe: Add Notification Template](add-notification-template.md) — Add new notification types with push/inapp/chat templates.
 - [Notification Config Split Journal](../../journal/2026-01-28-notification-config-split.md)

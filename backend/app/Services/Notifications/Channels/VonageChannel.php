@@ -3,12 +3,17 @@
 namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
+use App\Services\NotificationTemplateService;
 use Illuminate\Support\Facades\Http;
 
 class VonageChannel implements ChannelInterface
 {
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
+        $resolved = $this->resolveContent($user, $type, $title, $message, $data);
+        $title = $resolved['title'];
+        $message = $resolved['body'];
+
         $phoneNumber = $user->getSetting('notifications', 'vonage_phone_number')
             ?? $user->getSetting('phone_number');
 
@@ -39,15 +44,15 @@ class VonageChannel implements ChannelInterface
             throw new \RuntimeException('Vonage API error: ' . $response->body());
         }
 
-        $data = $response->json();
+        $responseData = $response->json();
 
         // Vonage returns status in messages array
-        if (isset($data['messages'][0]['status']) && $data['messages'][0]['status'] !== '0') {
-            throw new \RuntimeException('Vonage SMS failed: ' . ($data['messages'][0]['error-text'] ?? 'Unknown error'));
+        if (isset($responseData['messages'][0]['status']) && $responseData['messages'][0]['status'] !== '0') {
+            throw new \RuntimeException('Vonage SMS failed: ' . ($responseData['messages'][0]['error-text'] ?? 'Unknown error'));
         }
 
         return [
-            'message_id' => $data['messages'][0]['message-id'] ?? null,
+            'message_id' => $responseData['messages'][0]['message-id'] ?? null,
             'to' => $phoneNumber,
             'sent' => true,
         ];
@@ -73,5 +78,19 @@ class VonageChannel implements ChannelInterface
 
         return config('notifications.channels.vonage.enabled', false)
             && !empty($phone);
+    }
+
+    private function resolveContent(User $user, string $type, string $title, string $message, array $data): array
+    {
+        $service = app(NotificationTemplateService::class);
+        $template = $service->getByTypeAndChannel($type, 'chat');
+        if (!$template) {
+            return ['title' => $title, 'body' => $message];
+        }
+        $variables = array_merge([
+            'user' => ['name' => $user->name, 'email' => $user->email],
+            'app_name' => config('app.name', 'Sourdough'),
+        ], $data);
+        return $service->renderTemplate($template, $variables);
     }
 }

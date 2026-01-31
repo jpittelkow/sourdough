@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { isAdminUser } from "@/lib/auth";
 import {
   Table,
   TableBody,
@@ -41,14 +42,16 @@ interface User {
   email_verified_at: string | null;
   disabled_at: string | null;
   created_at: string;
+  groups?: { id: number; name: string; slug: string }[];
 }
 
 interface UserTableProps {
   users: User[];
   onUserUpdated: () => void;
+  currentUserId?: number;
 }
 
-export function UserTable({ users, onUserUpdated }: UserTableProps) {
+export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProps) {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -165,6 +168,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
             <TableHead>User</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>Status</TableHead>
+            <TableHead className="hidden lg:table-cell">Groups</TableHead>
             <TableHead>Created</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -189,7 +193,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                   )}
                   <div>
                     <div className="font-medium">{user.name}</div>
-                    {user.is_admin && (
+                    {isAdminUser(user) && (
                       <Badge variant="secondary" className="text-xs mt-1">
                         Admin
                       </Badge>
@@ -211,6 +215,18 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                     </Badge>
                   ) : (
                     <Badge variant="secondary">Unverified</Badge>
+                  )}
+                </div>
+              </TableCell>
+              <TableCell className="hidden lg:table-cell">
+                <div className="flex flex-wrap gap-1">
+                  {user.groups?.map((g) => (
+                    <Badge key={g.id} variant="secondary" className="text-xs">
+                      {g.name}
+                    </Badge>
+                  ))}
+                  {(!user.groups || user.groups.length === 0) && (
+                    <span className="text-muted-foreground text-xs">None</span>
                   )}
                 </div>
               </TableCell>
@@ -262,7 +278,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
                       )}
                     </DropdownMenuItem>
                     <DropdownMenuItem onClick={() => handleToggleAdmin(user)}>
-                      {user.is_admin ? (
+                      {isAdminUser(user) ? (
                         <>
                           <ShieldOff className="mr-2 h-4 w-4" />
                           Remove Admin
@@ -296,6 +312,7 @@ export function UserTable({ users, onUserUpdated }: UserTableProps) {
         open={isDialogOpen}
         onOpenChange={setIsDialogOpen}
         onSuccess={onUserUpdated}
+        currentUserId={currentUserId}
       />
 
       <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

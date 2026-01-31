@@ -6,10 +6,11 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Str;
+use Laravel\Scout\Searchable;
 
 class Notification extends Model
 {
-    use HasFactory;
+    use HasFactory, Searchable;
 
     /**
      * Indicates if the IDs are auto-incrementing.
@@ -107,5 +108,28 @@ class Notification extends Model
     public function scopeRead($query)
     {
         return $query->whereNotNull('read_at');
+    }
+
+    /**
+     * Get the indexable data array for the model (Scout/Meilisearch).
+     */
+    public function toSearchableArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'user_id' => $this->user_id,
+            'title' => $this->title,
+            'message' => $this->message,
+            'type' => $this->type,
+            'created_at' => $this->created_at?->timestamp,
+        ];
+    }
+
+    /**
+     * Get the name of the index associated with the model.
+     */
+    public function searchableAs(): string
+    {
+        return 'notifications';
     }
 }

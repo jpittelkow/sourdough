@@ -26,10 +26,11 @@ abstract class TestCase extends BaseTestCase
     }
 
     /**
-     * Create an authenticated admin user for testing.
+     * Create an authenticated admin user for testing (in admin group).
      */
     protected function actingAsAdmin(array $attributes = []): self
     {
-        return $this->actingAsUser(array_merge(['is_admin' => true], $attributes));
+        $user = \App\Models\User::factory()->admin()->create($attributes);
+        return $this->actingAs($user, 'sanctum');
     }
 }

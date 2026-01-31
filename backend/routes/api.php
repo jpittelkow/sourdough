@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PasskeyController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\SSOController;
 use App\Http\Controllers\Api\TwoFactorController;
@@ -15,17 +16,20 @@ use App\Http\Controllers\Api\MailSettingController;
 use App\Http\Controllers\Api\NotificationSettingController;
 use App\Http\Controllers\Api\JobController;
 use App\Http\Controllers\Api\StorageSettingController;
+use App\Http\Controllers\Api\FileManagerController;
 use App\Http\Controllers\Api\ApiTokenController;
 use App\Http\Controllers\Api\WebhookController;
 use App\Http\Controllers\Api\BrandingController;
 use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BackupSettingController;
 use App\Http\Controllers\Api\EmailTemplateController;
+use App\Http\Controllers\Api\NotificationTemplateController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\LLMController;
 use App\Http\Controllers\Api\LLMModelController;
 use App\Http\Controllers\Api\ClientErrorController;
 use App\Http\Controllers\Api\LLMSettingController;
+use App\Http\Controllers\Api\AuthSettingController;
 use App\Http\Controllers\Api\SSOSettingController;
 use App\Http\Controllers\Api\UserSettingController;
 use App\Http\Controllers\Api\UserNotificationSettingsController;
@@ -33,6 +37,10 @@ use App\Http\Controllers\Api\AccessLogController;
 use App\Http\Controllers\Api\AppLogExportController;
 use App\Http\Controllers\Api\LogRetentionController;
 use App\Http\Controllers\Api\SuspiciousActivityController;
+use App\Http\Controllers\Api\SearchController;
+use App\Http\Controllers\Api\Admin\SearchAdminController;
+use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\DashboardController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -110,7 +118,22 @@ Route::prefix('auth')->group(function () {
             Route::get('/recovery-codes', [TwoFactorController::class, 'recoveryCodes']);
             Route::post('/recovery-codes/regenerate', [TwoFactorController::class, 'regenerateRecoveryCodes']);
         });
+
+        // Passkey Routes (authenticated management)
+        Route::prefix('passkeys')->group(function () {
+            Route::get('/', [PasskeyController::class, 'index']);
+            Route::post('/register/options', [PasskeyController::class, 'registerOptions']);
+            Route::post('/register', [PasskeyController::class, 'register']);
+            Route::put('/{id}', [PasskeyController::class, 'update']);
+            Route::delete('/{id}', [PasskeyController::class, 'destroy']);
+        });
     });
+
+    // Passkey login (unauthenticated, rate limited)
+    Route::post('/passkeys/login/options', [PasskeyController::class, 'loginOptions'])
+        ->middleware('throttle:10,1');
+    Route::post('/passkeys/login', [PasskeyController::class, 'login'])
+        ->middleware('throttle:10,1');
 });
 
 /*
@@ -119,8 +142,8 @@ Route::prefix('auth')->group(function () {
 |--------------------------------------------------------------------------
 */
 
-Route::middleware(['auth:sanctum'])->group(function () {
-    
+Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () {
+
     // Profile (access logging: User, self)
     Route::prefix('profile')->middleware('log.access:User')->group(function () {
         Route::get('/', [ProfileController::class, 'show']);
@@ -136,30 +159,37 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show'])->middleware('log.access:Setting');
         Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update'])->middleware('log.access:Setting');
     });
+
+    // Dashboard (static widget data)
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
     
-    // Settings (Admin only)
-    Route::prefix('settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [SettingController::class, 'index']);
-        Route::put('/', [SettingController::class, 'update']);
-        Route::get('/notifications', [NotificationSettingsController::class, 'show']);
-        Route::put('/notifications', [NotificationSettingsController::class, 'update']);
-        Route::get('/{group}', [SettingController::class, 'show']);
-        Route::put('/{group}', [SettingController::class, 'updateGroup']);
-    });
-    
-    // System Settings (Admin only)
-    Route::prefix('system-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [SystemSettingController::class, 'index']);
-        Route::put('/', [SystemSettingController::class, 'update']);
-        Route::get('/{group}', [SystemSettingController::class, 'show']);
+    // Settings (permission: settings.view / settings.edit)
+    Route::prefix('settings')->group(function () {
+        Route::get('/', [SettingController::class, 'index'])->middleware('can:settings.view');
+        Route::put('/', [SettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::get('/notifications', [NotificationSettingsController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/notifications', [NotificationSettingsController::class, 'update'])->middleware('can:settings.edit');
+        Route::get('/{group}', [SettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/{group}', [SettingController::class, 'updateGroup'])->middleware('can:settings.edit');
     });
 
-    // Admin notification channel config (available toggles, SMS preferred provider)
-    Route::prefix('admin')->middleware('can:manage-settings')->group(function () {
-        Route::get('notification-channels', [NotificationChannelConfigController::class, 'index']);
-        Route::put('notification-channels', [NotificationChannelConfigController::class, 'update']);
+    // System Settings (permission: settings.view / settings.edit)
+    Route::prefix('system-settings')->group(function () {
+        Route::get('/', [SystemSettingController::class, 'index'])->middleware('can:settings.view');
+        Route::put('/', [SystemSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::get('/{group}', [SystemSettingController::class, 'show'])->middleware('can:settings.view');
+    });
+
+    // Admin notification channel config (permission: settings.view / settings.edit)
+    Route::prefix('admin')->group(function () {
+        Route::get('notification-channels', [NotificationChannelConfigController::class, 'index'])->middleware('can:settings.view');
+        Route::put('notification-channels', [NotificationChannelConfigController::class, 'update'])->middleware('can:settings.edit');
     });
     
+    // Search (authenticated; returns user data when searching users — access logged)
+    Route::get('/search', [SearchController::class, 'search'])->middleware('log.access:User');
+    Route::get('/search/suggestions', [SearchController::class, 'suggestions'])->middleware('log.access:User');
+
     // Notifications
     Route::prefix('notifications')->group(function () {
         Route::get('/', [NotificationController::class, 'index']);
@@ -172,137 +202,191 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::post('/test/{channel}', [NotificationController::class, 'test']);
     });
     
-    // LLM/AI (Admin only)
-    Route::prefix('llm')->middleware('can:manage-settings')->group(function () {
-        Route::get('/providers', [LLMController::class, 'providers']);
-        Route::post('/providers', [LLMController::class, 'storeProvider']);
-        Route::put('/providers/{provider}', [LLMController::class, 'updateProvider']);
-        Route::delete('/providers/{provider}', [LLMController::class, 'destroyProvider']);
-        Route::get('/config', [LLMController::class, 'config']);
-        Route::put('/config', [LLMController::class, 'updateConfig']);
-        Route::post('/test/{provider}', [LLMController::class, 'testProvider']);
-        Route::post('/query', [LLMController::class, 'query']);
-        Route::post('/query/vision', [LLMController::class, 'visionQuery']);
+    // LLM/AI (permission: settings.view / settings.edit)
+    Route::prefix('llm')->group(function () {
+        Route::get('/providers', [LLMController::class, 'providers'])->middleware('can:settings.view');
+        Route::post('/providers', [LLMController::class, 'storeProvider'])->middleware('can:settings.edit');
+        Route::put('/providers/{provider}', [LLMController::class, 'updateProvider'])->middleware('can:settings.edit');
+        Route::delete('/providers/{provider}', [LLMController::class, 'destroyProvider'])->middleware('can:settings.edit');
+        Route::get('/config', [LLMController::class, 'config'])->middleware('can:settings.view');
+        Route::put('/config', [LLMController::class, 'updateConfig'])->middleware('can:settings.edit');
+        Route::post('/test/{provider}', [LLMController::class, 'testProvider'])->middleware('can:settings.edit');
+        Route::post('/query', [LLMController::class, 'query'])->middleware('can:settings.view');
+        Route::post('/query/vision', [LLMController::class, 'visionQuery'])->middleware('can:settings.view');
     });
+
+    // Backup & Restore (permission: backups.view / backups.create / backups.restore / backups.delete)
+    Route::prefix('backup')->group(function () {
+        Route::get('/', [BackupController::class, 'index'])->middleware('can:backups.view');
+        Route::post('/create', [BackupController::class, 'create'])->middleware('can:backups.create');
+        Route::get('/download/{filename}', [BackupController::class, 'download'])->middleware('can:backups.view');
+        Route::post('/restore', [BackupController::class, 'restore'])->middleware('can:backups.restore');
+        Route::delete('/{filename}', [BackupController::class, 'destroy'])->middleware('can:backups.delete');
+    });
+
+    // User Management (permission: users.view / users.create / users.edit / users.delete, access logging: User)
+    Route::prefix('users')->middleware('log.access:User')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->middleware('can:users.view');
+        Route::post('/', [UserController::class, 'store'])->middleware('can:users.create');
+        Route::get('/{user}', [UserController::class, 'show'])->middleware('can:users.view');
+        Route::put('/{user}', [UserController::class, 'update'])->middleware('can:users.edit');
+        Route::delete('/{user}', [UserController::class, 'destroy'])->middleware('can:users.delete');
+        Route::post('/{user}/toggle-admin', [UserController::class, 'toggleAdmin'])->middleware('can:users.edit');
+        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])->middleware('can:users.edit');
+        Route::post('/{user}/disable', [UserController::class, 'toggleDisabled'])->middleware('can:users.edit');
+        Route::post('/{user}/resend-verification', [UserController::class, 'resendVerification'])->middleware('can:users.edit');
+        Route::put('/{user}/groups', [UserController::class, 'updateGroups'])->middleware('can:users.edit');
+    });
+
+    // Permissions list (permission: groups.view, for UI dropdowns)
+    Route::get('/permissions', [GroupController::class, 'availablePermissions'])->middleware('can:groups.view');
+
+    // User Groups (permission: groups.view / groups.manage)
+    Route::prefix('groups')->group(function () {
+        Route::get('/', [GroupController::class, 'index'])->middleware('can:groups.view');
+        Route::post('/', [GroupController::class, 'store'])->middleware('can:groups.manage');
+        Route::get('/{group}', [GroupController::class, 'show'])->middleware('can:groups.view');
+        Route::put('/{group}', [GroupController::class, 'update'])->middleware('can:groups.manage');
+        Route::delete('/{group}', [GroupController::class, 'destroy'])->middleware('can:groups.manage');
+        Route::get('/{group}/members', [GroupController::class, 'members'])->middleware('can:groups.view');
+        Route::post('/{group}/members', [GroupController::class, 'addMembers'])->middleware('can:groups.manage');
+        Route::delete('/{group}/members/{user}', [GroupController::class, 'removeMember'])->middleware('can:groups.manage');
+        Route::get('/{group}/permissions', [GroupController::class, 'permissions'])->middleware('can:groups.view');
+        Route::put('/{group}/permissions', [GroupController::class, 'updatePermissions'])->middleware('can:groups.manage');
+    });
+
+    // Audit Logs (permission: audit.view / logs.export)
+    Route::prefix('audit-logs')->group(function () {
+        Route::get('/', [AuditLogController::class, 'index'])->middleware('can:audit.view');
+        Route::get('/export', [AuditLogController::class, 'export'])->middleware('can:logs.export');
+        Route::get('/stats', [AuditLogController::class, 'stats'])->middleware('can:audit.view');
+    });
+
+    // Access Logs / HIPAA (permission: logs.view / logs.export)
+    Route::prefix('access-logs')->group(function () {
+        Route::get('/', [AccessLogController::class, 'index'])->middleware('can:logs.view');
+        Route::get('/export', [AccessLogController::class, 'export'])->middleware('can:logs.export');
+        Route::get('/stats', [AccessLogController::class, 'stats'])->middleware('can:logs.view');
+        Route::delete('/', [AccessLogController::class, 'deleteAll'])->middleware('can:logs.view');
+    });
+
+    // Application logs export (permission: logs.export)
+    Route::prefix('app-logs')->group(function () {
+        Route::get('/export', [AppLogExportController::class, 'export'])->middleware('can:logs.export');
+    });
+
+    // Log retention and cleanup config (permission: settings.edit)
+    Route::prefix('log-retention')->group(function () {
+        Route::get('/', [LogRetentionController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [LogRetentionController::class, 'update'])->middleware('can:settings.edit');
+    });
+
+    // Suspicious activity alerts (permission: logs.view)
+    Route::get('/suspicious-activity', [SuspiciousActivityController::class, 'index'])->middleware('can:logs.view');
     
-    // Backup & Restore (Admin only)
-    Route::prefix('backup')->middleware('can:manage-backups')->group(function () {
-        Route::get('/', [BackupController::class, 'index']);
-        Route::post('/create', [BackupController::class, 'create']);
-        Route::get('/download/{filename}', [BackupController::class, 'download']);
-        Route::post('/restore', [BackupController::class, 'restore']);
-        Route::delete('/{filename}', [BackupController::class, 'destroy']);
-    });
-    
-    // User Management (Admin only, access logging: User)
-    Route::prefix('users')->middleware(['can:admin', 'log.access:User'])->group(function () {
-        Route::get('/', [UserController::class, 'index']);
-        Route::post('/', [UserController::class, 'store']);
-        Route::get('/{user}', [UserController::class, 'show']);
-        Route::put('/{user}', [UserController::class, 'update']);
-        Route::delete('/{user}', [UserController::class, 'destroy']);
-        Route::post('/{user}/toggle-admin', [UserController::class, 'toggleAdmin']);
-        Route::post('/{user}/reset-password', [UserController::class, 'resetPassword']);
-        Route::post('/{user}/disable', [UserController::class, 'toggleDisabled']);
-        Route::post('/{user}/resend-verification', [UserController::class, 'resendVerification']);
-    });
-    
-    // Audit Logs (Admin only)
-    Route::prefix('audit-logs')->middleware('can:admin')->group(function () {
-        Route::get('/', [AuditLogController::class, 'index']);
-        Route::get('/export', [AuditLogController::class, 'export']);
-        Route::get('/stats', [AuditLogController::class, 'stats']);
+    // Email Templates (permission: settings.view / settings.edit)
+    Route::prefix('email-templates')->group(function () {
+        Route::get('/', [EmailTemplateController::class, 'index'])->middleware('can:settings.view');
+        Route::get('/{key}', [EmailTemplateController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/{key}', [EmailTemplateController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/{key}/preview', [EmailTemplateController::class, 'preview'])->middleware('can:settings.view');
+        Route::post('/{key}/test', [EmailTemplateController::class, 'test'])->middleware('can:settings.edit');
+        Route::post('/{key}/reset', [EmailTemplateController::class, 'reset'])->middleware('can:settings.edit');
     });
 
-    // Access Logs / HIPAA (Admin only)
-    Route::prefix('access-logs')->middleware('can:admin')->group(function () {
-        Route::get('/', [AccessLogController::class, 'index']);
-        Route::get('/export', [AccessLogController::class, 'export']);
-        Route::get('/stats', [AccessLogController::class, 'stats']);
-        Route::delete('/', [AccessLogController::class, 'deleteAll']);
+    // Notification Templates (permission: settings.view / settings.edit)
+    Route::prefix('notification-templates')->group(function () {
+        Route::get('/', [NotificationTemplateController::class, 'index'])->middleware('can:settings.view');
+        Route::get('/{id}', [NotificationTemplateController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/{id}', [NotificationTemplateController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/{id}/preview', [NotificationTemplateController::class, 'preview'])->middleware('can:settings.view');
+        Route::post('/{id}/reset', [NotificationTemplateController::class, 'reset'])->middleware('can:settings.edit');
     });
 
-    // Application logs export (Admin only; reads from file logs)
-    Route::prefix('app-logs')->middleware('can:admin')->group(function () {
-        Route::get('/export', [AppLogExportController::class, 'export']);
+    // Mail Settings (permission: settings.view / settings.edit)
+    Route::prefix('mail-settings')->group(function () {
+        Route::get('/', [MailSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [MailSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/test', [MailSettingController::class, 'sendTestEmail'])->middleware('can:settings.edit');
+        Route::delete('/keys/{key}', [MailSettingController::class, 'reset'])->middleware('can:settings.edit');
     });
 
-    // Log retention and cleanup config (Admin only)
-    Route::prefix('log-retention')->middleware('can:admin')->group(function () {
-        Route::get('/', [LogRetentionController::class, 'show']);
-        Route::put('/', [LogRetentionController::class, 'update']);
+    // Notification Channel Settings (permission: settings.view / settings.edit)
+    Route::prefix('notification-settings')->group(function () {
+        Route::get('/', [NotificationSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [NotificationSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/test/{channel}', [NotificationSettingController::class, 'testChannel'])->middleware('can:settings.edit');
+        Route::delete('/keys/{key}', [NotificationSettingController::class, 'reset'])->middleware('can:settings.edit');
     });
 
-    // Suspicious activity alerts (Admin only; read-only for dashboard)
-    Route::get('/suspicious-activity', [SuspiciousActivityController::class, 'index'])->middleware('can:admin');
-    
-    // Email Templates (Admin only)
-    Route::prefix('email-templates')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [EmailTemplateController::class, 'index']);
-        Route::get('/{key}', [EmailTemplateController::class, 'show']);
-        Route::put('/{key}', [EmailTemplateController::class, 'update']);
-        Route::post('/{key}/preview', [EmailTemplateController::class, 'preview']);
-        Route::post('/{key}/test', [EmailTemplateController::class, 'test']);
-        Route::post('/{key}/reset', [EmailTemplateController::class, 'reset']);
+    // LLM System-Wide Settings (permission: settings.view / settings.edit)
+    Route::prefix('llm-settings')->group(function () {
+        Route::get('/', [LLMSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [LLMSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::delete('/keys/{key}', [LLMSettingController::class, 'reset'])->middleware('can:settings.edit');
+        Route::post('/test-key', [LLMModelController::class, 'testKey'])->middleware('can:settings.edit');
+        Route::post('/discover-models', [LLMModelController::class, 'discover'])->middleware('can:settings.edit');
     });
 
-    // Mail Settings (Admin only)
-    Route::prefix('mail-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [MailSettingController::class, 'show']);
-        Route::put('/', [MailSettingController::class, 'update']);
-        Route::post('/test', [MailSettingController::class, 'sendTestEmail']);
-        Route::delete('/keys/{key}', [MailSettingController::class, 'reset']);
+    // Auth Settings (permission: settings.view / settings.edit)
+    Route::prefix('auth-settings')->group(function () {
+        Route::get('/', [AuthSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [AuthSettingController::class, 'update'])->middleware('can:settings.edit');
     });
 
-    // Notification Channel Settings (Admin only - credentials for channels)
-    Route::prefix('notification-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [NotificationSettingController::class, 'show']);
-        Route::put('/', [NotificationSettingController::class, 'update']);
-        Route::post('/test/{channel}', [NotificationSettingController::class, 'testChannel']);
-        Route::delete('/keys/{key}', [NotificationSettingController::class, 'reset']);
+    // SSO Settings (permission: settings.view / settings.edit)
+    Route::prefix('sso-settings')->group(function () {
+        Route::get('/', [SSOSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [SSOSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/test/{provider}', [SSOSettingController::class, 'test'])->middleware('can:settings.edit');
+        Route::delete('/keys/{key}', [SSOSettingController::class, 'reset'])->middleware('can:settings.edit');
     });
 
-    // LLM System-Wide Settings (Admin only)
-    Route::prefix('llm-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [LLMSettingController::class, 'show']);
-        Route::put('/', [LLMSettingController::class, 'update']);
-        Route::delete('/keys/{key}', [LLMSettingController::class, 'reset']);
-        Route::post('/test-key', [LLMModelController::class, 'testKey']);
-        Route::post('/discover-models', [LLMModelController::class, 'discover']);
+    // Backup Settings (permission: settings.view / settings.edit)
+    Route::prefix('backup-settings')->group(function () {
+        Route::get('/', [BackupSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [BackupSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/reset/{key}', [BackupSettingController::class, 'reset'])->middleware('can:settings.edit');
+        Route::post('/test/{destination}', [BackupSettingController::class, 'testDestination'])->middleware('can:settings.edit');
     });
 
-    // SSO Settings (Admin only)
-    Route::prefix('sso-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [SSOSettingController::class, 'show']);
-        Route::put('/', [SSOSettingController::class, 'update']);
-        Route::delete('/keys/{key}', [SSOSettingController::class, 'reset']);
+    // Search Admin (permission: settings.view / settings.edit for reindex)
+    Route::prefix('admin')->group(function () {
+        Route::get('/search/stats', [SearchAdminController::class, 'stats'])->middleware('can:settings.view');
+        Route::post('/search/reindex', [SearchAdminController::class, 'reindex'])->middleware('can:settings.edit');
     });
 
-    // Backup Settings (Admin only)
-    Route::prefix('backup-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [BackupSettingController::class, 'show']);
-        Route::put('/', [BackupSettingController::class, 'update']);
-        Route::post('/reset/{key}', [BackupSettingController::class, 'reset']);
-        Route::post('/test/{destination}', [BackupSettingController::class, 'testDestination']);
+    // Jobs (permission: settings.view / settings.edit for run)
+    Route::prefix('jobs')->group(function () {
+        Route::get('/scheduled', [JobController::class, 'scheduled'])->middleware('can:settings.view');
+        Route::post('/run/{command}', [JobController::class, 'run'])->middleware('can:settings.edit');
+        Route::get('/queue', [JobController::class, 'queueStatus'])->middleware('can:settings.view');
+        Route::get('/failed', [JobController::class, 'failedJobs'])->middleware('can:settings.view');
+        Route::post('/failed/{id}/retry', [JobController::class, 'retryJob'])->middleware('can:settings.edit');
+        Route::delete('/failed/{id}', [JobController::class, 'deleteJob'])->middleware('can:settings.edit');
+        Route::post('/failed/retry-all', [JobController::class, 'retryAllFailed'])->middleware('can:settings.edit');
+        Route::delete('/failed/clear', [JobController::class, 'clearFailed'])->middleware('can:settings.edit');
     });
 
-    // Jobs (Admin only)
-    Route::prefix('jobs')->middleware('can:admin')->group(function () {
-        Route::get('/scheduled', [JobController::class, 'scheduled']);
-        Route::post('/run/{command}', [JobController::class, 'run']);
-        Route::get('/queue', [JobController::class, 'queueStatus']);
-        Route::get('/failed', [JobController::class, 'failedJobs']);
-        Route::post('/failed/{id}/retry', [JobController::class, 'retryJob']);
-        Route::delete('/failed/{id}', [JobController::class, 'deleteJob']);
-        Route::post('/failed/retry-all', [JobController::class, 'retryAllFailed']);
-        Route::delete('/failed/clear', [JobController::class, 'clearFailed']);
+    // Storage Settings (permission: settings.view / settings.edit)
+    Route::prefix('storage-settings')->group(function () {
+        Route::get('/', [StorageSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [StorageSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/test', [StorageSettingController::class, 'test'])->middleware('can:settings.edit');
+        Route::get('/stats', [StorageSettingController::class, 'stats'])->middleware('can:settings.view');
+        Route::get('/paths', [StorageSettingController::class, 'paths'])->middleware('can:settings.view');
+        Route::get('/health', [StorageSettingController::class, 'health'])->middleware('can:settings.view');
     });
-    
-    // Storage Settings (Admin only)
-    Route::prefix('storage-settings')->middleware('can:manage-settings')->group(function () {
-        Route::get('/', [StorageSettingController::class, 'show']);
-        Route::put('/', [StorageSettingController::class, 'update']);
-        Route::get('/stats', [StorageSettingController::class, 'stats']);
+
+    // File Manager (admin only)
+    Route::prefix('storage/files')->middleware('can:admin')->group(function () {
+        Route::get('/', [FileManagerController::class, 'index']);
+        Route::post('/', [FileManagerController::class, 'upload']);
+        Route::get('/{path}/download', [FileManagerController::class, 'download'])->where('path', '.*');
+        Route::put('/{path}/rename', [FileManagerController::class, 'rename'])->where('path', '.*');
+        Route::put('/{path}/move', [FileManagerController::class, 'move'])->where('path', '.*');
+        Route::get('/{path}', [FileManagerController::class, 'show'])->where('path', '.*');
+        Route::delete('/{path}', [FileManagerController::class, 'destroy'])->where('path', '.*');
     });
     
     // API Tokens (Authenticated users)
@@ -312,24 +396,24 @@ Route::middleware(['auth:sanctum'])->group(function () {
         Route::delete('/{token}', [ApiTokenController::class, 'destroy']);
     });
     
-    // Webhooks (Admin only)
-    Route::prefix('webhooks')->middleware('can:admin')->group(function () {
-        Route::get('/', [WebhookController::class, 'index']);
-        Route::post('/', [WebhookController::class, 'store']);
+    // Webhooks (permission: settings.edit)
+    Route::prefix('webhooks')->group(function () {
+        Route::get('/', [WebhookController::class, 'index'])->middleware('can:settings.view');
+        Route::post('/', [WebhookController::class, 'store'])->middleware('can:settings.edit');
         // More specific routes must come before parameterized routes
-        Route::get('/{webhook}/deliveries', [WebhookController::class, 'deliveries']);
-        Route::post('/{webhook}/test', [WebhookController::class, 'test']);
-        Route::put('/{webhook}', [WebhookController::class, 'update']);
-        Route::delete('/{webhook}', [WebhookController::class, 'destroy']);
+        Route::get('/{webhook}/deliveries', [WebhookController::class, 'deliveries'])->middleware('can:settings.view');
+        Route::post('/{webhook}/test', [WebhookController::class, 'test'])->middleware('can:settings.edit');
+        Route::put('/{webhook}', [WebhookController::class, 'update'])->middleware('can:settings.edit');
+        Route::delete('/{webhook}', [WebhookController::class, 'destroy'])->middleware('can:settings.edit');
     });
-    
-    // Branding (admin write only - public read is defined above)
-    Route::prefix('branding')->middleware('can:manage-settings')->group(function () {
-        Route::put('/', [BrandingController::class, 'update']);
-        Route::post('/logo', [BrandingController::class, 'uploadLogo']);
-        Route::post('/favicon', [BrandingController::class, 'uploadFavicon']);
-        Route::delete('/logo', [BrandingController::class, 'deleteLogo']);
-        Route::delete('/favicon', [BrandingController::class, 'deleteFavicon']);
+
+    // Branding (permission: settings.edit - public read is defined above)
+    Route::prefix('branding')->group(function () {
+        Route::put('/', [BrandingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/logo', [BrandingController::class, 'uploadLogo'])->middleware('can:settings.edit');
+        Route::post('/favicon', [BrandingController::class, 'uploadFavicon'])->middleware('can:settings.edit');
+        Route::delete('/logo', [BrandingController::class, 'deleteLogo'])->middleware('can:settings.edit');
+        Route::delete('/favicon', [BrandingController::class, 'deleteFavicon'])->middleware('can:settings.edit');
     });
     
 });

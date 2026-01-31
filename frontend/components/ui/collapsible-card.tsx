@@ -33,7 +33,7 @@ export interface CollapsibleCardProps {
 }
 
 const statusToBadgeVariant: Record<
-  CollapsibleCardProps["status"] extends { variant: infer V } ? V : never,
+  "default" | "success" | "warning" | "destructive",
   "default" | "secondary" | "destructive" | "outline" | "success" | "warning"
 > = {
   default: "secondary",

@@ -23,7 +23,7 @@ We will restrict all settings pages to admin users only:
 
 1. **Settings Layout Protection**: Add admin check to `frontend/app/(dashboard)/settings/layout.tsx` that redirects non-admin users to the dashboard, similar to the existing admin layout protection.
 
-2. **Dashboard Updates**: Update the dashboard page to only show settings cards when `user?.is_admin` is true.
+2. **Dashboard Updates**: Update the dashboard page to only show settings cards when the user is in the admin group (e.g. `user?.is_admin` or group-based check).
 
 3. **Sidebar Integration**: The Settings button in the global left sidebar is already conditionally rendered for admin users only, providing a clear entry point.
 

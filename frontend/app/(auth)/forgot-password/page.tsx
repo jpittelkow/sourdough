@@ -67,7 +67,7 @@ export default function ForgotPasswordPage() {
         <AuthStateCard
           variant="warning"
           title="Password Reset Unavailable"
-          description="Password reset is not available because email has not been configured."
+          description="Password reset is not available. Email may not be configured, or it may have been disabled by your administrator."
           footer={
             <Link href="/login" className="w-full">
               <Button variant="outline" className="w-full">

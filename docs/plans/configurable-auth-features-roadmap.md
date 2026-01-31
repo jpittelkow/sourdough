@@ -3,8 +3,8 @@
 Evaluate and implement optional/configurable user authentication features that admins can enable or disable based on their deployment requirements.
 
 **Priority**: MEDIUM  
-**Status**: Planned  
-**Last Updated**: 2026-01-28
+**Status**: Complete (Phases 1–8); optional user docs for 2FA/passkey setup remain  
+**Last Updated**: 2026-01-30
 
 **Dependencies**: 
 - [Email Configuration Dependencies](email-configuration-dependencies-roadmap.md) - Email verification and password reset depend on email being configured
@@ -111,40 +111,40 @@ AUTH_PASSKEY_MODE=disabled|optional|required
 
 ### Phase 1: Audit Current State
 
-- [ ] Document current email verification implementation
-- [ ] Document current password reset implementation
-- [ ] Document current 2FA implementation
-- [ ] Document current passkey implementation (if any)
-- [ ] Identify hardcoded assumptions in auth flows
+- [x] Document current email verification implementation
+- [x] Document current password reset implementation
+- [x] Document current 2FA implementation
+- [x] Document current passkey implementation (if any)
+- [x] Identify hardcoded assumptions in auth flows
 
 ### Phase 2: Configuration Infrastructure
 
-- [ ] Define configuration schema for auth features
-- [ ] Add settings to System Settings or database
-- [ ] Create API endpoint to fetch auth configuration
-- [ ] Ensure settings are admin-only
+- [x] Define configuration schema for auth features
+- [x] Add settings to System Settings or database
+- [x] Create API endpoint to fetch auth configuration
+- [x] Ensure settings are admin-only
 
 ### Phase 3: Email Verification
 
-- [ ] Implement configurable email verification (disabled/optional/required)
-- [ ] Update registration flow based on setting
-- [ ] Update login flow to check verification status
-- [ ] Handle case where email not configured but verification required
+- [x] Implement configurable email verification (disabled/optional/required)
+- [x] Update registration flow based on setting
+- [x] Update login flow to check verification status
+- [x] Handle case where email not configured but verification required
 
 ### Phase 4: Password Reset
 
-- [ ] Implement toggle for self-service password reset
-- [ ] Update forgot password UI based on setting
-- [ ] Ensure admin can always reset passwords
-- [ ] Add admin UI for password reset when self-service disabled
+- [x] Implement toggle for self-service password reset
+- [x] Update forgot password UI based on setting
+- [x] Ensure admin can always reset passwords
+- [x] Add admin UI for password reset when self-service disabled
 
 ### Phase 5: Two-Factor Authentication
 
-- [ ] Implement configurable 2FA mode (disabled/optional/required)
-- [ ] Ensure TOTP setup flow works
-- [ ] Add recovery codes generation and usage
-- [ ] Add admin ability to reset user 2FA
-- [ ] Handle required mode with grace period
+- [x] Implement configurable 2FA mode (disabled/optional/required)
+- [x] Ensure TOTP setup flow works
+- [x] Add recovery codes generation and usage
+- [x] Add admin ability to reset user 2FA
+- [x] Handle required mode with grace period
 
 ### Phase 6: Passkey Support
 
@@ -156,16 +156,16 @@ AUTH_PASSKEY_MODE=disabled|optional|required
 
 ### Phase 7: Admin UI
 
-- [ ] Add auth configuration section to System Settings
-- [ ] Show current status of each feature
-- [ ] Provide clear descriptions of each option
-- [ ] Warn about dependencies (email required for some features)
+- [x] Add auth configuration section to System Settings
+- [x] Show current status of each feature
+- [x] Provide clear descriptions of each option
+- [x] Warn about dependencies (email required for some features)
 
 ### Phase 8: Documentation
 
-- [ ] Document each auth feature and its options
-- [ ] Document security implications of each setting
-- [ ] Add user documentation for 2FA and passkey setup
+- [x] Document each auth feature and its options
+- [x] Document security implications of each setting
+- [x] Add user documentation for 2FA and passkey setup (optional)
 
 ---
 
@@ -183,14 +183,20 @@ AUTH_PASSKEY_MODE=disabled|optional|required
 ## Files Reference
 
 **Backend**:
-- `backend/app/Http/Controllers/Api/AuthController.php` - Auth endpoints
+- `backend/app/Http/Controllers/Api/AuthController.php` - Auth endpoints (forgot-password checks `password_reset_enabled`)
+- `backend/app/Http/Controllers/Api/AuthSettingController.php` - Auth settings CRUD (GET/PUT `/auth-settings`)
+- `backend/app/Http/Controllers/Api/SystemSettingController.php` - Public features (`password_reset_available`, `email_verification_mode`, `two_factor_mode`)
 - `backend/app/Services/Auth/TwoFactorService.php` - 2FA service
 - `backend/config/auth.php` - Auth configuration
-- `backend/app/Http/Middleware/` - Auth middleware
+- `backend/config/settings-schema.php` - `auth` group (email_verification_mode, password_reset_enabled, two_factor_mode)
+- `backend/app/Http/Middleware/EnsureEmailIsVerified.php` - Enforces verification when mode is required
+- `backend/app/Http/Middleware/Ensure2FASetupWhenRequired.php` - Returns 403 with `requires_2fa_setup` when 2FA required and user has not set up
 
 **Frontend**:
-- `frontend/app/(auth)/` - Auth pages (login, register, forgot-password)
-- `frontend/app/(dashboard)/user/security/page.tsx` - User security settings
+- `frontend/app/(auth)/` - Auth pages (login, register, forgot-password; login hides "Forgot password?" when `passwordResetAvailable` false)
+- `frontend/app/(dashboard)/configuration/security/page.tsx` - Security page: Authentication (system-wide) card + user password/2FA/SSO
+- `frontend/lib/app-config.tsx` - Maps public features (emailVerificationMode, twoFactorMode)
+- `frontend/lib/api.ts` - Redirects to `/configuration/security` on 403 with `requires_2fa_setup`
 
 **Documentation**:
 - `docs/adr/002-authentication-architecture.md`
@@ -200,8 +206,8 @@ AUTH_PASSKEY_MODE=disabled|optional|required
 
 ## Success Criteria
 
-- [ ] All four auth features are independently configurable
-- [ ] Admin UI clearly shows configuration options
-- [ ] Features gracefully degrade when dependencies unavailable
-- [ ] Documentation covers all configuration options
-- [ ] No breaking changes to existing deployments (sensible defaults)
+- [x] All four auth features are independently configurable (email verification, password reset, 2FA, passkeys)
+- [x] Admin UI clearly shows configuration options (Configuration > Security)
+- [x] Features gracefully degrade when dependencies unavailable (warning when email not configured)
+- [x] Documentation covers all configuration options
+- [x] No breaking changes to existing deployments (sensible defaults)

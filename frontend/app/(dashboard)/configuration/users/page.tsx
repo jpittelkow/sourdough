@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -15,6 +16,14 @@ import {
 import { UserTable } from "@/components/admin/user-table";
 import { UserDialog } from "@/components/admin/user-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useGroups } from "@/lib/use-groups";
 import { Plus, Search, Loader2 } from "lucide-react";
 
 interface User {
@@ -26,6 +35,7 @@ interface User {
   email_verified_at: string | null;
   disabled_at: string | null;
   created_at: string;
+  groups?: { id: number; name: string; slug: string }[];
 }
 
 interface PaginatedResponse {
@@ -37,6 +47,7 @@ interface PaginatedResponse {
 }
 
 export default function UsersPage() {
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isCreating, setIsCreating] = useState(false);
@@ -45,10 +56,12 @@ export default function UsersPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [selectedGroup, setSelectedGroup] = useState<string>("");
+  const { groups } = useGroups();
 
   useEffect(() => {
     fetchUsers();
-  }, [currentPage, search]);
+  }, [currentPage, search, selectedGroup]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -59,6 +72,9 @@ export default function UsersPage() {
       });
       if (search) {
         params.append("search", search);
+      }
+      if (selectedGroup) {
+        params.append("group", selectedGroup);
       }
 
       const response = await api.get<PaginatedResponse>(`/users?${params}`);
@@ -75,7 +91,12 @@ export default function UsersPage() {
 
   const handleSearch = (value: string) => {
     setSearch(value);
-    setCurrentPage(1); // Reset to first page on search
+    setCurrentPage(1);
+  };
+
+  const handleGroupChange = (value: string) => {
+    setSelectedGroup(value === "all" ? "" : value);
+    setCurrentPage(1);
   };
 
   return (
@@ -101,9 +122,9 @@ export default function UsersPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="mb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search users by name or email..."
                 value={search}
@@ -111,6 +132,19 @@ export default function UsersPage() {
                 className="pl-10"
               />
             </div>
+            <Select value={selectedGroup || "all"} onValueChange={handleGroupChange}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="All groups" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All groups</SelectItem>
+                {groups.map((group) => (
+                  <SelectItem key={group.id} value={group.slug}>
+                    {group.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {isLoading ? (
@@ -131,7 +165,11 @@ export default function UsersPage() {
             </div>
           ) : (
             <>
-              <UserTable users={users} onUserUpdated={fetchUsers} />
+              <UserTable
+                users={users}
+                onUserUpdated={fetchUsers}
+                currentUserId={currentUser?.id}
+              />
 
               {totalPages > 1 && (
                 <div className="flex items-center justify-between mt-4">

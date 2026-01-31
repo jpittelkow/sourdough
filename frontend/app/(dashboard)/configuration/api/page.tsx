@@ -45,7 +45,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
-import { useAuth } from "@/lib/auth";
+import { useAuth, isAdminUser } from "@/lib/auth";
 
 interface ApiToken {
   id: number;
@@ -109,7 +109,7 @@ export default function APISettingsPage() {
   };
 
   const fetchWebhooks = async () => {
-    if (!user?.is_admin) return;
+    if (!isAdminUser(user)) return;
 
     try {
       const response = await api.get("/webhooks");
@@ -243,7 +243,7 @@ export default function APISettingsPage() {
             <Key className="mr-2 h-4 w-4" />
             API Tokens
           </TabsTrigger>
-          {user?.is_admin && (
+          {isAdminUser(user) && (
             <TabsTrigger value="webhooks">
               <Webhook className="mr-2 h-4 w-4" />
               Webhooks
@@ -326,7 +326,7 @@ export default function APISettingsPage() {
           </Card>
         </TabsContent>
 
-        {user?.is_admin && (
+        {isAdminUser(user) && (
           <TabsContent value="webhooks">
             <Card>
               <CardHeader>
@@ -484,7 +484,7 @@ export default function APISettingsPage() {
       </Dialog>
 
       {/* Create Webhook Dialog */}
-      {user?.is_admin && (
+      {isAdminUser(user) && (
         <Dialog open={webhookDialogOpen} onOpenChange={setWebhookDialogOpen}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>

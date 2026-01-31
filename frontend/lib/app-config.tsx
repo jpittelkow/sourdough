@@ -9,6 +9,9 @@ export interface AppConfigFeatures {
   emailConfigured: boolean;
   passwordResetAvailable: boolean;
   emailVerificationAvailable: boolean;
+  emailVerificationMode?: string;
+  twoFactorMode?: string;
+  passkeyMode?: string;
 }
 
 interface AppConfigState {
@@ -57,6 +60,9 @@ function useAppConfigQuery() {
                 emailConfigured: !!features.email_configured,
                 passwordResetAvailable: !!features.password_reset_available,
                 emailVerificationAvailable: !!features.email_verification_available,
+                emailVerificationMode: features.email_verification_mode ?? "optional",
+                twoFactorMode: features.two_factor_mode ?? "optional",
+                passkeyMode: features.passkey_mode ?? "disabled",
               }
             : null,
         };
