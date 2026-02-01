@@ -43,6 +43,11 @@ ENV LOG_CHANNEL=stderr
 # Meilisearch defaults (can be overridden at runtime)
 ENV MEILI_ENV=production
 ENV MEILI_MASTER_KEY=changeThisToASecureKey
+# PUID/PGID for volume permission matching (Unraid, Synology, etc.)
+# Set these to match your host volume ownership
+# Example for Unraid: PUID=99 PGID=100
+ENV PUID=""
+ENV PGID=""
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \

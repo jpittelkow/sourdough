@@ -5,6 +5,35 @@ echo "=== Sourdough Container Starting ==="
 echo "Version: ${APP_VERSION:-unknown}"
 echo "Build: ${APP_BUILD_SHA:-development}"
 
+#==============================================================================
+# PUID/PGID Support (for Unraid, Synology, etc.)
+#==============================================================================
+# If PUID and PGID are set, modify www-data user to match host volume ownership
+PUID=${PUID:-}
+PGID=${PGID:-}
+
+if [ -n "${PUID}" ] && [ -n "${PGID}" ]; then
+    echo "Configuring user permissions: PUID=${PUID} PGID=${PGID}"
+    
+    # Modify www-data group's GID if different
+    CURRENT_GID=$(id -g www-data)
+    if [ "${CURRENT_GID}" != "${PGID}" ]; then
+        echo "  Changing www-data GID from ${CURRENT_GID} to ${PGID}"
+        groupmod -o -g "${PGID}" www-data
+    fi
+    
+    # Modify www-data user's UID if different
+    CURRENT_UID=$(id -u www-data)
+    if [ "${CURRENT_UID}" != "${PUID}" ]; then
+        echo "  Changing www-data UID from ${CURRENT_UID} to ${PUID}"
+        usermod -o -u "${PUID}" www-data
+    fi
+    
+    echo "  User www-data: UID=$(id -u www-data) GID=$(id -g www-data)"
+else
+    echo "No PUID/PGID set, using default www-data (UID=$(id -u www-data) GID=$(id -g www-data))"
+fi
+
 # Directory paths
 BACKEND_DIR="/var/www/html/backend"
 FRONTEND_DIR="/var/www/html/frontend"
