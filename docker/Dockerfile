@@ -40,6 +40,9 @@ ENV APP_BUILD_TIME=${BUILD_TIME}
 ENV APP_ENV=production
 ENV APP_DEBUG=false
 ENV LOG_CHANNEL=stderr
+# Meilisearch defaults (can be overridden at runtime)
+ENV MEILI_ENV=production
+ENV MEILI_MASTER_KEY=changeThisToASecureKey
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
