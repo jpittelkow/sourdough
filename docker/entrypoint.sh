@@ -60,7 +60,7 @@ chown -R www-data:www-data /var/lib/meilisearch
 echo "Setting up storage directories..."
 mkdir -p ${BACKEND_DIR}/storage/app/public
 mkdir -p ${BACKEND_DIR}/storage/app/backups
-mkdir -p ${BACKEND_DIR}/storage/framework/cache
+mkdir -p ${BACKEND_DIR}/storage/framework/cache/data
 mkdir -p ${BACKEND_DIR}/storage/framework/sessions
 mkdir -p ${BACKEND_DIR}/storage/framework/views
 mkdir -p ${BACKEND_DIR}/storage/logs
