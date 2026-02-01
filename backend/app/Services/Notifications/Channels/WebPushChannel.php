@@ -47,7 +47,7 @@ class WebPushChannel implements ChannelInterface
         $payload = json_encode([
             'title' => $title,
             'body' => $message,
-            'icon' => $data['icon'] ?? '/icon-192x192.png',
+            'icon' => $data['icon'] ?? '/icon-192.png',
             'badge' => $data['badge'] ?? '/badge.png',
             'data' => $data,
             'timestamp' => time() * 1000,

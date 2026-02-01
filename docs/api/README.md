@@ -242,6 +242,9 @@ Requires `manage-settings` ability. Storage configuration (driver, max upload si
 | PUT | `/storage-settings` | Update storage settings (driver, max_upload_size, allowed_file_types; provider-specific keys: s3_*, gcs_*, azure_*, do_spaces_*, minio_*, b2_*) |
 | POST | `/storage-settings/test` | Test connection for current driver and config. Body: `driver` plus provider-specific fields. Returns `{ success: true }` or `{ success: false, error: "message" }` (422 on failure). |
 | GET | `/storage-settings/stats` | Get usage stats (driver, total_size, total_size_formatted, file_count). Local driver only: includes `breakdown` (directory path → size, size_formatted). |
+| GET | `/storage-settings/analytics` | Get analytics (local only): by_type, top_files, recent_files. |
+| GET | `/storage-settings/cleanup-suggestions` | Get cleanup suggestions (local only): cache, temp, old_backups with count/size. |
+| POST | `/storage-settings/cleanup` | Run cleanup. Body: `{ type: "cache" | "temp" | "old_backups" }`. |
 | GET | `/storage-settings/paths` | Get storage location paths and descriptions (app, public, backups, cache, sessions, logs). |
 | GET | `/storage-settings/health` | Get storage health (status: healthy\|warning, writable, disk_used_percent, disk_free_formatted, disk_total_formatted). Warning when not writable or usage ≥ 90%. |
 

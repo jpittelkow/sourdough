@@ -90,9 +90,9 @@ If the page loads or saves settings:
 
 ## Key Files
 
-- [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx) – `navigationGroups` and `GroupedNavigation`
-- [docs/ai/patterns.md](docs/ai/patterns.md#configuration-navigation-pattern) – Configuration navigation pattern
-- [docs/features.md](docs/features.md) – Feature list to update
+- `frontend/app/(dashboard)/configuration/layout.tsx` – `navigationGroups` and `GroupedNavigation`
+- [Configuration navigation pattern](../patterns.md#configuration-navigation-pattern)
+- [Feature list](../../features.md) to update
 
 ## Adding a New Group (Rare)
 
@@ -100,7 +100,7 @@ Only add a new group when the feature area does not fit existing groups and is s
 
 1. In `layout.tsx`, add a new object to `navigationGroups` with `name`, `icon`, and `items` (array of at least one item).
 2. Use a unique, descriptive group name and a Lucide icon.
-3. Document the new group in this recipe’s "Configuration Groups" table and in [patterns.md](docs/ai/patterns.md#configuration-navigation-pattern).
+3. Document the new group in this recipe’s "Configuration Groups" table and in [patterns.md](../patterns.md#configuration-navigation-pattern).
 
 ## Related
 

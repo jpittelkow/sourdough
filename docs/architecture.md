@@ -27,7 +27,7 @@ Sourdough uses a decoupled architecture:
 Architecture Decision Records (ADRs) document all significant design decisions:
 
 - [ADR-001: Technology Stack](adr/001-technology-stack.md) - Laravel 11, Next.js 14, SQLite, Docker selection rationale
-  - Key files: `composer.json`, `package.json`, `backend/config/app.php`, `frontend/next.config.js`
+  - Key files: `backend/composer.json`, `frontend/package.json`, `backend/config/app.php`, `frontend/next.config.js`
 - [ADR-002: Authentication Architecture](adr/002-authentication-architecture.md) - Laravel Sanctum session-based authentication
   - Key files: `backend/app/Http/Controllers/Api/AuthController.php`, `backend/app/Http/Controllers/Api/UserController.php`, `backend/config/auth.php`, `backend/config/sanctum.php`, `frontend/lib/auth.ts`, `frontend/app/(auth)/`, `frontend/app/(dashboard)/configuration/users/page.tsx`, `frontend/components/admin/user-table.tsx`, `frontend/components/admin/user-dialog.tsx`
 - [ADR-003: SSO Provider Integration](adr/003-sso-provider-integration.md) - OAuth2/OIDC provider integration strategy
@@ -65,6 +65,14 @@ Architecture Decision Records (ADRs) document all significant design decisions:
   - Key files: `backend/app/Services/Auth/PasskeyService.php`, `backend/app/Http/Controllers/Api/PasskeyController.php`, `backend/app/Models/User.php` (WebAuthnAuthenticatable), `backend/config/settings-schema.php` (auth.passkey_mode), `frontend/lib/use-passkeys.ts`, `frontend/components/auth/passkey-register-dialog.tsx`, `frontend/components/auth/passkey-login-button.tsx`, `frontend/app/(dashboard)/user/security/page.tsx`, `frontend/app/(auth)/login/page.tsx`, `frontend/app/(dashboard)/configuration/security/page.tsx`
 - [ADR-019: Progressive Web App (PWA) Service Worker](adr/019-progressive-web-app.md) - Manual service worker with Workbox runtime; cache-first for static assets, network-first for API; offline fallback
   - Key files: `frontend/public/sw.js`, `frontend/public/offline.html`, `frontend/lib/service-worker.ts`, `frontend/components/service-worker-setup.tsx`, `scripts/generate-pwa-icons.mjs`
+- [ADR-020: User Groups and Permissions System](adr/020-user-groups-permissions.md) - Group-based authorization with granular permissions
+  - Key files: `backend/app/Services/GroupService.php`, `backend/app/Services/PermissionService.php`, `backend/app/Models/UserGroup.php`, `backend/app/Enums/Permission.php`, `backend/app/Http/Controllers/Api/GroupController.php`, `frontend/components/permission-gate.tsx`, `frontend/lib/use-permission.ts`, `frontend/app/(dashboard)/configuration/groups/page.tsx`
+- [ADR-021: Search with Meilisearch Integration](adr/021-search-meilisearch-integration.md) - Embedded Meilisearch with Laravel Scout for full-text search
+  - Key files: `backend/app/Services/Search/SearchService.php`, `backend/app/Http/Controllers/Api/SearchController.php`, `backend/config/scout.php`, `backend/config/search-pages.php`, `frontend/components/search/search-modal.tsx`, `frontend/components/search/search-provider.tsx`, `frontend/lib/search.ts`
+- [ADR-022: Storage Provider System](adr/022-storage-provider-system.md) - Multi-provider file storage with S3, GCS, Azure, and local support
+  - Key files: `backend/app/Services/StorageService.php`, `backend/app/Http/Controllers/Api/StorageSettingController.php`, `backend/app/Http/Controllers/Api/FileManagerController.php`, `backend/config/filesystems.php`, `frontend/app/(dashboard)/configuration/storage/page.tsx`, `frontend/components/storage/file-browser.tsx`
+- [ADR-023: Audit Logging System](adr/023-audit-logging-system.md) - Database-backed audit logging with real-time broadcasting and severity levels
+  - Key files: `backend/app/Services/AuditService.php`, `backend/app/Models/AuditLog.php`, `backend/app/Events/AuditLogCreated.php`, `backend/app/Http/Controllers/Api/AuditLogController.php`, `frontend/app/(dashboard)/configuration/audit/page.tsx`, `frontend/lib/use-audit-stream.ts`
 
 ### Logging and Observability
 

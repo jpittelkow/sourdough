@@ -191,9 +191,13 @@ function saveStoredExpanded(expanded: Set<string>) {
 // Grouped navigation with collapsible sections (filtered by user permissions)
 function GroupedNavigation({ pathname }: { pathname: string }) {
   const { user } = useAuth();
+  // Admin users see all nav items; others filtered by permissions
   const filteredGroups = useMemo(
-    () => filterGroupsByPermission(navigationGroups, user?.permissions),
-    [user?.permissions]
+    () =>
+      isAdminUser(user)
+        ? navigationGroups
+        : filterGroupsByPermission(navigationGroups, user?.permissions),
+    [user]
   );
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     getDefaultExpanded(pathname, filteredGroups)

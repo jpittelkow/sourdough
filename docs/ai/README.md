@@ -21,6 +21,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Search | `backend/app/Services/Search/SearchService.php`, `frontend/lib/search.ts`, [add-searchable-model](recipes/add-searchable-model.md), [context-loading: Search Work](context-loading.md#search-work) |
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
+| PWA | [PWA roadmap](../plans/pwa-roadmap.md), `frontend/public/sw.js`, `frontend/lib/use-install-prompt.ts`, [add-pwa-install-prompt](recipes/add-pwa-install-prompt.md), [context-loading: PWA Work](context-loading.md#pwa-work) |
 
 **Full context loading details:** [context-loading.md](context-loading.md)
 
@@ -81,6 +82,13 @@ Example plan reference:
 | Add Tests | [add-tests.md](recipes/add-tests.md) |
 | Make Responsive | [make-component-responsive.md](recipes/make-component-responsive.md) |
 | Assign User to Groups | [assign-user-to-groups.md](recipes/assign-user-to-groups.md) |
+| Create Custom Group | [create-custom-group.md](recipes/create-custom-group.md) |
+| Add New Permission | [add-new-permission.md](recipes/add-new-permission.md) |
+| Add Auditable Action | [add-auditable-action.md](recipes/add-auditable-action.md) |
+| Trigger Audit Logging | [trigger-audit-logging.md](recipes/trigger-audit-logging.md) |
+| Add Searchable Page | [add-searchable-page.md](recipes/add-searchable-page.md) |
+| Add Configuration Menu Item | [add-configuration-menu-item.md](recipes/add-configuration-menu-item.md) |
+| Add PWA Install Prompt | [add-pwa-install-prompt.md](recipes/add-pwa-install-prompt.md) |
 
 ## Common Gotchas
 
@@ -90,12 +98,14 @@ Example plan reference:
 - **SQLite default** - Dev uses SQLite but code supports MySQL/PostgreSQL. Test array/JSON columns carefully.
 - **API prefix** - All backend routes are under `/api/`. Frontend calls go through Nginx proxy.
 - **Settings models** - User settings use `Setting` model; system settings use `SystemSetting` model
-- **Schema-backed settings** - For settings in `backend/config/settings-schema.php` (e.g. mail), use **SettingService** (env fallback, encryption, cache); do not use `SystemSetting::get`/`set` directly. See [ADR-014](adr/014-database-settings-env-fallback.md) and [SettingService pattern](patterns.md#settingservice-pattern).
+- **Schema-backed settings** - For settings in `backend/config/settings-schema.php` (e.g. mail), use **SettingService** (env fallback, encryption, cache); do not use `SystemSetting::get`/`set` directly. See [ADR-014](../adr/014-database-settings-env-fallback.md) and [SettingService pattern](patterns.md#settingservice-pattern).
 - **Sanctum cookies** - Auth uses session cookies, not Bearer tokens. Include `credentials: 'include'` in fetch.
 - **shadcn/ui** - Components in `frontend/components/ui/` are CLI-managed. Use `npx shadcn@latest add <component>` from `frontend/`; config in `frontend/components.json`. See [Quick Reference](../quick-reference.md) for commands.
 - **Service layer** - Business logic goes in `Services/`, not controllers. Controllers just validate and route.
 - **Form fields optional by default** - Config pages should make fields optional unless explicitly required. Use `z.string().optional()` and `.refine()` for format validation that allows empty. See [add-config-page recipe](recipes/add-config-page.md).
 - **Mobile-first CSS** - Write base styles for mobile (no prefix), add `md:`, `lg:` for larger screens. Use `useIsMobile()` hook for conditional rendering. See [Cursor rule](../../.cursor/rules/responsive-mobile-first.mdc).
+- **Admin is group-based** - Admin status is determined by membership in the `admin` group, not an `is_admin` column. Use `$user->isAdmin()` or `$user->inGroup('admin')` on backend; use `isAdminUser(user)` from `frontend/lib/auth.ts` on frontend. The API returns a computed `is_admin` attribute for compatibility.
+- **Audit actions** - Use `AuditService` for logging user actions (auth events, settings changes, admin operations). Use `{resource}.{action}` naming (e.g. `user.created`, `settings.updated`). Sensitive data is auto-masked.
 
 See also: [Anti-Patterns](anti-patterns.md) - Common mistakes to avoid
 

@@ -271,7 +271,7 @@ const providerTemplates: ProviderTemplate[] = [
 - [ ] (Optional) Model discovery: provider id added to `LLMModelController` validation `in:...` for `testKey` and `discover`
 - [ ] Frontend: entry added to `providerTemplates` in `configuration/ai/page.tsx`
 - [ ] Error handling and timeouts (e.g. `config('llm.timeout')`) in provider and discovery
-- [ ] ADR reference: [ADR-006: LLM Orchestration Modes](adr/006-llm-orchestration-modes.md); model discovery: [LLM Model Discovery Roadmap](plans/llm-model-discovery-roadmap.md)
+- [ ] ADR reference: [ADR-006: LLM Orchestration Modes](../../adr/006-llm-orchestration-modes.md); model discovery: [LLM Model Discovery Roadmap](../../plans/llm-model-discovery-roadmap.md)
 
 ---
 

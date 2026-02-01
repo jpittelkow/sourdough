@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useNotifications } from "@/lib/notifications";
+import { useOnline } from "@/lib/use-online";
+import { OfflineBadge } from "@/components/offline-badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { NotificationList } from "@/components/notifications/notification-list";
@@ -30,6 +32,7 @@ export default function NotificationsPage() {
     fetchNotifications: refetchContext,
     fetchUnreadCount,
   } = useNotifications();
+  const { isOffline } = useOnline();
 
   const [filter, setFilter] = useState<"all" | "unread">("all");
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -148,11 +151,16 @@ export default function NotificationsPage() {
 
   return (
     <div className="container py-6 md:py-8">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
-        <p className="text-muted-foreground mt-1">
-          View and manage your notifications.
-        </p>
+      <div className="mb-6 flex items-center gap-2 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Notifications</h1>
+          <p className="text-muted-foreground mt-1">
+            {isOffline
+              ? "You're offline. Notifications are read-only; actions will sync when back online."
+              : "View and manage your notifications."}
+          </p>
+        </div>
+        <OfflineBadge />
       </div>
 
       <Tabs
@@ -170,7 +178,7 @@ export default function NotificationsPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleMarkAllRead}
-                disabled={isLoading}
+                disabled={isLoading || isOffline}
               >
                 <CheckCheck className="mr-2 h-4 w-4" />
                 Mark all read
@@ -181,7 +189,7 @@ export default function NotificationsPage() {
                 variant="destructive"
                 size="sm"
                 onClick={handleDeleteSelected}
-                disabled={deleting}
+                disabled={deleting || isOffline}
               >
                 <Trash2 className="mr-2 h-4 w-4" />
                 Delete selected ({selectedIds.size})

@@ -884,11 +884,62 @@ function MyComponent() {
 </button>
 ```
 
+### Don't: Define Utility Functions Inline in Pages
+
+Common utilities like `formatBytes` and `formatDate` should not be defined in page components. These get duplicated across the codebase.
+
+```tsx
+// ❌ WRONG: Utility defined inline in page component
+// frontend/app/(dashboard)/configuration/backup/page.tsx
+export default function BackupPage() {
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+  // ...
+}
+
+// Same function duplicated in storage/page.tsx, file-browser.tsx, etc.
+```
+
+```tsx
+// ✅ CORRECT: Centralize utilities in lib/utils.ts
+// frontend/lib/utils.ts
+export function formatBytes(bytes: number, decimals = 2): string {
+  if (bytes === 0) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB", "TB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(decimals)) + " " + sizes[i];
+}
+
+export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOptions): string {
+  return new Date(date).toLocaleDateString(undefined, options ?? {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
+// Then import where needed
+import { formatBytes, formatDate } from "@/lib/utils";
+```
+
+**Currently duplicated (needs centralization):**
+- `formatBytes` - 2+ definitions (backup, storage pages)
+- `formatDate` - 4+ definitions (backup, storage, templates pages)
+
+**Before adding any utility, search the codebase** to see if it already exists. If it does, use the existing one. If it doesn't exist but would be useful in multiple places, add it to `frontend/lib/utils.ts`.
+
 ## Summary Checklist
 
 Before submitting code, verify:
 
 - [ ] **No duplicated logic** - Searched for existing components/utilities first
+- [ ] **Centralized utilities** - Common functions (formatBytes, formatDate) in `frontend/lib/utils.ts`, not inline
 - [ ] **Shared components used** - New reusable functionality placed in `frontend/components/` or `frontend/lib/`
 - [ ] Business logic is in Services, not Controllers
 - [ ] All queries are user-scoped where appropriate

@@ -1,5 +1,10 @@
-import axios from "axios";
+import axios, { type AxiosError } from "axios";
 import { setCorrelationId } from "@/lib/error-logger";
+import {
+  addToRequestQueue,
+  registerBackgroundSync,
+  setupOfflineRetry,
+} from "@/lib/request-queue";
 
 export const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL
@@ -11,6 +16,11 @@ export const api = axios.create({
     Accept: "application/json",
   },
 });
+
+// Set up online listener to retry queued requests (fallback when Background Sync not supported)
+if (typeof window !== "undefined") {
+  setupOfflineRetry(api);
+}
 
 // Flag to prevent multiple redirects
 let isRedirecting = false;
@@ -67,7 +77,28 @@ api.interceptors.response.use(
 
       throw new Error(message);
     } else if (error.request) {
-      // Request made but no response
+      // Network error: queue mutations for retry when back online
+      const config = error.config;
+      const method = config?.method?.toUpperCase();
+      const isFormData = config?.data instanceof FormData;
+      if (
+        typeof window !== "undefined" &&
+        config &&
+        method &&
+        ["POST", "PUT", "PATCH", "DELETE"].includes(method) &&
+        !isFormData
+      ) {
+        const base = config.baseURL ?? "";
+        const path = config.url ?? "";
+        const url = path.startsWith("http") ? path : base + (path.startsWith("/") ? path : `/${path}`);
+        addToRequestQueue(
+          method as "POST" | "PUT" | "PATCH" | "DELETE",
+          url,
+          config.data
+        )
+          .then(() => registerBackgroundSync())
+          .catch(() => {});
+      }
       throw new Error("Network error - please check your connection");
     } else {
       // Error in setting up request

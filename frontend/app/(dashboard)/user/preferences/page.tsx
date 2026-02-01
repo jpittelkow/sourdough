@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { useOnline } from "@/lib/use-online";
+import { OfflineBadge } from "@/components/offline-badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,9 +26,17 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send } from "lucide-react";
+import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send, Smartphone, Download } from "lucide-react";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
+import {
+  isWebPushSupported,
+  getPermissionStatus,
+  subscribe,
+  unsubscribe,
+} from "@/lib/web-push";
+import { useAppConfig } from "@/lib/app-config";
+import { useInstallPrompt } from "@/lib/use-install-prompt";
 
 interface UserPreferences {
   theme?: "light" | "dark" | "system";
@@ -67,6 +76,12 @@ export default function PreferencesPage() {
   const [channelSettings, setChannelSettings] = useState<Record<string, Record<string, string>>>({});
   const [savingChannel, setSavingChannel] = useState<string | null>(null);
   const [testingChannel, setTestingChannel] = useState<string | null>(null);
+  const [webpushLoading, setWebpushLoading] = useState(false);
+  const [webpushPermission, setWebpushPermission] = useState<NotificationPermission | "unsupported">("unsupported");
+  const [installPrompting, setInstallPrompting] = useState(false);
+  const { features } = useAppConfig();
+  const { isOffline } = useOnline();
+  const { canPrompt, isInstalled, promptInstall } = useInstallPrompt();
 
   useEffect(() => {
     fetchPreferences();
@@ -74,6 +89,10 @@ export default function PreferencesPage() {
 
   useEffect(() => {
     fetchChannels();
+  }, []);
+
+  useEffect(() => {
+    setWebpushPermission(getPermissionStatus());
   }, []);
 
   const fetchChannels = async () => {
@@ -174,6 +193,72 @@ export default function PreferencesPage() {
       toast.error(msg ?? "Failed to send test");
     } finally {
       setTestingChannel(null);
+    }
+  };
+
+  const enableWebPush = async () => {
+    const vapidKey = features?.webpushVapidPublicKey;
+    if (!vapidKey) {
+      toast.error("Browser notifications are not configured. Contact your administrator.");
+      return;
+    }
+    if (!isWebPushSupported()) {
+      toast.error("Your browser does not support push notifications.");
+      return;
+    }
+    setWebpushLoading(true);
+    try {
+      const payload = await subscribe(vapidKey);
+      if (!payload) {
+        if (getPermissionStatus() === "denied") {
+          toast.error("Notification permission was denied.");
+        } else {
+          toast.error("Failed to subscribe to push notifications.");
+        }
+        return;
+      }
+      await api.post("/user/webpush-subscription", payload);
+      await api.put("/user/notification-settings", {
+        channel: "webpush",
+        enabled: true,
+        usage_accepted: true,
+      });
+      setWebpushPermission(getPermissionStatus());
+      await fetchChannels();
+      toast.success("Browser notifications enabled");
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to enable browser notifications");
+      errorLogger.report(
+        err instanceof Error ? err : new Error("Web push subscribe failed"),
+        { source: "preferences-webpush" }
+      );
+    } finally {
+      setWebpushLoading(false);
+    }
+  };
+
+  const disableWebPush = async () => {
+    setWebpushLoading(true);
+    try {
+      await api.delete("/user/webpush-subscription");
+      await unsubscribe();
+      await api.put("/user/notification-settings", {
+        channel: "webpush",
+        enabled: false,
+      });
+      setWebpushPermission(getPermissionStatus());
+      await fetchChannels();
+      toast.success("Browser notifications disabled");
+    } catch (err: unknown) {
+      const msg = err && typeof err === "object" && "response" in err
+        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+        : null;
+      toast.error(msg ?? "Failed to disable browser notifications");
+    } finally {
+      setWebpushLoading(false);
     }
   };
 
@@ -286,11 +371,16 @@ export default function PreferencesPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Preferences</h1>
-        <p className="text-muted-foreground">
-          Customize your personal settings and preferences.
-        </p>
+      <div className="flex items-center gap-2 flex-wrap">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Preferences</h1>
+          <p className="text-muted-foreground">
+            {isOffline
+              ? "You're offline. Settings are read-only; changes will sync when you're back online."
+              : "Customize your personal settings and preferences."}
+          </p>
+        </div>
+        <OfflineBadge />
       </div>
 
       {/* Appearance */}
@@ -310,11 +400,13 @@ export default function PreferencesPage() {
             <RadioGroup
               value={preferences.theme ?? "system"}
               onValueChange={(value) => {
+                if (isOffline) return;
                 const validTheme = ["light", "dark", "system"].includes(value)
                   ? (value as "light" | "dark" | "system")
                   : "system";
                 handleThemeChange(validTheme);
               }}
+              disabled={isOffline}
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="light" id="light" />
@@ -359,6 +451,7 @@ export default function PreferencesPage() {
             <Select
               value={preferences.default_llm_mode ?? "single"}
               onValueChange={(value) => {
+                if (isOffline) return;
                 const validMode = ["single", "aggregation", "council"].includes(value)
                   ? (value as "single" | "aggregation" | "council")
                   : "single";
@@ -366,6 +459,7 @@ export default function PreferencesPage() {
                   default_llm_mode: validMode,
                 });
               }}
+              disabled={isOffline}
             >
               <SelectTrigger id="default_llm_mode">
                 <SelectValue />
@@ -418,13 +512,65 @@ export default function PreferencesPage() {
                       <Label className="text-base font-medium">{channel.name}</Label>
                       <p className="text-sm text-muted-foreground">{channel.description}</p>
                     </div>
-                    <Switch
-                      checked={channel.enabled}
-                      onCheckedChange={(enabled) => toggleChannel(channel.id, enabled)}
-                      disabled={channel.settings.length > 0 && !channel.configured}
-                    />
+                    {channel.id === "webpush" ? (
+                      <div className="flex items-center gap-2">
+                        {channel.configured ? (
+                          <>
+                            <span className="text-sm text-muted-foreground">
+                              {webpushPermission === "granted" ? "Subscribed" : webpushPermission === "denied" ? "Permission denied" : "Enabled"}
+                            </span>
+                            <Switch
+                              checked={channel.enabled}
+                              onCheckedChange={(enabled) =>
+                                enabled ? enableWebPush() : disableWebPush()
+                              }
+                              disabled={webpushLoading || isOffline}
+                            />
+                          </>
+                        ) : (
+                          <Button
+                            size="sm"
+                            onClick={enableWebPush}
+                            disabled={
+                              webpushLoading ||
+                              isOffline ||
+                              !features?.webpushEnabled ||
+                              !isWebPushSupported()
+                            }
+                          >
+                            {webpushLoading ? (
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            ) : (
+                              <Smartphone className="mr-2 h-4 w-4" />
+                            )}
+                            Enable Browser Notifications
+                          </Button>
+                        )}
+                      </div>
+                    ) : (
+                      <Switch
+                        checked={channel.enabled}
+                        onCheckedChange={(enabled) => toggleChannel(channel.id, enabled)}
+                        disabled={(channel.settings.length > 0 && !channel.configured) || isOffline}
+                      />
+                    )}
                   </div>
-                  {channel.settings.length > 0 && (
+                  {channel.id === "webpush" && channel.configured && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => testChannel("webpush")}
+                      disabled={testingChannel === "webpush" || isOffline}
+                    >
+                      {testingChannel === "webpush" ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Send className="mr-2 h-4 w-4" />
+                      )}
+                      Test
+                    </Button>
+                  )}
+                  {channel.settings.length > 0 && channel.id !== "webpush" && (
                     <>
                       <Separator />
                       <div className="space-y-3 pl-0">
@@ -444,7 +590,7 @@ export default function PreferencesPage() {
                           <Button
                             size="sm"
                             onClick={() => saveChannelSettings(channel.id)}
-                            disabled={savingChannel === channel.id}
+                            disabled={savingChannel === channel.id || isOffline}
                           >
                             {savingChannel === channel.id && (
                               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -456,7 +602,7 @@ export default function PreferencesPage() {
                               size="sm"
                               variant="outline"
                               onClick={() => testChannel(channel.id)}
-                              disabled={testingChannel === channel.id}
+                              disabled={testingChannel === channel.id || isOffline}
                             >
                               {testingChannel === channel.id ? (
                                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -473,6 +619,53 @@ export default function PreferencesPage() {
                 </div>
               ))}
             </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Install App (PWA) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Install App
+          </CardTitle>
+          <CardDescription>
+            Install this app on your device for quick access and offline use.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isInstalled ? (
+            <p className="text-sm text-muted-foreground">
+              The app is installed. Open it from your home screen or app drawer.
+            </p>
+          ) : canPrompt ? (
+            <Button
+              size="sm"
+              onClick={async () => {
+                setInstallPrompting(true);
+                try {
+                  const result = await promptInstall();
+                  if (result?.outcome === "accepted") {
+                    toast.success("App installed");
+                  }
+                } finally {
+                  setInstallPrompting(false);
+                }
+              }}
+              disabled={installPrompting || isOffline}
+            >
+              {installPrompting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Download className="mr-2 h-4 w-4" />
+              )}
+              Install App
+            </Button>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Install is available in supported browsers (e.g. Chrome, Edge) when you visit this site. Use your browser&apos;s menu to add to home screen.
+            </p>
           )}
         </CardContent>
       </Card>

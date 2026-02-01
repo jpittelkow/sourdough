@@ -6,6 +6,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
+import { Pie, PieChart, Cell } from "recharts";
 import { api } from "@/lib/api";
 import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -29,7 +30,26 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Loader2, FolderOpen, Globe, Archive, Database, Users, FileText, AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+import type { ChartConfig } from "@/components/ui/chart";
+import { Switch } from "@/components/ui/switch";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Loader2, FolderOpen, Globe, Archive, Database, Users, FileText, AlertTriangle, CheckCircle2, XCircle, BarChart3, Bell, Trash2 } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icons";
 
 const DRIVERS = ["local", "s3", "gcs", "azure", "do_spaces", "minio", "b2"] as const;
@@ -38,6 +58,10 @@ const storageSchema = z.object({
   driver: z.enum(DRIVERS),
   max_upload_size: z.number().min(1),
   allowed_file_types: z.array(z.string()),
+  storage_alert_enabled: z.boolean().optional(),
+  storage_alert_threshold: z.number().min(1).max(100).optional(),
+  storage_alert_critical: z.number().min(1).max(100).optional(),
+  storage_alert_email: z.boolean().optional(),
   s3_bucket: z.string().optional(),
   s3_region: z.string().optional(),
   s3_key: z.string().optional(),
@@ -96,6 +120,112 @@ interface StorageHealth {
   disk_total_formatted: string;
 }
 
+interface StorageAnalytics {
+  driver: string;
+  by_type?: Record<string, number>;
+  top_files?: Array<{
+    path: string;
+    name: string;
+    size: number;
+    size_formatted: string;
+    lastModified: number;
+    lastModifiedFormatted: string;
+  }>;
+  recent_files?: Array<{
+    path: string;
+    name: string;
+    size: number;
+    size_formatted: string;
+    lastModified: number;
+    lastModifiedFormatted: string;
+  }>;
+  note?: string;
+}
+
+const CHART_COLORS = [
+  "hsl(217 91% 60%)",
+  "hsl(38 92% 50%)",
+  "hsl(142 71% 45%)",
+  "hsl(262 83% 58%)",
+  "hsl(0 84% 60%)",
+  "hsl(173 58% 39%)",
+  "hsl(27 96% 61%)",
+  "hsl(199 89% 48%)",
+];
+
+function formatBytes(bytes: number): string {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let i = 0;
+  let v = bytes;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v.toFixed(2)} ${units[i]}`;
+}
+
+function StorageByTypeChart({ byType }: { byType: Record<string, number> }) {
+  const entries = Object.entries(byType)
+    .sort(([, a], [, b]) => b - a)
+    .slice(0, 8);
+  const total = entries.reduce((acc, [, v]) => acc + v, 0);
+  if (total === 0 || entries.length === 0) {
+    return (
+      <div className="flex min-h-[200px] items-center justify-center rounded-lg border border-dashed bg-muted/30 text-sm text-muted-foreground">
+        No file type data
+      </div>
+    );
+  }
+  const chartConfig: ChartConfig = Object.fromEntries(
+    entries.map(([ext], i) => [
+      ext,
+      { label: ext === "none" ? "(no ext)" : `.${ext}`, color: CHART_COLORS[i % CHART_COLORS.length] },
+    ])
+  );
+  const chartData = entries.map(([name, value], i) => ({
+    name,
+    value: Math.round((value / total) * 1000) / 10,
+    size: value,
+    fill: `var(--color-${name})`,
+  }));
+  return (
+    <ChartContainer config={chartConfig} className="min-h-[200px] w-full max-w-[300px]">
+      <PieChart accessibilityLayer>
+        <ChartTooltip
+          content={
+            <ChartTooltipContent
+              nameKey="name"
+              formatter={(value: number, _name: string, item: { payload?: { name: string; size: number } }) => {
+                const ext = item?.payload?.name ?? "";
+                const size = item?.payload?.size ?? 0;
+                return (
+                  <span>
+                    {ext === "none" ? "(no ext)" : `.${ext}`}: {formatBytes(size)} ({value}%)
+                  </span>
+                );
+              }}
+            />
+          }
+        />
+        <Pie
+          data={chartData}
+          dataKey="value"
+          nameKey="name"
+          innerRadius={50}
+          outerRadius={70}
+          paddingAngle={2}
+          strokeWidth={1}
+          stroke="hsl(var(--background))"
+        >
+          {chartData.map((entry, index) => (
+            <Cell key={`cell-${index}`} fill={entry.fill} />
+          ))}
+        </Pie>
+      </PieChart>
+    </ChartContainer>
+  );
+}
+
 export default function StorageSettingsPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
@@ -107,6 +237,17 @@ export default function StorageSettingsPage() {
   const [fileTypesInput, setFileTypesInput] = useState("");
   const [testStatus, setTestStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [testError, setTestError] = useState<string | null>(null);
+  const [analytics, setAnalytics] = useState<StorageAnalytics | null>(null);
+  const [isLoadingAnalytics, setIsLoadingAnalytics] = useState(false);
+  const [cleanupSuggestions, setCleanupSuggestions] = useState<{
+    suggestions: Record<string, { count: number; size: number; size_formatted?: string; description: string }>;
+    total_reclaimable: number;
+    total_reclaimable_formatted?: string;
+    note?: string;
+  } | null>(null);
+  const [isLoadingCleanup, setIsLoadingCleanup] = useState(false);
+  const [cleanupConfirmType, setCleanupConfirmType] = useState<string | null>(null);
+  const [cleanupSubmitting, setCleanupSubmitting] = useState(false);
 
   const { register, handleSubmit, formState: { errors, isDirty }, setValue, watch } = useForm<StorageForm>({
     resolver: zodResolver(storageSchema),
@@ -114,6 +255,10 @@ export default function StorageSettingsPage() {
       driver: "local",
       max_upload_size: 10485760, // 10MB
       allowed_file_types: [],
+      storage_alert_enabled: false,
+      storage_alert_threshold: 80,
+      storage_alert_critical: 95,
+      storage_alert_email: true,
     },
   });
 
@@ -124,6 +269,8 @@ export default function StorageSettingsPage() {
     fetchStats();
     fetchPaths();
     fetchHealth();
+    fetchAnalytics();
+    fetchCleanupSuggestions();
   }, []);
 
   const fetchSettings = async () => {
@@ -143,6 +290,14 @@ export default function StorageSettingsPage() {
           setValue(key as any, settings[key] ? parseInt(settings[key]) : 10485760);
         } else if (key === "allowed_file_types") {
           setValue(key as any, Array.isArray(settings[key]) ? settings[key] : []);
+        } else if (key === "storage_alert_enabled") {
+          setValue(key as any, settings[key] === true || settings[key] === "true");
+        } else if (key === "storage_alert_threshold") {
+          setValue(key as any, settings[key] != null ? parseInt(settings[key]) : 80);
+        } else if (key === "storage_alert_critical") {
+          setValue(key as any, settings[key] != null ? parseInt(settings[key]) : 95);
+        } else if (key === "storage_alert_email") {
+          setValue(key as any, settings[key] !== false && settings[key] !== "false");
         } else {
           setValue(key as any, settings[key] || "");
         }
@@ -181,6 +336,46 @@ export default function StorageSettingsPage() {
       setHealth(response.data);
     } catch (error: any) {
       // Health might not be available
+    }
+  };
+
+  const fetchAnalytics = async () => {
+    setIsLoadingAnalytics(true);
+    try {
+      const response = await api.get("/storage-settings/analytics");
+      setAnalytics(response.data);
+    } catch (error: any) {
+      // Analytics might not be available
+    } finally {
+      setIsLoadingAnalytics(false);
+    }
+  };
+
+  const fetchCleanupSuggestions = async () => {
+    setIsLoadingCleanup(true);
+    try {
+      const response = await api.get("/storage-settings/cleanup-suggestions");
+      setCleanupSuggestions(response.data);
+    } catch (error: any) {
+      // Cleanup might not be available
+    } finally {
+      setIsLoadingCleanup(false);
+    }
+  };
+
+  const onCleanup = async (type: string) => {
+    setCleanupSubmitting(true);
+    try {
+      await api.post("/storage-settings/cleanup", { type });
+      toast.success("Cleanup completed successfully");
+      setCleanupConfirmType(null);
+      await fetchCleanupSuggestions();
+      await fetchStats();
+      await fetchAnalytics();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || error.response?.data?.error || "Cleanup failed");
+    } finally {
+      setCleanupSubmitting(false);
     }
   };
 
@@ -259,6 +454,10 @@ export default function StorageSettingsPage() {
       const submitData = {
         ...data,
         allowed_file_types: fileTypes,
+        storage_alert_enabled: data.storage_alert_enabled ?? false,
+        storage_alert_threshold: data.storage_alert_threshold ?? 80,
+        storage_alert_critical: data.storage_alert_critical ?? 95,
+        storage_alert_email: data.storage_alert_email ?? true,
       };
 
       await api.put("/storage-settings", submitData);
@@ -267,6 +466,8 @@ export default function StorageSettingsPage() {
       await fetchStats();
       await fetchPaths();
       await fetchHealth();
+      await fetchAnalytics();
+      await fetchCleanupSuggestions();
     } catch (error: any) {
       toast.error(error.response?.data?.message || "Failed to update storage settings");
     } finally {
@@ -360,6 +561,205 @@ export default function StorageSettingsPage() {
         </Card>
       )}
 
+      {analytics && analytics.driver === "local" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5" />
+              Storage Analytics
+            </CardTitle>
+            <CardDescription>
+              File type breakdown and largest files
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoadingAnalytics ? (
+              <div className="flex items-center justify-center py-12">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : analytics.note ? (
+              <p className="text-sm text-muted-foreground py-4">{analytics.note}</p>
+            ) : (
+              <div className="space-y-6">
+                {analytics.by_type && Object.keys(analytics.by_type).length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-3">Storage by file type</div>
+                    <StorageByTypeChart byType={analytics.by_type} />
+                  </div>
+                )}
+                {analytics.top_files && analytics.top_files.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-3">Top 10 largest files</div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Path</TableHead>
+                          <TableHead className="text-right">Size</TableHead>
+                          <TableHead>Modified</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {analytics.top_files.map((f, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{f.name}</TableCell>
+                            <TableCell>
+                              {isAdminUser(user) ? (
+                                <Link
+                                  href={`/configuration/storage/files?path=${encodeURIComponent(f.path)}`}
+                                  className="text-primary hover:underline truncate block max-w-[200px]"
+                                >
+                                  {f.path}
+                                </Link>
+                              ) : (
+                                <span className="truncate block max-w-[200px] text-muted-foreground">{f.path}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">{f.size_formatted}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{f.lastModifiedFormatted}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                {analytics.recent_files && analytics.recent_files.length > 0 && (
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground mb-3">Recently modified</div>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Name</TableHead>
+                          <TableHead>Path</TableHead>
+                          <TableHead className="text-right">Size</TableHead>
+                          <TableHead>Modified</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {analytics.recent_files.map((f, i) => (
+                          <TableRow key={i}>
+                            <TableCell className="font-medium">{f.name}</TableCell>
+                            <TableCell>
+                              {isAdminUser(user) ? (
+                                <Link
+                                  href={`/configuration/storage/files?path=${encodeURIComponent(f.path)}`}
+                                  className="text-primary hover:underline truncate block max-w-[200px]"
+                                >
+                                  {f.path}
+                                </Link>
+                              ) : (
+                                <span className="truncate block max-w-[200px] text-muted-foreground">{f.path}</span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">{f.size_formatted}</TableCell>
+                            <TableCell className="text-muted-foreground text-sm">{f.lastModifiedFormatted}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+                {(!analytics.by_type || Object.keys(analytics.by_type).length === 0) &&
+                  (!analytics.top_files || analytics.top_files.length === 0) &&
+                  (!analytics.recent_files || analytics.recent_files.length === 0) && (
+                  <p className="text-sm text-muted-foreground py-4">No analytics data available.</p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {cleanupSuggestions && stats?.driver === "local" && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Trash2 className="h-5 w-5" />
+              Cleanup Tools
+            </CardTitle>
+            <CardDescription>
+              Free up space by removing cache, temp files, and old backups
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {cleanupSuggestions.note ? (
+              <p className="text-sm text-muted-foreground py-4">{cleanupSuggestions.note}</p>
+            ) : isLoadingCleanup ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {cleanupSuggestions.total_reclaimable_formatted && cleanupSuggestions.total_reclaimable > 0 && (
+                  <div className="rounded-lg bg-muted/50 p-3 text-sm">
+                    <span className="font-medium">Total reclaimable: </span>
+                    <span>{cleanupSuggestions.total_reclaimable_formatted}</span>
+                  </div>
+                )}
+                <div className="space-y-3">
+                  {Object.entries(cleanupSuggestions.suggestions || {}).map(([key, s]) => (
+                    <div
+                      key={key}
+                      className="flex items-center justify-between rounded-lg border p-4"
+                    >
+                      <div>
+                        <div className="font-medium capitalize">{key.replace(/_/g, " ")}</div>
+                        <p className="text-sm text-muted-foreground">{s.description}</p>
+                        {(s.count ?? 0) > 0 && (
+                          <p className="text-sm mt-1">
+                            {s.count} file(s) · {s.size_formatted ?? formatBytes(s.size)}
+                          </p>
+                        )}
+                      </div>
+                      <Button
+                        variant={key === "old_backups" ? "destructive" : "outline"}
+                        size="sm"
+                        disabled={(s.count ?? 0) === 0}
+                        onClick={() => setCleanupConfirmType(key)}
+                      >
+                        Clean
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={!!cleanupConfirmType} onOpenChange={(open) => !open && setCleanupConfirmType(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm cleanup</DialogTitle>
+            <DialogDescription>
+              {cleanupConfirmType === "old_backups" && (
+                <>This will permanently delete backups beyond the retention policy. This cannot be undone.</>
+              )}
+              {cleanupConfirmType === "cache" && (
+                <>This will clear the framework cache. The application may regenerate cache files as needed.</>
+              )}
+              {cleanupConfirmType === "temp" && (
+                <>This will delete temporary files older than 7 days. Make sure no processes are using them.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCleanupConfirmType(null)} disabled={cleanupSubmitting}>
+              Cancel
+            </Button>
+            <Button
+              variant={cleanupConfirmType === "old_backups" ? "destructive" : "default"}
+              onClick={() => cleanupConfirmType && onCleanup(cleanupConfirmType)}
+              disabled={cleanupSubmitting}
+            >
+              {cleanupSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Clean
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {paths.length > 0 && (
         <Card>
           <CardHeader>
@@ -403,6 +803,90 @@ export default function StorageSettingsPage() {
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Bell className="h-5 w-5" />
+              Storage Alerts
+            </CardTitle>
+            <CardDescription>
+              Get notified when storage usage exceeds configured thresholds
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between rounded-lg border p-4">
+              <div>
+                <Label htmlFor="storage_alert_enabled" className="text-base font-medium">Enable alerts</Label>
+                <p className="text-sm text-muted-foreground">Send notifications when storage usage exceeds thresholds</p>
+              </div>
+              <Switch
+                id="storage_alert_enabled"
+                checked={watch("storage_alert_enabled") ?? false}
+                onCheckedChange={(checked) => setValue("storage_alert_enabled", checked)}
+              />
+            </div>
+            {(watch("storage_alert_enabled") ?? false) && (
+              <>
+                {health && (
+                  <div className="rounded-lg border p-3 bg-muted/30">
+                    <div className="text-sm font-medium text-muted-foreground mb-1">Current usage</div>
+                    <div className="flex items-center gap-2">
+                      <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            (health.disk_used_percent ?? 0) >= (watch("storage_alert_critical") ?? 95)
+                              ? "bg-destructive"
+                              : (health.disk_used_percent ?? 0) >= (watch("storage_alert_threshold") ?? 80)
+                                ? "bg-amber-500"
+                                : "bg-primary"
+                          }`}
+                          style={{ width: `${Math.min(100, health.disk_used_percent ?? 0)}%` }}
+                        />
+                      </div>
+                      <span className="text-sm font-medium">{health.disk_used_percent ?? 0}%</span>
+                    </div>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="storage_alert_threshold">Warning threshold (%)</Label>
+                    <Input
+                      id="storage_alert_threshold"
+                      type="number"
+                      min={1}
+                      max={100}
+                      {...register("storage_alert_threshold", { valueAsNumber: true })}
+                    />
+                    <p className="text-xs text-muted-foreground">Alert when usage exceeds this percentage</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="storage_alert_critical">Critical threshold (%)</Label>
+                    <Input
+                      id="storage_alert_critical"
+                      type="number"
+                      min={1}
+                      max={100}
+                      {...register("storage_alert_critical", { valueAsNumber: true })}
+                    />
+                    <p className="text-xs text-muted-foreground">Critical alert when usage exceeds this</p>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between rounded-lg border p-4">
+                  <div>
+                    <Label htmlFor="storage_alert_email" className="text-base font-medium">Email notifications</Label>
+                    <p className="text-sm text-muted-foreground">Send storage alerts via email in addition to in-app</p>
+                  </div>
+                  <Switch
+                    id="storage_alert_email"
+                    checked={watch("storage_alert_email") ?? true}
+                    onCheckedChange={(checked) => setValue("storage_alert_email", checked)}
+                  />
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle>Storage Configuration</CardTitle>

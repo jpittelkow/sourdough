@@ -4,7 +4,7 @@ Review and implement compliance requirements for security standards including SO
 
 **Priority**: MEDIUM  
 **Status**: Planned  
-**Last Updated**: 2026-01-27
+**Last Updated**: 2026-01-30
 
 **Dependencies**:
 - [Audit Logs & Logging](audit-logs-roadmap.md) - Comprehensive logging required for compliance
@@ -80,6 +80,7 @@ Review and implement compliance requirements for security standards including SO
 - [ ] Perform security code review
 - [ ] Run automated security scanning (SAST/DAST)
 - [ ] Review dependency vulnerabilities
+- [ ] Check for abandoned/unmaintained packages (npm, Composer)
 - [ ] Implement Content Security Policy (CSP)
 - [ ] Review CORS configuration
 - [ ] Implement rate limiting

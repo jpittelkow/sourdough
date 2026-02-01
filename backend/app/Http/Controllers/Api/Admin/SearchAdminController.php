@@ -29,6 +29,38 @@ class SearchAdminController extends Controller
     }
 
     /**
+     * Get current Meilisearch connection health status.
+     */
+    public function health(): JsonResponse
+    {
+        $health = $this->searchService->getHealth();
+
+        return $this->dataResponse($health);
+    }
+
+    /**
+     * Test Meilisearch connection with provided credentials.
+     */
+    public function testConnection(Request $request): JsonResponse
+    {
+        $request->validate([
+            'host' => ['required', 'string', 'url'],
+            'api_key' => ['nullable', 'string'],
+        ]);
+
+        $result = $this->searchService->testConnection(
+            $request->input('host'),
+            $request->input('api_key')
+        );
+
+        if (! $result['success']) {
+            return $this->errorResponse($result['message'], 422);
+        }
+
+        return $this->successResponse($result['message']);
+    }
+
+    /**
      * Reindex search (single model or all).
      */
     public function reindex(Request $request): JsonResponse

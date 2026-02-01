@@ -77,7 +77,10 @@ class NotificationTemplateController extends Controller
             'ip' => 'IP address of the request',
             'timestamp' => 'Date and time of the event',
             'version' => 'Application version number',
-            'usage' => 'Current quota usage percentage',
+            'usage' => 'Current quota/storage usage percentage',
+            'threshold' => 'Configured warning threshold percentage',
+            'free_formatted' => 'Free disk space (human-readable)',
+            'total_formatted' => 'Total disk space (human-readable)',
         ];
     }
 
@@ -216,6 +219,22 @@ class NotificationTemplateController extends Controller
                 'user' => $user,
                 'app_name' => $appName,
                 'usage' => '80',
+            ],
+            'storage.warning' => [
+                'user' => $user,
+                'app_name' => $appName,
+                'usage' => '85',
+                'threshold' => '80',
+                'free_formatted' => '5.2 GB',
+                'total_formatted' => '50.0 GB',
+            ],
+            'storage.critical' => [
+                'user' => $user,
+                'app_name' => $appName,
+                'usage' => '96',
+                'threshold' => '95',
+                'free_formatted' => '2.0 GB',
+                'total_formatted' => '50.0 GB',
             ],
             default => [
                 'user' => $user,

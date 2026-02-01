@@ -12,6 +12,9 @@ workbox.setConfig({ debug: false });
 
 const CACHE_VERSION = 'sourdough-v1';
 const OFFLINE_URL = '/offline.html';
+const REQUEST_QUEUE_DB = 'sourdough-request-queue';
+const REQUEST_QUEUE_STORE = 'requests';
+const SYNC_TAG = 'retry-failed-requests';
 
 // Precache offline page on install
 self.addEventListener('install', (event) => {
@@ -30,6 +33,47 @@ self.addEventListener('message', (event) => {
 // Claim clients so new SW takes control immediately
 self.addEventListener('activate', (event) => {
   event.waitUntil(self.clients.claim());
+});
+
+// Push: display notification (payload from backend is decrypted by browser)
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch {
+    // Fallback if payload is not JSON
+  }
+  const title = data.title || 'Notification';
+  const options = {
+    body: data.body || '',
+    icon: data.icon || '/icon-192.png',
+    badge: data.badge || '/icon-192.png',
+    data: data.data || {},
+    timestamp: data.timestamp || Date.now(),
+  };
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+// Notification click: focus existing window or open URL
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = event.notification.data?.url || '/';
+  const fullUrl = new URL(url, self.location.origin).href;
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (const client of windowClients) {
+        if (client.url.startsWith(self.location.origin) && 'focus' in client) {
+          if (typeof client.navigate === 'function') {
+            return client.navigate(fullUrl).then((c) => (c ? c.focus() : client.focus())).catch(() => client.focus());
+          }
+          return Promise.resolve(client.focus());
+        }
+      }
+      if (self.clients.openWindow) {
+        return self.clients.openWindow(fullUrl);
+      }
+    })
+  );
 });
 
 // Static assets: cache-first (/_next/static/*, images, fonts, favicon)
@@ -57,7 +101,8 @@ workbox.routing.registerRoute(
   })
 );
 
-// Public API routes only (user-specific data must not be cached - shared device risk)
+// Public and user-data API routes (network-first, short TTL for user data)
+// User data is cached only after first successful fetch (session-scoped in practice)
 const CACHEABLE_API_PATHS = [
   '/api/manifest',
   '/api/branding',
@@ -65,6 +110,9 @@ const CACHEABLE_API_PATHS = [
   '/api/version',
   '/api/health',
   '/api/auth/sso/providers',
+  '/api/auth/user',
+  '/api/dashboard/stats',
+  '/api/notifications',
 ];
 workbox.routing.registerRoute(
   ({ request, url }) => {
@@ -109,4 +157,66 @@ workbox.routing.setCatchHandler(async ({ request }) => {
     return cached || Response.error();
   }
   return Response.error();
+});
+
+// Background Sync: retry failed requests when back online (Chrome/Edge).
+// Browsers without sync use the page's 'online' listener + processRequestQueue().
+function openQueueDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(REQUEST_QUEUE_DB, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(REQUEST_QUEUE_STORE)) {
+        db.createObjectStore(REQUEST_QUEUE_STORE, { keyPath: 'id' });
+      }
+    };
+  });
+}
+
+function getQueuedRequests(db) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(REQUEST_QUEUE_STORE, 'readonly');
+    const req = tx.objectStore(REQUEST_QUEUE_STORE).getAll();
+    req.onsuccess = () => resolve(req.result || []);
+    req.onerror = () => reject(req.error);
+  });
+}
+
+function deleteQueuedRequest(db, id) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(REQUEST_QUEUE_STORE, 'readwrite');
+    const req = tx.objectStore(REQUEST_QUEUE_STORE).delete(id);
+    req.onsuccess = () => resolve();
+    req.onerror = () => reject(req.error);
+  });
+}
+
+async function processQueueInSW() {
+  const db = await openQueueDB();
+  const items = await getQueuedRequests(db);
+  const base = self.location.origin;
+  for (const item of items) {
+    try {
+      const url = item.url.startsWith('http') ? item.url : base + item.url;
+      const opts = {
+        method: item.method,
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      };
+      if (item.body) opts.body = item.body;
+      const res = await fetch(url, opts);
+      if (res.ok) await deleteQueuedRequest(db, item.id);
+    } catch (_) {
+      // Leave in queue for next sync
+    }
+  }
+  db.close();
+}
+
+self.addEventListener('sync', (event) => {
+  if (event.tag === SYNC_TAG) {
+    event.waitUntil(processQueueInSW());
+  }
 });

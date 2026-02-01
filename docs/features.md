@@ -13,6 +13,7 @@ Core functionality and feature documentation:
 - Email/password authentication with Laravel Sanctum
 - SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab, Enterprise OIDC); **sign-in and register pages** show "Continue with {provider}" only for providers that have credentials and are **enabled** (from `GET /auth/sso/providers`); **setup** is Configuration > SSO (`/configuration/sso`) with per-provider enabled toggle, setup modals, and test connection
 - Two-factor authentication (TOTP + recovery codes)
+- **Passkeys (WebAuthn/FIDO2):** Passwordless authentication using biometrics or hardware security keys. Users register passkeys in User Security (`/user/security`); login page shows "Sign in with passkey" when available and passkeys are enabled. Configurable passkey mode (disabled / optional / required) in Configuration > Security. Supported on Chrome, Edge, Safari, Firefox with WebAuthn support.
 - Password reset and email verification
 - **Configurable auth features (Configuration > Security):** Admins can set **email verification** (disabled / optional / required), **self-service password reset** (on/off), and **2FA** (disabled / optional / required). When email verification is required, unverified users get 403 on protected routes. When 2FA is required, users without 2FA are redirected to Configuration > Security to set up 2FA. When password reset is disabled, the "Forgot password?" link and forgot-password page are hidden; backend returns 503 for forgot-password requests.
 - **Auth UI:** Sign-in and register use a glassmorphism card layout, password visibility toggle, password strength indicator (register/reset), and real-time email availability check on register (`POST /auth/check-email`)
@@ -43,6 +44,14 @@ Core functionality and feature documentation:
 - [API Notification Endpoints](api/README.md#notifications) - Notification management API
 - [Recipe: Trigger Notifications](ai/recipes/trigger-notifications.md) - Send notifications from backend code
 
+**Web Push (PWA):** Admins configure VAPID keys in Configuration > Notifications. Users enable browser notifications in User Preferences—subscription is stored and push is delivered via the service worker. Supports Chrome, Firefox, Edge; limited on Safari/iOS.
+
+**PWA install experience:** Custom install prompt appears after 2+ visits (Chrome/Edge). Banner is dismissible with "Don't show again" (30-day cooldown). User Preferences includes an "Install App" card when install is available. Manifest includes full icon set, screenshots, shortcuts (Dashboard, Settings), and Share Target. See [PWA roadmap](plans/pwa-roadmap.md) Phase 4 and [Recipe: Add PWA Install Prompt](ai/recipes/add-pwa-install-prompt.md).
+
+**Share Target:** When the PWA is installed, users can share links or text from other apps to Sourdough; shared content is shown at `/share` with links to dashboard or sign-in. Manifest `share_target` uses GET with title, text, and url params.
+
+**Offline experience:** When offline, an indicator banner appears; dashboard, user preferences, and notifications show cached data with an offline badge. Save/actions are disabled on preferences and notifications. Failed mutations (POST/PUT/PATCH/DELETE) are queued in IndexedDB and retried when back online (Background Sync in Chrome/Edge; online event elsewhere). Offline fallback page offers "Go to Dashboard" and auto-reloads when online.
+
 **Capabilities:**
 - In-app notification UI: header bell with unread badge, dropdown of recent items, full `/notifications` page with filters and bulk actions
 - Real-time updates via Laravel Echo + Pusher when broadcasting is configured
@@ -57,9 +66,12 @@ Core functionality and feature documentation:
 | Telegram | Bot API | ✅ |
 | Discord | Webhooks | ✅ |
 | Slack | Webhooks | ✅ |
-| SMS | Twilio, Vonage | ✅ |
-| Signal | signal-cli | 🔄 |
-| Push | Web Push, FCM | 🔄 |
+| SMS | Twilio, Vonage, AWS SNS | ✅ |
+| Signal | signal-cli | 🔄 Planned |
+| Matrix | Homeserver API | ✅ |
+| ntfy | ntfy push service | ✅ |
+| Web Push | VAPID (browser push) | ✅ |
+| FCM | Firebase Cloud Messaging | 🔄 Planned |
 | In-App | Database + WebSocket | ✅ |
 
 ## AI/LLM Orchestration
@@ -86,8 +98,9 @@ Core functionality and feature documentation:
 ## Configuration Management
 
 - [ADR-014: Database Settings with Environment Fallback](adr/014-database-settings-env-fallback.md) - Database-stored settings with env fallback
+- System settings: Configuration > System (`/configuration/system`); core application settings including app name, URL, timezone, locale, registration policies (open/closed), session timeout, and password requirements
 - Mail settings: Configuration > Email (`/configuration/email`); SMTP and provider credentials stored in DB with encryption for secrets
-- Auth settings: Configuration > Security (`/configuration/security`); **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
+- Auth settings: Configuration > Security (`/configuration/security`); **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required), passkey mode (disabled/optional/required). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
 - SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC; per-provider **enabled** toggle and **per-provider save** (global options card has its own save); setup instruction modals and copyable redirect URIs; test connection per provider
 
 **Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns.md#configuration-navigation-pattern).
@@ -202,7 +215,7 @@ Core functionality and feature documentation:
 
 ## Storage Settings
 
-- [Storage Settings Enhancement Roadmap](plans/storage-settings-roadmap.md) – Phases 1–2 done; Phases 3–4 (file manager, analytics) planned
+- [Storage Settings Enhancement Roadmap](plans/storage-settings-roadmap.md) – Phases 1–4 complete
 
 **Capabilities (Phase 1 – Local Storage Transparency):**
 - **Configuration > Storage** (`/configuration/storage`): Storage driver selection, max upload size, allowed file types. Stored in DB with env fallback (`manage-settings`).
@@ -215,6 +228,14 @@ Core functionality and feature documentation:
 - **Provider-specific forms**: Dynamic fields per driver (bucket, region, credentials, endpoint where applicable). GCS uses service account JSON; Azure uses connection string and container; S3-compatible (DO Spaces, MinIO, B2) use key/secret and optional custom endpoint.
 - **Connection test**: "Test Connection" button (non-local drivers) calls `POST /storage-settings/test` and shows success or error message.
 
+**Capabilities (Phase 3 – File Manager):**
+- **Configuration > Storage > Manage Files** (`/configuration/storage/files`): Browse, upload, download, delete, rename, move; image/PDF/text preview. Admin only.
+
+**Capabilities (Phase 4 – Analytics & Monitoring):**
+- **Storage Analytics**: Donut chart for file type breakdown, top 10 largest files, recently modified files; `GET /storage-settings/analytics` (local driver only).
+- **Alerts & Thresholds**: Configurable warning/critical thresholds; enable alerts; email notifications. `storage:check-alerts` runs daily via scheduler. Notification templates: `storage.warning`, `storage.critical`.
+- **Cleanup Tools**: Identify reclaimable space (cache, temp files older than 7 days, old backups beyond retention); one-click cleanup; `GET /storage-settings/cleanup-suggestions`, `POST /storage-settings/cleanup` with `{ type: 'cache' | 'temp' | 'old_backups' }`.
+
 ## Scheduled Jobs
 
 **Configuration > Jobs** (`/configuration/jobs`) – Monitor and run scheduled tasks. Admin only.
@@ -224,3 +245,52 @@ Core functionality and feature documentation:
 - **Queue Status tab**: Pending and failed job counts; queue breakdown when available.
 - **Failed Jobs tab**: List failed queue jobs with retry, delete, retry all, clear all.
 - **API**: `GET /api/jobs/scheduled` (tasks with triggerable, last_run, dangerous); `POST /api/jobs/run/{command}` (body: optional `{ options: {} }`); existing queue/failed endpoints. Manual runs are audited (`scheduled_command_run`).
+
+## User Pages
+
+User-facing pages for managing personal account settings.
+
+### User Profile (`/user/profile`)
+
+- View and edit name and email
+- Avatar display with initials fallback
+- View group memberships (read-only badges)
+- **Account deletion:** Delete own account with email confirmation; permanently removes user and associated data
+
+### User Security (`/user/security`)
+
+- **Password change:** Update password with current password verification
+- **Two-Factor Authentication:** Enable/disable 2FA, scan QR code with authenticator app, enter verification code, view/regenerate recovery codes
+- **Passkeys:** Add/remove WebAuthn passkeys for passwordless login; shows browser support status; lists registered passkeys with alias and creation date
+- **SSO Connections:** Link/unlink OAuth providers (Google, GitHub, Microsoft, etc.); view connected account nickname
+
+### User Preferences (`/user/preferences`)
+
+- **Theme selection:** Light, Dark, or System (follows OS preference)
+- **Default LLM mode:** Single, Aggregation, or Council mode for AI queries
+- **Notification channel preferences:** Enable/disable channels (Telegram, Discord, Slack, SMS, etc.), configure webhooks and phone numbers, test notifications, accept usage terms
+- **Browser push notifications:** Enable WebPush with one-click subscription
+- **PWA install:** "Install App" card when PWA install is available
+
+## Branding
+
+**Configuration > Branding** (`/configuration/branding`): Customize application appearance. Admin only.
+
+**Capabilities:**
+- **Logo upload:** Upload custom logo (max 2MB) or enter URL; preview and delete
+- **Favicon upload:** Upload custom favicon (max 512KB) or enter URL; preview and delete
+- **Theme colors:** Primary and secondary color customization via color picker; reset to system defaults
+- **Custom CSS:** Inject custom CSS to override default styles
+- **Live preview:** See changes in real-time preview panel before saving
+- **Reset to defaults:** One-click reset all branding to system defaults
+
+## API & Webhooks
+
+**Configuration > API** (`/configuration/api`): Manage API access and webhook integrations.
+
+**Capabilities:**
+- **Personal access tokens (all users):** Create, view, and revoke API tokens; token preview (last 4 chars) shown after creation; last used date; tokens are shown once on creation and cannot be viewed again
+- **Outgoing webhooks (admin only):** Configure webhook endpoints for system events; available events: `user.created`, `user.updated`, `user.deleted`, `backup.completed`, `backup.failed`, `settings.updated`
+- **Webhook management:** Create/delete webhooks, enable/disable, set secret for signature verification
+- **Webhook testing:** Test button sends a test payload to the configured URL; last triggered timestamp shown
+- **API**: `GET/POST/DELETE /api-tokens` for tokens; `GET/POST/DELETE /webhooks`, `POST /webhooks/{id}/test` for webhooks

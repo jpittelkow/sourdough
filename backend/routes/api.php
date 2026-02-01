@@ -158,6 +158,8 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::put('/settings', [UserSettingController::class, 'update'])->middleware('log.access:Setting');
         Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show'])->middleware('log.access:Setting');
         Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update'])->middleware('log.access:Setting');
+        Route::post('/webpush-subscription', [UserNotificationSettingsController::class, 'storeWebPushSubscription'])->middleware('log.access:Setting');
+        Route::delete('/webpush-subscription', [UserNotificationSettingsController::class, 'destroyWebPushSubscription'])->middleware('log.access:Setting');
     });
 
     // Dashboard (static widget data)
@@ -353,6 +355,8 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     // Search Admin (permission: settings.view / settings.edit for reindex)
     Route::prefix('admin')->group(function () {
         Route::get('/search/stats', [SearchAdminController::class, 'stats'])->middleware('can:settings.view');
+        Route::get('/search/health', [SearchAdminController::class, 'health'])->middleware('can:settings.view');
+        Route::post('/search/test-connection', [SearchAdminController::class, 'testConnection'])->middleware('can:settings.edit');
         Route::post('/search/reindex', [SearchAdminController::class, 'reindex'])->middleware('can:settings.edit');
     });
 
@@ -374,6 +378,9 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::put('/', [StorageSettingController::class, 'update'])->middleware('can:settings.edit');
         Route::post('/test', [StorageSettingController::class, 'test'])->middleware('can:settings.edit');
         Route::get('/stats', [StorageSettingController::class, 'stats'])->middleware('can:settings.view');
+        Route::get('/analytics', [StorageSettingController::class, 'analytics'])->middleware('can:settings.view');
+        Route::get('/cleanup-suggestions', [StorageSettingController::class, 'cleanupSuggestions'])->middleware('can:settings.view');
+        Route::post('/cleanup', [StorageSettingController::class, 'cleanup'])->middleware('can:settings.edit');
         Route::get('/paths', [StorageSettingController::class, 'paths'])->middleware('can:settings.view');
         Route::get('/health', [StorageSettingController::class, 'health'])->middleware('can:settings.view');
     });

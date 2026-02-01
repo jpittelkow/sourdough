@@ -28,7 +28,7 @@ If the config is stored in the database with environment fallback (see [ADR-014]
 4. **Reset to default**: Expose `DELETE /api/.../keys/{key}` where `{key}` is the **schema key** (e.g. `smtp_password`), not the frontend key. Validate that the key exists in `config('settings-schema.{group}')` before calling `$this->settingService->reset($group, $key)`.
 5. **Frontend**: Reset button can call `api.delete(\`/mail-settings/keys/${schemaKey}\`)`. Schema keys for mail are e.g. `mailer`, `smtp_host`, `smtp_port`, `smtp_password`, `from_address`, `from_name`.
 
-See [SettingService pattern](../../patterns.md#settingservice-pattern) and `backend/app/Http/Controllers/Api/MailSettingController.php` for key mapping (schema ↔ frontend) and validation.
+See [SettingService pattern](../patterns.md#settingservice-pattern) and `backend/app/Http/Controllers/Api/MailSettingController.php` for key mapping (schema ↔ frontend) and validation.
 
 ## Step 1: Define the Zod Schema (Optional by Default)
 

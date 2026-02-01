@@ -21,7 +21,7 @@ Create a shared component when:
 |------|----------|---------|
 | UI Components | `frontend/components/ui/` | `button.tsx`, `card.tsx` |
 | Feature Components | `frontend/components/` | `logo.tsx`, `sidebar.tsx` |
-| Hooks | `frontend/lib/` or `frontend/hooks/` | `use-page-title.ts` |
+| Hooks | `frontend/lib/` | `use-mobile.ts`, `use-page-title.ts` |
 | Utilities | `frontend/lib/` | `api.ts`, `utils.ts`, `error-logger.ts` |
 | Backend Services | `backend/app/Services/` | `NotificationOrchestrator.php` |
 

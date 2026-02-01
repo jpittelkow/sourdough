@@ -44,6 +44,11 @@ class SystemSettingController extends Controller
         $emailConfigured = $emailConfigService->isConfigured();
         $passwordResetEnabled = $this->settingService->get('auth', 'password_reset_enabled', true);
 
+        $searchEnabled = filter_var(
+            $this->settingService->get('search', 'enabled', true),
+            FILTER_VALIDATE_BOOLEAN
+        );
+
         return response()->json([
             'settings' => $settings,
             'features' => [
@@ -53,6 +58,9 @@ class SystemSettingController extends Controller
                 'email_verification_mode' => $this->settingService->get('auth', 'email_verification_mode', 'optional'),
                 'two_factor_mode' => $this->settingService->get('auth', 'two_factor_mode', 'optional'),
                 'passkey_mode' => $this->settingService->get('auth', 'passkey_mode', 'disabled'),
+                'search_enabled' => $searchEnabled,
+                'webpush_enabled' => !empty(config('notifications.channels.webpush.public_key')),
+                'webpush_vapid_public_key' => config('notifications.channels.webpush.public_key', ''),
             ],
         ]);
     }
@@ -88,17 +96,17 @@ class SystemSettingController extends Controller
         $user = $request->user();
 
         foreach ($validated['settings'] as $setting) {
-            SystemSetting::set(
+            $this->settingService->set(
+                $setting['group'],
                 $setting['key'],
                 $setting['value'],
-                $setting['group'],
-                $user->id,
-                $setting['is_public'] ?? false
+                $user->id
             );
         }
 
-        // Clear cache
+        // Clear caches so fresh values are returned
         Cache::forget('system_settings_public');
+        $this->settingService->clearCache();
 
         $this->auditService->logSettings('system', [], ['settings' => $validated['settings']], $user->id);
 

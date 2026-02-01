@@ -6,6 +6,8 @@ Follow these patterns for consistency across the codebase.
 
 ### Controller Pattern
 
+Controllers use `ApiResponseTrait` for consistent JSON responses. See [ApiResponseTrait](#apiresponsetrait) for available methods.
+
 ```php
 <?php
 // backend/app/Http/Controllers/Api/ExampleController.php
@@ -16,12 +18,15 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreExampleRequest;
 use App\Http\Requests\UpdateExampleRequest;
 use App\Http\Resources\ExampleResource;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\Example;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 
 class ExampleController extends Controller
 {
+    use ApiResponseTrait;
+
     /**
      * List all examples for the authenticated user.
      */
@@ -29,9 +34,9 @@ class ExampleController extends Controller
     {
         $examples = Example::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate(config('app.pagination.default'));
 
-        return response()->json([
+        return $this->dataResponse([
             'data' => ExampleResource::collection($examples),
             'meta' => [
                 'current_page' => $examples->currentPage(),
@@ -51,10 +56,9 @@ class ExampleController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return response()->json([
+        return $this->createdResponse('Example created successfully.', [
             'data' => new ExampleResource($example),
-            'message' => 'Example created successfully.',
-        ], 201);
+        ]);
     }
 
     /**
@@ -65,7 +69,7 @@ class ExampleController extends Controller
         // Policy check (if using policies)
         $this->authorize('view', $example);
 
-        return response()->json([
+        return $this->dataResponse([
             'data' => new ExampleResource($example),
         ]);
     }
@@ -79,9 +83,8 @@ class ExampleController extends Controller
 
         $example->update($request->validated());
 
-        return response()->json([
+        return $this->successResponse('Example updated successfully.', [
             'data' => new ExampleResource($example),
-            'message' => 'Example updated successfully.',
         ]);
     }
 
@@ -94,9 +97,7 @@ class ExampleController extends Controller
 
         $example->delete();
 
-        return response()->json([
-            'message' => 'Example deleted successfully.',
-        ]);
+        return $this->successResponse('Example deleted successfully.');
     }
 }
 ```
@@ -791,6 +792,159 @@ Route::middleware(['auth:sanctum', 'admin'])->prefix('admin')->group(function ()
 });
 ```
 
+### First User Gets Admin Pattern
+
+The first registered user automatically becomes an admin. Use this pattern in registration and SSO flows.
+
+```php
+use App\Models\User;
+use App\Services\GroupService;
+
+$groupService = app(GroupService::class);
+$isFirstUser = User::count() === 0;
+
+if ($isFirstUser) {
+    $groupService->ensureDefaultGroupsExist();
+}
+
+$user = User::create([
+    'name' => $validated['name'],
+    'email' => $validated['email'],
+    'password' => $validated['password'],
+]);
+
+if ($isFirstUser) {
+    $user->assignGroup('admin');
+} else {
+    $groupService->assignDefaultGroupToUser($user);
+}
+```
+
+**Key points:**
+- Check `User::count() === 0` before creating the user
+- Ensure default groups exist before assigning
+- First user gets `admin` group, subsequent users get default group
+
+**Used in:** `AuthController::register()`, `SSOService::createUserFromSocialite()`
+
+### Multi-Channel Error Handling Pattern
+
+When sending notifications through multiple channels, catch errors per channel and aggregate results. Don't let one channel's failure prevent others.
+
+```php
+// From NotificationOrchestrator::send()
+public function send(User $user, string $type, string $title, string $message, array $data = [], ?array $channels = null): array
+{
+    $channels = $channels ?? $this->getDefaultChannels();
+    $results = [];
+
+    foreach ($channels as $channel) {
+        try {
+            $channelInstance = $this->getChannelInstance($channel);
+
+            // Skip if channel is not available
+            if (!$channelInstance || !$this->isChannelEnabled($channel)) {
+                continue;
+            }
+
+            if (!$channelInstance->isAvailableFor($user)) {
+                continue;
+            }
+
+            $result = $channelInstance->send($user, $type, $title, $message, $data);
+            $results[$channel] = [
+                'success' => true,
+                'result' => $result,
+            ];
+        } catch (\Exception $e) {
+            Log::error("Notification channel {$channel} failed", [
+                'user' => $user->id,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+            $results[$channel] = [
+                'success' => false,
+                'error' => $e->getMessage(),
+            ];
+        }
+    }
+
+    return $results;
+}
+```
+
+**Key points:**
+- Iterate channels, wrap each in try/catch
+- Log failures but continue to next channel
+- Return aggregated results: `[channel => [success => bool, result|error => ...]]`
+- Caller can inspect which channels succeeded/failed
+
+**Key file:** `backend/app/Services/Notifications/NotificationOrchestrator.php`
+
+### Filename Validation Pattern (Path Traversal Prevention)
+
+Validate filenames before file operations to prevent path traversal attacks.
+
+```php
+// From BackupController
+private function validateFilename(string $filename): bool
+{
+    // Only allow alphanumeric, dash, underscore, and .zip extension
+    // Must match our backup naming pattern: sourdough-backup-YYYY-MM-DD_HH-ii-ss.zip
+    if (!preg_match('/^sourdough-backup-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.zip$/', $filename)) {
+        return false;
+    }
+
+    // Double-check for path traversal characters
+    if (str_contains($filename, '..') || str_contains($filename, '/') || str_contains($filename, '\\')) {
+        return false;
+    }
+
+    return true;
+}
+
+// Usage in controller
+public function download(string $filename): StreamedResponse|JsonResponse
+{
+    if (!$this->validateFilename($filename)) {
+        return response()->json(['message' => 'Invalid backup filename'], 400);
+    }
+    // ... proceed with download
+}
+```
+
+**For general file paths (FileManagerController):**
+
+```php
+private function validatePath(string $path): bool
+{
+    // Block path traversal and null bytes
+    if (str_contains($path, '..') || preg_match('#\0#', $path)) {
+        return false;
+    }
+
+    // Block access to sensitive directories
+    $blocked = ['.env', 'config', '.git', 'bootstrap', 'vendor'];
+    $segments = $path === '' ? [] : explode('/', trim($path, '/'));
+    foreach ($segments as $segment) {
+        if (in_array(strtolower($segment), $blocked, true)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+```
+
+**Key points:**
+- Always validate before any file operation (read, write, delete)
+- Block `..` for path traversal
+- Block null bytes (`\0`)
+- Use allowlist regex for expected filename patterns
+- Block access to sensitive directories
+
+**Key files:** `backend/app/Http/Controllers/Api/BackupController.php`, `backend/app/Http/Controllers/Api/FileManagerController.php`, `backend/app/Http/Requests/FilePathRequest.php`
+
 ## Backend Traits
 
 Use shared traits for consistent controller behavior. Location: `backend/app/Http/Traits/`.
@@ -1251,6 +1405,31 @@ export default function SuccessPage() {
 
 **Key file:** `frontend/components/auth/auth-state-card.tsx`
 
+### PWA Install Prompt Pattern
+
+Use the **`useInstallPrompt()`** hook and **`InstallPrompt`** component for PWA install experience: capture `beforeinstallprompt`, show a non-intrusive banner after 2+ visits, and offer "Install App" in settings.
+
+```tsx
+import { useInstallPrompt } from "@/lib/use-install-prompt";
+import { InstallPrompt } from "@/components/install-prompt";
+
+// In app shell: show banner when criteria met
+<InstallPrompt />
+
+// In settings or header: manual install button
+const { canPrompt, isInstalled, promptInstall } = useInstallPrompt();
+if (canPrompt && !isInstalled) {
+  <Button onClick={() => promptInstall()}>Install App</Button>
+}
+```
+
+- **Hook:** `useInstallPrompt()` returns `deferredPrompt`, `canPrompt`, `isInstalled`, `promptInstall()`, `dismissBanner(dontShowAgain?)`, `shouldShowBanner`. Visit count and dismissal (30-day cooldown) are stored in localStorage.
+- **Banner:** `InstallPrompt` renders only when `shouldShowBanner` (2+ visits, not dismissed, install available, not already installed). Dismissible with "Don't show again" option.
+- **Integration:** Add `<InstallPrompt />` to `AppShell`; add "Install App" card/section in User Preferences using the hook for the install button.
+- **Detection:** `isInstalled` is derived from `display-mode: standalone` media query and `appinstalled` event; `canPrompt` is true when `beforeinstallprompt` has fired and app is not installed.
+
+**Key files:** `frontend/lib/use-install-prompt.ts`, `frontend/components/install-prompt.tsx`, `frontend/components/app-shell.tsx`, `frontend/app/(dashboard)/user/preferences/page.tsx`. See [PWA roadmap](../plans/pwa-roadmap.md) Phase 4.
+
 ### Page Component Pattern
 
 ```tsx
@@ -1485,59 +1664,64 @@ export default function ExampleSettingsPage() {
 
 ### API Utility Pattern
 
+The `api` client uses axios with built-in interceptors for error handling, auth redirects, correlation ID tracking, and offline request queuing.
+
 ```typescript
 // frontend/lib/api.ts
-const API_BASE = '/api';
+import axios from "axios";
 
-class ApiClient {
-  private async request<T>(
-    method: string,
-    endpoint: string,
-    data?: unknown
-  ): Promise<T> {
-    const url = `${API_BASE}${endpoint}`;
-    const options: RequestInit = {
-      method,
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      credentials: 'include', // Include cookies for Sanctum
-    };
+export const api = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL
+    ? `${process.env.NEXT_PUBLIC_API_URL}/api`
+    : "/api",
+  withCredentials: true, // Include cookies for Sanctum
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+});
 
-    if (data) {
-      options.body = JSON.stringify(data);
-    }
-
-    const response = await fetch(url, options);
-
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      throw new Error(error.message || `Request failed: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  get<T>(endpoint: string): Promise<T> {
-    return this.request<T>('GET', endpoint);
-  }
-
-  post<T>(endpoint: string, data?: unknown): Promise<T> {
-    return this.request<T>('POST', endpoint, data);
-  }
-
-  put<T>(endpoint: string, data?: unknown): Promise<T> {
-    return this.request<T>('PUT', endpoint, data);
-  }
-
-  delete<T>(endpoint: string): Promise<T> {
-    return this.request<T>('DELETE', endpoint);
-  }
-}
-
-export const api = new ApiClient();
+// Response interceptor handles:
+// - Correlation ID capture from headers
+// - 401 redirect to /login
+// - 403 with requires_2fa_setup redirect to /configuration/security
+// - Network errors queued for retry when online (mutations only)
 ```
+
+**Usage:**
+
+```typescript
+import { api } from "@/lib/api";
+
+// GET request
+const response = await api.get<{ data: Example[] }>("/examples");
+const examples = response.data.data;
+
+// POST request
+await api.post("/examples", { name: "New Example" });
+
+// PUT request
+await api.put(`/examples/${id}`, { name: "Updated" });
+
+// DELETE request
+await api.delete(`/examples/${id}`);
+
+// With query params
+await api.get("/examples", { params: { page: 2, per_page: 20 } });
+
+// File download (blob)
+const response = await api.get(`/backup/download/${filename}`, {
+  responseType: "blob",
+});
+```
+
+**Key features:**
+- `withCredentials: true` ensures Sanctum session cookies are sent
+- Interceptors automatically redirect to `/login` on 401
+- Network errors on mutations (POST/PUT/PATCH/DELETE) are queued for retry when back online
+- Correlation ID from response headers is captured for error logging
+
+**Key file:** `frontend/lib/api.ts`
 
 ### Form with Validation Pattern
 
@@ -2078,6 +2262,225 @@ Ensure all interactive elements have minimum 44x44px touch targets:
 // Tablet and up
 <div className="hidden sm:block">Tablet+ content</div>
 ```
+
+### Redirect Pages Pattern
+
+Use redirect pages to maintain backward compatibility when restructuring routes. Common for migrating `/admin/*` or `/settings/*` routes to `/configuration/*`.
+
+```tsx
+// frontend/app/(dashboard)/admin/backup/page.tsx
+import { redirect } from "next/navigation";
+
+export default function BackupRedirect() {
+  redirect("/configuration/backup");
+}
+```
+
+This pattern is used in 14+ pages to preserve bookmarks and external links when routes are reorganized.
+
+### Test Connection Button Pattern
+
+Use for testing external service connections (backup destinations, storage providers, SSO, notification channels). Track testing state per item to show loading spinner on the correct button.
+
+```tsx
+const [testingDestination, setTestingDestination] = useState<string | null>(null);
+
+const handleTestDestination = async (destination: string) => {
+  setTestingDestination(destination);
+  try {
+    await api.post(`/backup-settings/test/${destination}`);
+    toast.success("Connection successful");
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Connection failed";
+    toast.error(msg);
+  } finally {
+    setTestingDestination(null);
+  }
+};
+
+// Button for each destination
+<Button
+  variant="outline"
+  onClick={() => handleTestDestination("s3")}
+  disabled={!!testingDestination}
+>
+  {testingDestination === "s3" ? (
+    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+  ) : null}
+  Test Connection
+</Button>
+```
+
+**Key points:**
+- Track which item is being tested (not just boolean) to show spinner on correct button
+- Disable all test buttons while any test is in progress
+- Clear testing state in `finally` block
+
+**Used in:** Backup settings, Storage settings, SSO settings, Notification channels, AI providers, Search (Meilisearch).
+
+### File Download (Blob) Pattern
+
+Use for downloading files from API endpoints that return binary data.
+
+```tsx
+const handleDownloadBackup = async (filename: string) => {
+  try {
+    const response = await api.get(`/backup/download/${filename}`, {
+      responseType: "blob",
+    });
+
+    const url = window.URL.createObjectURL(new Blob([response.data]));
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.parentNode?.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error: any) {
+    toast.error(error.message || "Failed to download");
+  }
+};
+```
+
+**Key points:**
+- Use `responseType: "blob"` in axios request
+- Create object URL from blob, trigger download via hidden link
+- Clean up: remove link and revoke object URL to prevent memory leaks
+
+**Used in:** Backup downloads, Log exports (CSV/JSONL), Access log exports, File manager downloads.
+
+### Error Message Extraction Pattern
+
+Extract error messages from API responses consistently across catch blocks.
+
+```tsx
+// In catch blocks
+catch (err: unknown) {
+  const msg = err instanceof Error ? err.message : null;
+  toast.error(msg ?? "Failed to save settings");
+}
+
+// For axios errors with response data
+catch (error: unknown) {
+  const err = error as Error & { response?: { data?: { message?: string } } };
+  toast.error(
+    err.message || err.response?.data?.message || "Operation failed"
+  );
+}
+```
+
+**Note:** The `api` interceptor in `frontend/lib/api.ts` already extracts `response.data.message` and throws it as an `Error`, so for most cases `err.message` is sufficient.
+
+### useOnline Hook Pattern
+
+Use `useOnline()` for reactive online/offline state in UI.
+
+```tsx
+import { useOnline } from "@/lib/use-online";
+
+export function MyComponent() {
+  const { isOnline, isOffline } = useOnline();
+
+  // Disable actions when offline
+  <Button disabled={isOffline}>Submit</Button>
+
+  // Show offline indicator
+  {isOffline && <Badge variant="secondary">Offline</Badge>}
+}
+```
+
+**Hook implementation:**
+
+```tsx
+// frontend/lib/use-online.ts
+export function useOnline(): { isOnline: boolean; isOffline: boolean } {
+  const [isOnline, setIsOnline] = useState(() =>
+    typeof navigator !== "undefined" ? navigator.onLine : true
+  );
+
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  return { isOnline, isOffline: !isOnline };
+}
+```
+
+**Used with:** PWA features, notification pages, any page that should indicate offline state.
+
+**Key file:** `frontend/lib/use-online.ts`
+
+### Typed Confirmation Dialog Pattern
+
+For dangerous operations (restore, delete all), require user to type a specific word to confirm.
+
+```tsx
+const [restoreTarget, setRestoreTarget] = useState<string | null>(null);
+const [restoreConfirmation, setRestoreConfirmation] = useState("");
+const [isRestoring, setIsRestoring] = useState(false);
+
+const handleRestore = async () => {
+  if (!restoreTarget || restoreConfirmation !== "RESTORE") {
+    toast.error('Please type "RESTORE" to confirm');
+    return;
+  }
+
+  setIsRestoring(true);
+  try {
+    await api.post(`/backup/restore/${restoreTarget}`);
+    toast.success("Restore initiated");
+  } catch (error: any) {
+    toast.error(error.message || "Restore failed");
+  } finally {
+    setIsRestoring(false);
+    setRestoreTarget(null);
+    setRestoreConfirmation("");
+  }
+};
+
+// In dialog
+<Dialog>
+  <DialogContent>
+    <DialogHeader>
+      <DialogTitle>Restore Backup</DialogTitle>
+      <DialogDescription>
+        This will overwrite all current data. Type <strong>RESTORE</strong> to confirm.
+      </DialogDescription>
+    </DialogHeader>
+    <Input
+      value={restoreConfirmation}
+      onChange={(e) => setRestoreConfirmation(e.target.value)}
+      placeholder="Type RESTORE"
+    />
+    <DialogFooter>
+      <Button
+        variant="destructive"
+        onClick={handleRestore}
+        disabled={isRestoring || restoreConfirmation !== "RESTORE"}
+      >
+        {isRestoring && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        Restore
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
+```
+
+**Key points:**
+- Button stays disabled until exact match (case-sensitive)
+- Clear confirmation text when dialog closes
+- Use for: backup restore, data deletion, account deletion
+
+**Used in:** Backup restore, dangerous settings operations.
 
 ## Naming Conventions Summary
 

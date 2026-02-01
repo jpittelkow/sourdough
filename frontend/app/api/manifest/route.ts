@@ -43,43 +43,21 @@ export async function GET() {
       shortName = appName.length > 3 ? appName.substring(0, 3).toUpperCase() : appName.toUpperCase();
     }
 
-    // Build icons array - use uploaded favicon if available, otherwise fallback to static icons
-    const icons = [];
-    
-    if (faviconUrl) {
-      // Use uploaded favicon for all icon sizes
-      // Note: Browsers will scale the image as needed
-      icons.push(
-        {
-          src: faviconUrl,
-          sizes: '192x192',
-          type: 'image/png',
-          purpose: 'any maskable',
-        },
-        {
-          src: faviconUrl,
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable',
-        }
-      );
-    } else {
-      // Fallback to static icons if no favicon uploaded
-      icons.push(
-        {
-          src: '/icon-192.png',
-          sizes: '192x192',
-          type: 'image/png',
-          purpose: 'any maskable',
-        },
-        {
-          src: '/icon-512.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable',
-        }
-      );
-    }
+    // Build icons array - use uploaded favicon if available, otherwise full icon set from /icons/
+    const iconSizes = [48, 72, 96, 128, 144, 152, 192, 384, 512];
+    const icons = faviconUrl
+      ? [
+          { src: faviconUrl, sizes: '192x192', type: 'image/png', purpose: 'any maskable' as const },
+          { src: faviconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' as const },
+        ]
+      : [
+          ...iconSizes.map((s) => ({
+            src: `/icons/icon-${s}.png`,
+            sizes: `${s}x${s}`,
+            type: 'image/png' as const,
+            ...(s === 192 || s === 512 ? { purpose: 'any maskable' as const } : {}),
+          })),
+        ];
 
     const manifest = {
       name: appName,
@@ -91,6 +69,20 @@ export async function GET() {
       display: 'standalone',
       start_url: '/',
       orientation: 'portrait-primary',
+      categories: ['productivity', 'utilities'],
+      screenshots: [
+        { src: '/screenshots/dashboard.png', sizes: '1280x720', type: 'image/png', label: 'Dashboard' },
+        { src: '/screenshots/mobile.png', sizes: '750x1334', type: 'image/png', label: 'Mobile view' },
+      ],
+      shortcuts: [
+        { name: 'Dashboard', short_name: 'Dashboard', url: '/dashboard', icons: [{ src: '/icons/shortcut-dashboard.png', sizes: '96x96', type: 'image/png' }] },
+        { name: 'Settings', short_name: 'Settings', url: '/user/preferences', icons: [{ src: '/icons/shortcut-settings.png', sizes: '96x96', type: 'image/png' }] },
+      ],
+      share_target: {
+        action: '/share',
+        method: 'GET',
+        params: { title: 'title', text: 'text', url: 'url' },
+      },
     };
 
     return NextResponse.json(manifest, {
@@ -106,24 +98,28 @@ export async function GET() {
       short_name: 'SD',
       description: 'Starter Application Framework for AI Development',
       icons: [
-        {
-          src: '/icon-192.png',
-          sizes: '192x192',
-          type: 'image/png',
-          purpose: 'any maskable',
-        },
-        {
-          src: '/icon-512.png',
-          sizes: '512x512',
-          type: 'image/png',
-          purpose: 'any maskable',
-        },
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
       ],
       theme_color: '#3b82f6',
       background_color: '#ffffff',
       display: 'standalone',
       start_url: '/',
       orientation: 'portrait-primary',
+      categories: ['productivity', 'utilities'],
+      screenshots: [
+        { src: '/screenshots/dashboard.png', sizes: '1280x720', type: 'image/png', label: 'Dashboard' },
+        { src: '/screenshots/mobile.png', sizes: '750x1334', type: 'image/png', label: 'Mobile view' },
+      ],
+      shortcuts: [
+        { name: 'Dashboard', short_name: 'Dashboard', url: '/dashboard', icons: [{ src: '/icons/shortcut-dashboard.png', sizes: '96x96', type: 'image/png' }] },
+        { name: 'Settings', short_name: 'Settings', url: '/user/preferences', icons: [{ src: '/icons/shortcut-settings.png', sizes: '96x96', type: 'image/png' }] },
+      ],
+      share_target: {
+        action: '/share',
+        method: 'GET',
+        params: { title: 'title', text: 'text', url: 'url' },
+      },
     };
 
     return NextResponse.json(fallbackManifest, {

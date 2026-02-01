@@ -144,35 +144,37 @@ In-app file browser for viewing and managing stored files.
 
 ---
 
-## Phase 4: Enhanced Analytics & Monitoring
+## Phase 4: Enhanced Analytics & Monitoring ✅ COMPLETE (Core)
 
 Improved visibility into storage usage and trends.
 
 ### Features
 
-- [ ] **Storage Dashboard**
-  - Visual breakdown by file type (pie/donut chart)
-  - Storage usage over time (line chart)
-  - Top 10 largest files
-  - Recently modified files
+- [x] **Storage Dashboard**
+  - [x] Visual breakdown by file type (pie/donut chart)
+  - [ ] Storage usage over time (line chart) - Optional future enhancement
+  - [x] Top 10 largest files
+  - [x] Recently modified files
   
-- [ ] **Alerts & Thresholds**
-  - Configurable storage usage thresholds
-  - Warning when approaching limits
-  - Email notifications for storage alerts
+- [x] **Alerts & Thresholds**
+  - [x] Configurable storage usage thresholds (warning + critical)
+  - [x] Warning when approaching limits
+  - [x] Email notifications for storage alerts
   
-- [ ] **Cleanup Tools**
-  - Identify orphaned files
-  - Find duplicate files
-  - Suggest files for archival based on age
-  - One-click cleanup for temp/cache files
+- [x] **Cleanup Tools**
+  - [x] Suggest files for cleanup based on age (temp files > 7 days)
+  - [x] One-click cleanup for temp/cache files
+  - [x] One-click cleanup for old backups beyond retention policy
+  - [ ] Identify orphaned files - Optional future enhancement
+  - [ ] Find duplicate files - Optional future enhancement
 
 ### Backend Changes
 
-- [ ] Add storage metrics collection (scheduled job)
-- [ ] Create storage analytics endpoints
-- [ ] Add alert threshold settings
-- [ ] Create cleanup suggestion endpoint
+- [x] Add storage metrics collection (StorageAlertCommand scheduled job)
+- [x] Create storage analytics endpoints (GET /storage-settings/analytics)
+- [x] Add alert threshold settings (storage_alert_enabled/threshold/critical/email)
+- [x] Create cleanup suggestion endpoint (GET /storage-settings/cleanup-suggestions)
+- [x] Create cleanup execution endpoint (POST /storage-settings/cleanup)
 
 ---
 
@@ -188,13 +190,10 @@ Improved visibility into storage usage and trends.
 
 **Recipes:** [Add storage provider](../ai/recipes/add-storage-provider.md). **Patterns:** [Storage Settings pattern](../ai/patterns.md#storage-settings-pattern).
 
-### To Be Created
+### Phase 4 Implementation
 
-- `frontend/app/(dashboard)/configuration/storage/file-manager/page.tsx` - File manager UI
-- `frontend/components/storage/file-browser.tsx` - File browser component
-- `frontend/components/storage/upload-dialog.tsx` - Upload modal
-- `backend/app/Http/Controllers/FileManagerController.php` - File operations API
-- `backend/app/Services/StorageService.php` - Storage abstraction service
+- `backend/app/Http/Controllers/Api/StorageSettingController.php` - analytics, cleanupSuggestions, cleanup
+- `backend/app/Console/Commands/StorageAlertCommand.php` - storage:check-alerts
 
 ---
 
@@ -203,7 +202,7 @@ Improved visibility into storage usage and trends.
 - [x] Users can see exactly where files are stored locally
 - [x] At least 3 additional cloud providers supported
 - [x] File manager allows browsing and basic operations
-- [ ] Storage analytics provide actionable insights (Phase 4)
+- [x] Storage analytics provide actionable insights (Phase 4)
 - [x] All file operations are audit logged
 
 ---

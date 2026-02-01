@@ -21,14 +21,14 @@ Refactor Meilisearch integration to allow administrators to configure the Meilis
 
 Add Meilisearch configuration to the settings system.
 
-- [ ] Add search settings to `config/settings-schema.php`:
+- [x] Add search settings to `config/settings-schema.php`:
   - `search.enabled` (boolean, default: true)
   - `search.host` (string, default: `http://127.0.0.1:7700`)
   - `search.api_key` (string, encrypted, default: from `MEILI_MASTER_KEY` env)
   - `search.use_embedded` (boolean, default: true) - hint for UI
-- [ ] Create migration to seed default values from environment
-- [ ] Update `SearchService` to read from SettingService instead of direct env
-- [ ] Add validation for Meilisearch URL format
+- [x] ConfigServiceProvider injects settings into config and scout.meilisearch
+- [x] Add `isEnabled()`, `testConnection()`, `getHealth()` to SearchService
+- [x] Add validation for Meilisearch URL format (testConnection)
 
 **Key files:**
 - `backend/config/settings-schema.php`
@@ -38,15 +38,15 @@ Add Meilisearch configuration to the settings system.
 
 Update Configuration > Search page with instance settings.
 
-- [ ] Add "Search Instance" section to search configuration page
-- [ ] Add toggle: "Enable Search" (when disabled, hides search UI globally)
-- [ ] Add radio/select: "Use embedded instance" vs "Use external instance"
-- [ ] When external selected, show:
+- [x] Add "Instance" tab to search configuration page
+- [x] Add toggle: "Enable Search" (when disabled, hides search UI globally)
+- [x] Add radio: "Use embedded instance" vs "Use external instance"
+- [x] When external selected, show:
   - Meilisearch URL input
   - API Key input (masked/password field)
   - "Test Connection" button
-- [ ] Show connection status indicator (connected/error)
-- [ ] Add health check endpoint for testing external connections
+- [x] Show connection status indicator (connected/error)
+- [x] Add health check endpoint (GET /admin/search/health)
 
 **Key files:**
 - `frontend/app/(dashboard)/configuration/search/page.tsx`
@@ -56,12 +56,11 @@ Update Configuration > Search page with instance settings.
 
 Hide search UI when disabled.
 
-- [ ] Add `search.enabled` to app config API response
-- [ ] Update `AppConfigProvider` to include search enabled state
-- [ ] Conditionally render search button in Header based on setting
-- [ ] Conditionally register Cmd+K shortcut based on setting
-- [ ] Update SearchProvider to check enabled state before rendering modal
-- [ ] Hide Configuration > Search admin link when search is disabled (optional)
+- [x] Add `search.enabled` to public settings features response
+- [x] Update `AppConfigProvider` to include searchEnabled in features
+- [x] Conditionally render search button and SearchInline in Header based on setting
+- [x] Conditionally register Cmd+K shortcut based on setting (SearchProvider)
+- [x] Update SearchProvider to check enabled state before rendering modal
 
 **Key files:**
 - `frontend/lib/app-config.tsx`
@@ -72,11 +71,10 @@ Hide search UI when disabled.
 
 Handle connection switching and validation.
 
-- [ ] Add endpoint to test Meilisearch connection with provided credentials
-- [ ] Show warning when switching from embedded to external (data won't migrate)
-- [ ] Add "Reindex All" prompt when switching instances
-- [ ] Handle graceful degradation if external instance is unavailable
-- [ ] Add health check to system status/monitoring
+- [x] Add POST /admin/search/test-connection endpoint
+- [x] Show warning when switching from embedded to external (data won't migrate)
+- [x] Add "Reindex All" prompt when saving external config
+- [x] SearchService has graceful degradation (existing try/catch, getHealth)
 
 **Key files:**
 - `backend/app/Http/Controllers/Api/Admin/SearchAdminController.php`
@@ -84,12 +82,12 @@ Handle connection switching and validation.
 
 ## Success Criteria
 
-- [ ] Admin can enable/disable search from Configuration > Search
-- [ ] When search is disabled, search bar and Cmd+K shortcut are hidden
-- [ ] Admin can configure external Meilisearch instance (URL + API key)
-- [ ] "Test Connection" validates external instance before saving
-- [ ] Embedded instance remains the default for new installations
-- [ ] Settings stored in database, not requiring env changes
+- [x] Admin can enable/disable search from Configuration > Search
+- [x] When search is disabled, search bar and Cmd+K shortcut are hidden
+- [x] Admin can configure external Meilisearch instance (URL + API key)
+- [x] "Test Connection" validates external instance before saving
+- [x] Embedded instance remains the default for new installations
+- [x] Settings stored in database, not requiring env changes
 
 ## Future Enhancements
 

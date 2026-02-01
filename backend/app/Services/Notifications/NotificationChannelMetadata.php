@@ -23,7 +23,7 @@ trait NotificationChannelMetadata
      */
     protected function isUserConfigurableChannel(string $id): bool
     {
-        return in_array($id, ['slack', 'discord', 'ntfy'], true);
+        return in_array($id, ['slack', 'discord', 'ntfy', 'webpush'], true);
     }
 
     /**

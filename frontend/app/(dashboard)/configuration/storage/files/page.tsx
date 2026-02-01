@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -33,8 +33,11 @@ const ITEMS_PER_PAGE = 50;
 
 export default function FileManagerPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathFromUrl = searchParams.get("path") ?? "";
+  const initialPath = pathFromUrl.includes("/") ? pathFromUrl.split("/").slice(0, -1).join("/") : pathFromUrl;
   const { user, isLoading: authLoading } = useAuth();
-  const [currentPath, setCurrentPath] = useState("");
+  const [currentPath, setCurrentPath] = useState(initialPath);
   const [page, setPage] = useState(1);
   const [items, setItems] = useState<FileManagerItem[]>([]);
   const [total, setTotal] = useState(0);
@@ -78,6 +81,7 @@ export default function FileManagerPage() {
     }
     loadList();
   }, [user, router, loadList]);
+
 
   useEffect(() => {
     api.get<{ settings: Record<string, unknown> }>("/storage-settings").then((res) => {

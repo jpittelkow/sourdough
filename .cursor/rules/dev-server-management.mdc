@@ -19,17 +19,17 @@ docker-compose ps
 
 ### Verify Server is Accessible
 
-**Note:** The dev server runs on port **8081** (not 8080).
+**Note:** The dev server runs on port **8080** by default (configurable via `APP_PORT` in `.env`).
 
 ```bash
 # Check if the server responds
-curl -s -o /dev/null -w "%{http_code}" http://localhost:8081
+curl -s -o /dev/null -w "%{http_code}" http://localhost:8080
 ```
 
 Or on Windows PowerShell:
 
 ```powershell
-(Invoke-WebRequest -Uri http://localhost:8081 -UseBasicParsing -TimeoutSec 5).StatusCode
+(Invoke-WebRequest -Uri http://localhost:8080 -UseBasicParsing -TimeoutSec 5).StatusCode
 ```
 
 ### View Logs for Issues
@@ -76,7 +76,7 @@ docker-compose up -d --build
 If the server won't start or is unresponsive:
 
 1. Check logs: `docker-compose logs --tail=100`
-2. Check for port conflicts: `docker ps` or `netstat -an | findstr 8081`
+2. Check for port conflicts: `docker ps` or `netstat -an | findstr 8080`
 3. Try full rebuild: `docker-compose down && docker-compose up -d --build`
 4. Check Docker is running: `docker info`
 

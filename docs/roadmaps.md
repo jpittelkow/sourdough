@@ -6,31 +6,32 @@ Development roadmaps and implementation history.
 
 Currently in progress. Complete these before starting new work.
 
-| Roadmap | Priority | Status |
-|---------|----------|--------|
-| [Progressive Web App (PWA)](plans/pwa-roadmap.md) | MEDIUM | Phase 1 complete; Phase 2 next |
+_No items. Documentation Audit complete._
 
 ## Next Up
 
 Ready to start. These are unblocked and can begin immediately.
 
-| Roadmap | Priority | Remaining Work |
-|---------|----------|----------------|
-| [Storage Settings Enhancement](plans/storage-settings-roadmap.md) | MEDIUM | Phase 4 (analytics, alerts, cleanup tools) |
+_No items. See Planned Features._
 
 ## Planned Features
 
 Requires foundation work or longer-term planning.
 
-| Roadmap | Priority | Dependencies |
-|---------|----------|--------------|
-| [Meilisearch Configuration](plans/meilisearch-configuration-roadmap.md) | MEDIUM | ✅ Meilisearch Integration (complete) |
+| Roadmap | Priority | Status |
+|---------|----------|--------|
 | [Docker Container Audit](plans/docker-audit-roadmap.md) | MEDIUM | None |
-| [Web Push Notifications](plans/web-push-notifications-roadmap.md) | MEDIUM | Incorporated into PWA roadmap |
 | [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Audit Logs (complete) |
-| [Documentation Audit](plans/documentation-audit-roadmap.md) | MEDIUM | None |
 | [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
 | [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
+
+## Pre-Release Checklist
+
+After completing Planned Features, complete these final tasks before release:
+
+- [ ] **Final Code Review** - Review all modified files for bugs, debug code, hardcoded values, and adherence to patterns (see [Code Review recipe](ai/recipes/code-review.md))
+- [ ] **Roadmap Cleanup** - Archive completed roadmaps, verify all links work, update stale entries (see Roadmap Maintenance below)
+- [ ] **User Build Verification** - Manually verify the Docker build works end-to-end (see Build Verification below)
 
 ## Completed (Core Done)
 
@@ -38,6 +39,9 @@ High-priority work complete. Only optional/lower-priority items remain.
 
 | Roadmap | Completed | Remaining Work |
 |---------|-----------|----------------|
+| [Progressive Web App (PWA)](plans/pwa-roadmap.md) | 2026-01-31 | Optional: periodic sync, protocol handlers, rich notifications |
+| [Storage Settings Enhancement](plans/storage-settings-roadmap.md) | 2026-01-31 | Optional: usage-over-time chart, orphaned/duplicate file detection |
+| [Web Push Notifications](plans/web-push-notifications-roadmap.md) | 2026-01-31 | Merged into PWA roadmap; core complete |
 | [Auth UI Redesign](plans/auth-ui-redesign-roadmap.md) | 2026-01-29 | Optional: illustrations, page transitions |
 | [Logging](plans/logging-roadmap.md) | 2026-01-29 | Optional: archival, aggregation, scheduled export |
 | [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Optional: external storage, aggregation |
@@ -54,10 +58,12 @@ All tasks complete.
 
 | Roadmap | Completed |
 |---------|-----------|
+| [Documentation Audit](plans/documentation-audit-roadmap.md) | 2026-01-31 |
 | [Configurable Auth Features](plans/configurable-auth-features-roadmap.md) | 2026-01-30 |
 | [Dashboard Improvements](plans/dashboard-improvements-roadmap.md) | 2026-01-30 |
 | [User Groups](plans/user-groups-roadmap.md) | 2026-01-30 |
 | [Meilisearch Integration](plans/meilisearch-integration-roadmap.md) | 2026-01-30 |
+| [Meilisearch Configuration](plans/meilisearch-configuration-roadmap.md) | 2026-01-30 |
 | [Integration Settings](plans/integration-settings-roadmap.md) | 2026-01-29 |
 | [Email Configuration Dependencies](plans/email-configuration-dependencies-roadmap.md) | 2026-01-29 |
 | [Env to Database Migration](plans/env-to-database-roadmap.md) | 2026-01-29 |
@@ -70,12 +76,42 @@ All tasks complete.
 | [Collapsible Settings UI](plans/collapsible-settings-ui-roadmap.md) | 2026-01-29 |
 | [Branded Iconography](plans/branded-iconography-roadmap.md) | 2026-01-29 |
 
+## Roadmap Maintenance
+
+When adding or updating roadmaps:
+
+1. **New roadmaps**: Add to appropriate section (Active, Next Up, or Planned) with priority
+2. **Completing work**: Move to Completed section with date, note any remaining optional work
+3. **Verify links**: Ensure all roadmap file links resolve correctly
+4. **Journal entries**: Add implementation notes to the Journal Entries table
+
+## Build Verification
+
+To verify the build works end-to-end:
+
+1. Clean rebuild: `docker-compose down -v && docker-compose up -d --build`
+2. Wait for startup, then access http://localhost:8080
+3. Test: login flow, dashboard loads, configuration pages work
+4. Check browser console for errors
+
 ## Journal Entries
 
 Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-01-31 | [Documentation Audit Phase 8: Cross-Reference & Completeness](journal/2026-01-31-documentation-audit-phase-8.md) |
+| 2026-01-31 | [Documentation Audit Phase 4: ADR & Architecture](journal/2026-01-31-documentation-audit-phase-4-adr.md) |
+| 2026-01-31 | [Documentation Audit Phase 3: Patterns & Anti-Patterns](journal/2026-01-31-documentation-audit-phase-3.md) |
+| 2026-01-31 | [Documentation Audit Phase 2: AI Recipes](journal/2026-01-31-documentation-audit-phase-2.md) |
+| 2026-01-31 | [Documentation Audit Phase 1: Cursor Rules](journal/2026-01-31-documentation-audit-phase-1.md) |
+| 2026-01-31 | [PWA Phase 4 and 5: Install Experience and Advanced Features](journal/2026-01-31-pwa-phase-4-5-install-and-advanced.md) |
+| 2026-01-31 | [PWA Phase 3: Offline Experience](journal/2026-01-31-pwa-phase-3-offline-experience.md) |
+| 2026-01-31 | [PWA Phase 2: Push Notifications](journal/2026-01-31-pwa-push-notifications.md) |
+| 2026-01-30 | [Notification Templates Implementation](journal/2026-01-30-notification-templates.md) |
+| 2026-01-30 | [Meilisearch Embedded in Container](journal/2026-01-30-meilisearch-embedded.md) |
+| 2026-01-30 | [Remove is_admin, Admin Group Only](journal/2026-01-30-remove-is-admin-group-only.md) |
+| 2026-01-30 | [Meilisearch Configuration](journal/2026-01-30-meilisearch-configuration.md) |
 | 2026-01-30 | [Dashboard Static Simplification](journal/2026-01-30-dashboard-static-simplification.md) |
 | 2026-01-30 | [Alpine to Debian Migration for Meilisearch](journal/2026-01-30-alpine-to-debian-meilisearch.md) |
 | 2026-01-30 | [User Groups Phase 4: Admin UI](journal/2026-01-30-user-groups-phase-4-admin-ui.md) |
@@ -83,6 +119,7 @@ Implementation history and development notes in `journal/`:
 | 2026-01-30 | [Meilisearch Integration (Phases 4–6)](journal/2026-01-30-meilisearch-phases-4-6.md) |
 | 2026-01-30 | [Meilisearch Integration (Phases 1–3)](journal/2026-01-30-meilisearch-phases-1-3.md) |
 | 2026-01-30 | [Configurable Auth Features](journal/2026-01-30-configurable-auth-features.md) |
+| 2026-01-30 | [Storage Phase 4: Analytics & Monitoring](journal/2026-01-30-storage-phase-4-analytics.md) |
 | 2026-01-30 | [Storage Settings Phase 2 (Additional Providers)](journal/2026-01-30-storage-providers-phase-2.md) |
 | 2026-01-30 | [Storage Settings Phase 1 (Local Storage Transparency)](journal/2026-01-30-storage-settings-phase-1.md) |
 | 2026-01-30 | [SSO Settings Enhancement](journal/2026-01-30-sso-settings-enhancement.md) |
@@ -95,6 +132,7 @@ Implementation history and development notes in `journal/`:
 | 2026-01-29 | [Audit Dashboard Analytics (Phase 2)](journal/2026-01-29-audit-dashboard-analytics.md) |
 | 2026-01-29 | [Audit Extended Features (Real-time Streaming & Structured Logging)](journal/2026-01-29-audit-extended-features.md) |
 | 2026-01-29 | [Audit Logging Implementation](journal/2026-01-29-audit-logging-implementation.md) |
+| 2026-01-29 | [LLM Settings Page Consolidation](journal/2026-01-29-llm-settings-consolidation.md) |
 | 2026-01-29 | [LLM Model Discovery](journal/2026-01-29-llm-model-discovery.md) |
 | 2026-01-29 | [User Management Admin (HIGH Priority)](journal/2026-01-29-user-management-admin.md) |
 | 2026-01-29 | [Email Template Integration (Chunk D)](journal/2026-01-29-email-template-integration-chunk-d.md) |

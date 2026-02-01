@@ -38,6 +38,11 @@ frontend/components/header.tsx      # Header components
 frontend/components/logo.tsx        # Logo component with variants
 ```
 
+**Recipes:**
+- [Add UI component](recipes/add-ui-component.md)
+- [Add collapsible section](recipes/add-collapsible-section.md)
+- [Add provider icon](recipes/add-provider-icon.md)
+
 ## Backend API Work
 
 **Read first:**
@@ -132,6 +137,7 @@ docs/plans/env-to-database-roadmap.md
 - [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx) – `navigationGroups` and grouped nav
 - [Recipe: Add configuration menu item](recipes/add-configuration-menu-item.md)
 - [Recipe: Add configuration page](recipes/add-config-page.md) – Form and page structure
+- [Recipe: Add settings page](recipes/add-settings-page.md) – Settings page with SettingService
 
 ## Email Template Work
 
@@ -195,6 +201,7 @@ frontend/app/(dashboard)/configuration/layout.tsx
 **Recipes:**
 - [Add Notification Template](recipes/add-notification-template.md)
 - [Trigger Notifications](recipes/trigger-notifications.md) — sendByType()
+- [Keep notification template variables up to date](recipes/keep-notification-template-variables-up-to-date.md)
 
 ## Authentication Work
 
@@ -209,9 +216,9 @@ frontend/lib/auth.ts
 
 **Also useful:**
 ```
-backend/app/Services/Auth/AuthService.php
 backend/app/Services/Auth/SSOService.php
 backend/app/Services/Auth/TwoFactorService.php
+backend/app/Services/Auth/PasskeyService.php
 frontend/app/(auth)/                            # Auth pages
 frontend/components/auth/                       # Auth components
   - auth-page-layout.tsx                        # Layout wrapper
@@ -224,6 +231,9 @@ frontend/components/ui/
   - form-field.tsx                              # Label + description/helpLink + Input + error
   - loading-button.tsx                           # Button with spinner
 ```
+
+**Recipes:**
+- [Add SSO provider](recipes/add-sso-provider.md)
 
 ## User Management Work
 
@@ -286,6 +296,11 @@ frontend/app/(dashboard)/configuration/users/page.tsx
 frontend/components/admin/user-table.tsx             # Groups column
 frontend/components/admin/user-dialog.tsx            # UserGroupPicker
 ```
+
+**Recipes:**
+- [Create custom group](recipes/create-custom-group.md)
+- [Add new permission](recipes/add-new-permission.md)
+- [Assign user to groups](recipes/assign-user-to-groups.md)
 
 ## Backup System Work
 
@@ -356,6 +371,7 @@ frontend/components/search/search-result-icon.tsx
 
 **Recipes:**
 - [Add searchable model](recipes/add-searchable-model.md)
+- [Add searchable page](recipes/add-searchable-page.md)
 
 ## Dashboard/Widget Work
 
@@ -522,6 +538,9 @@ backend/tests/                                  # PHP tests
 frontend/__tests__/                             # Vitest tests (if exists)
 ```
 
+**Recipes:**
+- [Add tests](recipes/add-tests.md)
+
 ## Navigation/Layout Work
 
 **Read first:**
@@ -551,6 +570,35 @@ frontend/components/sidebar.tsx         # Uses Logo component
 .env.example                            # Branding environment variables
 ```
 
+## PWA Work
+
+**Read first:**
+```
+docs/plans/pwa-roadmap.md                         # PWA phases and tasks
+frontend/public/manifest.json                     # Static manifest (API route overrides at /api/manifest)
+frontend/app/api/manifest/route.ts                # Dynamic manifest (branding, full icon set, shortcuts, share_target)
+frontend/public/sw.js                             # Service worker (caching, push, sync)
+frontend/lib/use-install-prompt.ts                # Install prompt hook
+frontend/components/install-prompt.tsx            # Install banner component
+frontend/lib/request-queue.ts                      # Offline request queue and background sync
+```
+
+**Also useful:**
+```
+frontend/lib/service-worker.ts                    # SW registration
+frontend/lib/web-push.ts                          # Push subscription
+frontend/components/service-worker-setup.tsx      # SW registration in app
+frontend/components/app-shell.tsx                 # InstallPrompt integration
+frontend/app/(dashboard)/user/preferences/page.tsx  # Install App section
+frontend/app/share/page.tsx                       # Share Target handler
+scripts/generate-pwa-icons.mjs                    # Icon generation
+```
+
+**Pattern:** [PWA Install Prompt](patterns.md#pwa-install-prompt-pattern)
+
+**Recipes:**
+- [Add PWA install prompt](recipes/add-pwa-install-prompt.md)
+
 ## Mobile/Responsive Work
 
 **Read first:**
@@ -572,6 +620,39 @@ frontend/app/globals.css                # Global responsive styles
 
 **Cursor rule:** `.cursor/rules/responsive-mobile-first.mdc`
 **Recipe:** `docs/ai/recipes/make-component-responsive.md`
+
+## Webhooks Work
+
+**Read first:**
+```
+backend/app/Http/Controllers/Api/WebhookController.php
+backend/app/Models/Webhook.php
+backend/app/Models/WebhookDelivery.php
+backend/routes/api.php                    # webhooks routes (can:settings.view/edit)
+```
+
+**Also useful:**
+```
+frontend/app/(dashboard)/configuration/webhooks/page.tsx  # Webhook management UI (if exists)
+backend/app/Services/WebhookService.php   # Webhook delivery service (if exists)
+```
+
+Webhooks allow external systems to receive notifications when events occur. Endpoints: list, create, update, delete, test, view deliveries.
+
+## API Tokens Work
+
+**Read first:**
+```
+backend/app/Http/Controllers/Api/ApiTokenController.php
+backend/routes/api.php                    # api-tokens routes (authenticated)
+```
+
+**Also useful:**
+```
+frontend/app/(dashboard)/user/profile/page.tsx  # API tokens section in profile
+```
+
+API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in `PersonalAccessToken` model). Users can create, list, and revoke their own tokens.
 
 ## Adding a New Feature (Full Stack)
 

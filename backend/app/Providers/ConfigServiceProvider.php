@@ -54,6 +54,20 @@ class ConfigServiceProvider extends ServiceProvider
      */
     private function injectSearchConfig(array $settings): void
     {
+        if (array_key_exists('enabled', $settings)) {
+            config(['search.enabled' => filter_var($settings['enabled'] ?? true, FILTER_VALIDATE_BOOLEAN)]);
+        }
+        if (array_key_exists('use_embedded', $settings)) {
+            config(['search.use_embedded' => filter_var($settings['use_embedded'] ?? true, FILTER_VALIDATE_BOOLEAN)]);
+        }
+        if (array_key_exists('host', $settings) && ! empty(trim((string) ($settings['host'] ?? '')))) {
+            config(['search.host' => rtrim((string) $settings['host'], '/')]);
+            config(['scout.meilisearch.host' => rtrim((string) $settings['host'], '/')]);
+        }
+        if (array_key_exists('api_key', $settings)) {
+            config(['search.api_key' => $settings['api_key'] ?? null]);
+            config(['scout.meilisearch.key' => $settings['api_key'] ?? config('scout.meilisearch.key')]);
+        }
         if (array_key_exists('results_per_page', $settings)) {
             $v = (int) ($settings['results_per_page'] ?? 15);
             config(['search.results_per_page' => max(5, min(50, $v))]);

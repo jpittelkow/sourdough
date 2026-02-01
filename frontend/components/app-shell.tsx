@@ -2,9 +2,12 @@
 
 import { Sidebar } from "@/components/sidebar";
 import { Header } from "@/components/header";
+import { OfflineIndicator } from "@/components/offline-indicator";
+import { InstallPrompt } from "@/components/install-prompt";
 import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
 import { SearchProvider } from "@/components/search/search-provider";
 import { PageTitleManager } from "@/components/page-title-manager";
+import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
 
 interface AppShellProps {
@@ -13,9 +16,12 @@ interface AppShellProps {
 
 function AppShellContent({ children }: AppShellProps) {
   const { isExpanded } = useSidebar();
+  const { isOffline } = useOnline();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className={cn("min-h-screen bg-background", isOffline && "pt-10")}>
+      <OfflineIndicator />
+      <InstallPrompt />
       <PageTitleManager />
       <Sidebar />
       <div

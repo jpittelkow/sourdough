@@ -179,7 +179,7 @@ example: (className) =>
 
 Icons use `currentColor` for fill, so they automatically follow the theme's text color. Do not use hardcoded colors in the SVG; this ensures the icon is readable in both light and dark mode.
 
-Use the same key as `config/sso.php` (e.g. `example`). The `icon` value returned by `GET /auth/sso/providers` comes from `config/sso.php`; unknown keys fall back to the `key` icon. See [Patterns: ProviderIcon](patterns.md#providericon-pattern) and the inline comments in `provider-icons.tsx`.
+Use the same key as `config/sso.php` (e.g. `example`). The `icon` value returned by `GET /auth/sso/providers` comes from `config/sso.php`; unknown keys fall back to the `key` icon. See [Patterns: ProviderIcon](../patterns.md#providericon-pattern) and the inline comments in `provider-icons.tsx`.
 
 ## Step 8: Add SSO Setup Page Form
 

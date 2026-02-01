@@ -12,6 +12,9 @@ export interface AppConfigFeatures {
   emailVerificationMode?: string;
   twoFactorMode?: string;
   passkeyMode?: string;
+  searchEnabled?: boolean;
+  webpushEnabled?: boolean;
+  webpushVapidPublicKey?: string;
 }
 
 interface AppConfigState {
@@ -63,6 +66,9 @@ function useAppConfigQuery() {
                 emailVerificationMode: features.email_verification_mode ?? "optional",
                 twoFactorMode: features.two_factor_mode ?? "optional",
                 passkeyMode: features.passkey_mode ?? "disabled",
+                searchEnabled: features.search_enabled !== false,
+                webpushEnabled: !!features.webpush_enabled,
+                webpushVapidPublicKey: features.webpush_vapid_public_key ?? undefined,
               }
             : null,
         };

@@ -4,7 +4,7 @@ When you add or change variables used in notification templates, keep the admin 
 
 ## Where the reference lives
 
-- **Backend**: `NotificationTemplateController::variableDescriptions()` in [backend/app/Http/Controllers/Api/NotificationTemplateController.php](../../backend/app/Http/Controllers/Api/NotificationTemplateController.php). Returns a map of variable name → short description.
+- **Backend**: `NotificationTemplateController::variableDescriptions()` in [backend/app/Http/Controllers/Api/NotificationTemplateController.php](../../../backend/app/Http/Controllers/Api/NotificationTemplateController.php). Returns a map of variable name → short description.
 - **API**: The `show` endpoint (`GET /api/notification-templates/{id}`) includes `variable_descriptions` in the response.
 - **Frontend**: The template editor page uses it in the collapsible "Available Variables" card; variables without an entry show "Available when sending." as fallback.
 
@@ -16,7 +16,7 @@ When you add or change variables used in notification templates, keep the admin 
 
 ## What to do
 
-1. Open [backend/app/Http/Controllers/Api/NotificationTemplateController.php](../../backend/app/Http/Controllers/Api/NotificationTemplateController.php).
+1. Open [backend/app/Http/Controllers/Api/NotificationTemplateController.php](../../../backend/app/Http/Controllers/Api/NotificationTemplateController.php).
 2. Find the private method `variableDescriptions()`.
 3. Add or update entries in the returned array. Use the **exact variable name** as in templates (e.g. `user.name`, `backup_name`). Keep descriptions short (one line).
 

@@ -11,23 +11,23 @@ A full PWA provides native app-like experience: installable, works offline, rece
 - [x] Basic `manifest.json` with app name, icons, theme
 - [x] Backend `WebPushChannel` with VAPID signing
 - [x] Mobile-responsive UI
-- [ ] Service worker
-- [ ] Offline caching
-- [ ] Push notification frontend
-- [ ] Install prompt
+- [x] Service worker
+- [x] Offline caching
+- [x] Push notification frontend
+- [x] Install prompt
 
-## Phase 1: Service Worker Foundation
+## Phase 1: Service Worker Foundation ✅ COMPLETE
 
 Create the core service worker with caching strategies.
 
 ### Tasks
 
-- [ ] Create `frontend/public/sw.js` service worker
-- [ ] Implement cache-first strategy for static assets (JS, CSS, images)
-- [ ] Implement network-first strategy for API requests
-- [ ] Add offline fallback page (`frontend/public/offline.html`)
-- [ ] Register service worker in Next.js app
-- [ ] Handle service worker updates gracefully
+- [x] Create `frontend/public/sw.js` service worker
+- [x] Implement cache-first strategy for static assets (JS, CSS, images)
+- [x] Implement network-first strategy for API requests
+- [x] Add offline fallback page (`frontend/public/offline.html`)
+- [x] Register service worker in Next.js app
+- [x] Handle service worker updates gracefully
 
 ### Key Decisions
 
@@ -46,19 +46,19 @@ Create the core service worker with caching strategies.
 | `frontend/lib/service-worker.ts` | SW registration utility |
 | `frontend/components/service-worker-setup.tsx` | SW registration component |
 
-## Phase 2: Push Notifications
+## Phase 2: Push Notifications ✅ COMPLETE
 
 Complete the push notification flow (see [Web Push Notifications](web-push-notifications-roadmap.md) for details).
 
 ### Tasks
 
-- [ ] Handle `push` event in service worker
-- [ ] Handle `notificationclick` for navigation
-- [ ] Create `frontend/lib/web-push.ts` subscription utility
-- [ ] Add "Enable Notifications" UI in User Preferences
-- [ ] Fix backend `WebPushChannel` settings group
-- [ ] Add `POST /api/user/webpush-subscription` endpoint
-- [ ] Add VAPID key generation instructions to admin config
+- [x] Handle `push` event in service worker
+- [x] Handle `notificationclick` for navigation
+- [x] Create `frontend/lib/web-push.ts` subscription utility
+- [x] Add "Enable Notifications" UI in User Preferences
+- [x] Backend `WebPushChannel` uses notifications group for subscription
+- [x] Add `POST /api/user/webpush-subscription` and `DELETE /api/user/webpush-subscription` endpoints
+- [x] Add VAPID key generation instructions to admin config
 
 ### Notification Features
 
@@ -67,43 +67,43 @@ Complete the push notification flow (see [Web Push Notifications](web-push-notif
 - [ ] Quiet hours / Do Not Disturb setting
 - [ ] Badge count on app icon
 
-## Phase 3: Offline Experience
+## Phase 3: Offline Experience ✅ COMPLETE
 
 Provide meaningful offline functionality.
 
 ### Tasks
 
-- [ ] Cache critical app shell (layout, navigation)
-- [ ] Cache user's frequently accessed data
-- [ ] Show offline indicator in UI
-- [ ] Queue failed API requests for retry (background sync)
-- [ ] Graceful degradation for uncached content
+- [x] Cache critical app shell (layout, navigation)
+- [x] Cache user's frequently accessed data
+- [x] Show offline indicator in UI
+- [x] Queue failed API requests for retry (background sync)
+- [x] Graceful degradation for uncached content
 
 ### Offline-Capable Pages
 
 | Page | Offline Behavior |
 |------|------------------|
 | Dashboard | Show cached data with "offline" badge |
-| Settings | Read-only from cache |
-| User Profile | Read-only from cache |
-| Login | Show offline message |
+| User Preferences | Read-only from cache; save/actions disabled |
+| Notifications | Show cached notifications; Mark read/Delete disabled |
+| Login | Show offline message (offline.html) |
 
-## Phase 4: Install Experience
+## Phase 4: Install Experience ✅ COMPLETE
 
 Prompt users to install the PWA.
 
 ### Tasks
 
-- [ ] Enhance `manifest.json`:
-  - [ ] Add `screenshots` for install UI
-  - [ ] Add `shortcuts` for quick actions
+- [x] Enhance `manifest.json`:
+  - [x] Add `screenshots` for install UI
+  - [x] Add `shortcuts` for quick actions
   - [ ] Add `related_applications` if native app exists
-  - [ ] Update icons (ensure all sizes: 48, 72, 96, 128, 144, 152, 192, 384, 512)
-- [ ] Create install prompt component
-- [ ] Detect `beforeinstallprompt` event
-- [ ] Show custom install banner (non-intrusive)
-- [ ] Track install success/dismiss analytics
-- [ ] Add "Install App" option in settings/menu
+  - [x] Update icons (ensure all sizes: 48, 72, 96, 128, 144, 152, 192, 384, 512)
+- [x] Create install prompt component
+- [x] Detect `beforeinstallprompt` event
+- [x] Show custom install banner (non-intrusive)
+- [x] Track install success/dismiss (localStorage; optional analytics)
+- [x] Add "Install App" option in settings/menu
 
 ### Install Banner UX
 
@@ -117,10 +117,10 @@ Enhancements for power users.
 
 ### Tasks
 
-- [ ] Background sync for offline form submissions
+- [x] Background sync for offline form submissions (already in sw.js)
 - [ ] Periodic background sync for data refresh
-- [ ] Share Target API (receive shared content)
-- [ ] Shortcuts in manifest for quick actions
+- [x] Share Target API (receive shared content)
+- [x] Shortcuts in manifest for quick actions
 - [ ] Protocol handlers (custom URL schemes)
 
 ## Manifest Enhancements
@@ -188,6 +188,7 @@ VAPID_SUBJECT=mailto:admin@yourdomain.com
 | Push Notifications | ✅ | ✅ | ⚠️ iOS 16.4+ | ✅ |
 | Install Prompt | ✅ | ❌ | ⚠️ Manual | ✅ |
 | Background Sync | ✅ | ❌ | ❌ | ✅ |
+| Share Target | ✅ | ❌ | ⚠️ Limited | ✅ |
 
 ## Dependencies
 

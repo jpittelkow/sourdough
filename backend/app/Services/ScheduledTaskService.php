@@ -26,6 +26,10 @@ class ScheduledTaskService
             'description' => 'Check audit and access logs for suspicious activity',
             'dangerous' => false,
         ],
+        'storage:check-alerts' => [
+            'description' => 'Check storage usage against thresholds and notify admins',
+            'dangerous' => false,
+        ],
     ];
 
     /**

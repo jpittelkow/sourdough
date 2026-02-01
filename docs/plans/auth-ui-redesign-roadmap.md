@@ -4,9 +4,9 @@ Modernize the login, registration, and related authentication pages with improve
 
 **Priority**: MEDIUM  
 **Status**: Completed (Core Done)  
-**Last Updated**: 2026-01-29
+**Last Updated**: 2026-01-30
 
-**Remaining Work**: Optional visual polish (illustrations, page transitions, cross-browser testing)
+**Remaining Work**: Page title fixes, optional visual polish (illustrations, page transitions, cross-browser testing)
 
 ---
 
@@ -24,6 +24,12 @@ Update the authentication pages (login, register, forgot password, reset passwor
 - [ ] Engaging imagery/illustrations
 - [x] Password strength indicator
 - [x] Enhanced form interactions (password toggle, email availability)
+
+## Known Issues
+
+- [ ] Page title not showing on login page
+- [ ] Page title not showing on register page
+- [ ] Review other auth pages for missing page titles
 
 ## Auth Pages
 

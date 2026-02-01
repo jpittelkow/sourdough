@@ -627,7 +627,7 @@ export default function NotificationsPage() {
 
         <CollapsibleCard
           title="Web Push (VAPID)"
-          description="VAPID keys for web push notifications"
+          description="VAPID keys for web push notifications. Generate with: npx web-push generate-vapid-keys"
           icon={<Bell className="h-4 w-4" />}
           status={{
             label: watch("vapid_public_key") && watch("vapid_private_key") ? "Configured" : "Not configured",

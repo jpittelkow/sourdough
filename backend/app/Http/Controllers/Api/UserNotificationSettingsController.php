@@ -87,6 +87,39 @@ class UserNotificationSettingsController extends Controller
         return response()->json(['message' => 'Notification settings updated']);
     }
 
+    /**
+     * Store Web Push subscription from the frontend.
+     */
+    public function storeWebPushSubscription(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'endpoint' => ['required', 'string'],
+            'keys' => ['required', 'array'],
+            'keys.p256dh' => ['required', 'string'],
+            'keys.auth' => ['required', 'string'],
+        ]);
+
+        $user = $request->user();
+        $user->setSetting('webpush_subscription', $validated, self::GROUP);
+        $user->setSetting('webpush_enabled', true, self::GROUP);
+
+        return response()->json(['message' => 'Subscription saved']);
+    }
+
+    /**
+     * Remove Web Push subscription.
+     */
+    public function destroyWebPushSubscription(Request $request): JsonResponse
+    {
+        $user = $request->user();
+        $user->settings()
+            ->where('group', self::GROUP)
+            ->whereIn('key', ['webpush_subscription', 'webpush_enabled'])
+            ->delete();
+
+        return response()->json(['message' => 'Subscription removed']);
+    }
+
     private function getAvailableChannelIds(array $channelConfig, ?string $smsProvider): array
     {
         $ids = [];
@@ -132,6 +165,11 @@ class UserNotificationSettingsController extends Controller
     {
         if ($this->isAlwaysAvailableChannel($id)) {
             return true;
+        }
+
+        if ($id === 'webpush') {
+            $sub = $userSettings['webpush_subscription'] ?? null;
+            return !empty($sub);
         }
 
         $required = $this->getRequiredSettings($id);

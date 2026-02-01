@@ -438,5 +438,5 @@ export default function DashboardPage() {
 
 ## See also
 
-- **Dashboard Improvements Roadmap** – [docs/plans/dashboard-improvements-roadmap.md](../plans/dashboard-improvements-roadmap.md)
+- **Dashboard Improvements Roadmap** – [docs/plans/dashboard-improvements-roadmap.md](../../plans/dashboard-improvements-roadmap.md)
 - **Audit dashboard widget** – Real-world example: stats cards, severity donut + activity trends charts (shadcn), recent-warnings list, “View all” link. Uses `GET /audit-logs/stats`. See `frontend/components/audit/audit-dashboard-widget.tsx`, `audit-severity-chart.tsx`, `audit-trends-chart.tsx`, and [Audit Dashboard Analytics](../../journal/2026-01-29-audit-dashboard-analytics.md).

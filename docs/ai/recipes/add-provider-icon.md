@@ -67,7 +67,7 @@ import { ProviderIcon } from "@/components/provider-icons";
 
 ## Related
 
-- [Patterns: ProviderIcon](patterns.md#providericon-pattern)
-- [Patterns: CollapsibleCard](patterns.md#collapsiblecard-pattern) (using icons in card headers)
+- [Patterns: ProviderIcon](../patterns.md#providericon-pattern)
+- [Patterns: CollapsibleCard](../patterns.md#collapsiblecard-pattern) (using icons in card headers)
 - [Recipe: Add SSO Provider](add-sso-provider.md) (Step 7 for SSO icons)
 - [Recipe: Add collapsible section](add-collapsible-section.md) (using icons in CollapsibleCard headers)

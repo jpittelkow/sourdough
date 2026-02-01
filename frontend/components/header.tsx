@@ -14,7 +14,7 @@ const isMac =
 
 export function Header() {
   const { setMobileMenuOpen } = useSidebar();
-  const { setOpen: setSearchOpen } = useSearch();
+  const { setOpen: setSearchOpen, searchEnabled } = useSearch();
 
   return (
     <header className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,22 +30,26 @@ export function Header() {
           <Menu className="h-5 w-5" />
         </Button>
         <div className="flex items-center gap-1 ml-auto md:ml-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="md:hidden h-9 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
-            onClick={() => setSearchOpen(true)}
-            title="Search"
-            aria-label="Search"
-          >
-            <Search className="h-4 w-4" />
-            <span className="hidden sm:inline text-xs">
-              {isMac ? "⌘K" : "Ctrl+K"}
-            </span>
-          </Button>
-          <div className="hidden md:block">
-            <SearchInline />
-          </div>
+          {searchEnabled && (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="md:hidden h-9 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+                onClick={() => setSearchOpen(true)}
+                title="Search"
+                aria-label="Search"
+              >
+                <Search className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs">
+                  {isMac ? "⌘K" : "Ctrl+K"}
+                </span>
+              </Button>
+              <div className="hidden md:block">
+                <SearchInline />
+              </div>
+            </>
+          )}
           <NotificationBell />
           <UserDropdown />
         </div>

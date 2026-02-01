@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
@@ -15,8 +16,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, RefreshCw, Settings } from "lucide-react";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PasswordInput } from "@/components/ui/password-input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Loader2, RefreshCw, Server, Settings } from "lucide-react";
 
 interface IndexStat {
   count: number;
@@ -33,17 +39,42 @@ interface SearchSettings {
   min_query_length: number;
 }
 
+interface InstanceSettings {
+  enabled: boolean;
+  use_embedded: boolean;
+  host: string;
+  api_key: string;
+}
+
+interface HealthResponse {
+  status: string;
+  healthy: boolean;
+  message?: string;
+}
+
 const DEFAULT_SEARCH_SETTINGS: SearchSettings = {
   results_per_page: 15,
   suggestions_limit: 5,
   min_query_length: 2,
 };
 
+const DEFAULT_INSTANCE_SETTINGS: InstanceSettings = {
+  enabled: true,
+  use_embedded: true,
+  host: "http://127.0.0.1:7700",
+  api_key: "",
+};
+
 export default function SearchConfigurationPage() {
+  const queryClient = useQueryClient();
   const [stats, setStats] = useState<Record<string, IndexStat> | null>(null);
   const [searchSettings, setSearchSettings] = useState<SearchSettings>(DEFAULT_SEARCH_SETTINGS);
+  const [instanceSettings, setInstanceSettings] = useState<InstanceSettings>(DEFAULT_INSTANCE_SETTINGS);
+  const [health, setHealth] = useState<HealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingInstance, setIsSavingInstance] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [reindexing, setReindexing] = useState<string | "all" | null>(null);
 
   const fetchStats = async () => {
@@ -69,9 +100,24 @@ export default function SearchConfigurationPage() {
           suggestions_limit: Number(search.suggestions_limit) || DEFAULT_SEARCH_SETTINGS.suggestions_limit,
           min_query_length: Number(search.min_query_length) ?? DEFAULT_SEARCH_SETTINGS.min_query_length,
         });
+        setInstanceSettings({
+          enabled: search.enabled !== false,
+          use_embedded: search.use_embedded !== false,
+          host: typeof search.host === "string" ? search.host : DEFAULT_INSTANCE_SETTINGS.host,
+          api_key: typeof search.api_key === "string" ? search.api_key : "",
+        });
       }
     } catch {
       // Use defaults if fetch fails
+    }
+  };
+
+  const fetchHealth = async () => {
+    try {
+      const res = await api.get<HealthResponse>("/admin/search/health");
+      setHealth(res.data);
+    } catch {
+      setHealth({ status: "error", healthy: false, message: "Failed to check connection" });
     }
   };
 
@@ -84,6 +130,12 @@ export default function SearchConfigurationPage() {
       cancelled = true;
     };
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && instanceSettings.enabled) {
+      fetchHealth();
+    }
+  }, [isLoading, instanceSettings.enabled]);
 
   const handleReindex = async (model: string | null) => {
     setReindexing(model ?? "all");
@@ -128,6 +180,58 @@ export default function SearchConfigurationPage() {
     }
   };
 
+  const handleSaveInstance = async () => {
+    setIsSavingInstance(true);
+    try {
+      const settingsArray = [
+        { group: "search", key: "enabled", value: instanceSettings.enabled },
+        { group: "search", key: "use_embedded", value: instanceSettings.use_embedded },
+        { group: "search", key: "host", value: instanceSettings.use_embedded ? "http://127.0.0.1:7700" : instanceSettings.host.trim() },
+        { group: "search", key: "api_key", value: instanceSettings.use_embedded ? "" : instanceSettings.api_key },
+      ];
+      await api.put("/system-settings", { settings: settingsArray });
+      if (!instanceSettings.use_embedded) {
+        toast.success("Instance settings saved. Run Reindex all to populate the external instance.", {
+          duration: 6000,
+        });
+      } else {
+        toast.success("Instance settings saved.");
+      }
+      await fetchHealth();
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Failed to save instance settings";
+      toast.error(message);
+      if (err instanceof Error) {
+        errorLogger.report(err, { context: "SearchConfigurationPage.saveInstance" });
+      }
+    } finally {
+      setIsSavingInstance(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    const host = instanceSettings.use_embedded ? "http://127.0.0.1:7700" : instanceSettings.host.trim();
+    const apiKey = instanceSettings.use_embedded ? "" : instanceSettings.api_key;
+    if (!host) {
+      toast.error("Enter a Meilisearch URL to test.");
+      return;
+    }
+    setIsTestingConnection(true);
+    try {
+      const res = await api.post<{ message: string }>("/admin/search/test-connection", { host, api_key: apiKey || undefined });
+      toast.success(res.data?.message ?? "Connection successful.");
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Connection test failed";
+      toast.error(message);
+      if (err instanceof Error) {
+        errorLogger.report(err, { context: "SearchConfigurationPage.testConnection" });
+      }
+    } finally {
+      setIsTestingConnection(false);
+    }
+  };
+
   if (isLoading) {
     return <SettingsPageSkeleton />;
   }
@@ -143,14 +247,126 @@ export default function SearchConfigurationPage() {
         </p>
       </div>
 
-      <Tabs defaultValue="indexes" className="space-y-4">
+      <Tabs defaultValue="instance" className="space-y-4">
         <TabsList>
+          <TabsTrigger value="instance">
+            <Server className="mr-2 h-4 w-4" />
+            Instance
+          </TabsTrigger>
           <TabsTrigger value="indexes">Index statistics</TabsTrigger>
           <TabsTrigger value="settings">
             <Settings className="mr-2 h-4 w-4" />
             Settings
           </TabsTrigger>
         </TabsList>
+        <TabsContent value="instance" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Search instance</CardTitle>
+              <CardDescription>
+                Enable or disable search globally, and choose between embedded or external Meilisearch.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <SettingsSwitchRow
+                label="Enable search"
+                description="When disabled, the search bar and Cmd+K shortcut are hidden."
+                checked={instanceSettings.enabled}
+                onCheckedChange={(checked) =>
+                  setInstanceSettings((s) => ({ ...s, enabled: checked }))
+                }
+              />
+              <div className="space-y-3">
+                <Label>Instance type</Label>
+                <RadioGroup
+                  value={instanceSettings.use_embedded ? "embedded" : "external"}
+                  onValueChange={(v) =>
+                    setInstanceSettings((s) => ({
+                      ...s,
+                      use_embedded: v === "embedded",
+                    }))
+                  }
+                >
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="embedded" id="embedded" />
+                    <Label htmlFor="embedded" className="font-normal cursor-pointer">
+                      Use embedded instance (runs in this app)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <RadioGroupItem value="external" id="external" />
+                    <Label htmlFor="external" className="font-normal cursor-pointer">
+                      Use external instance (Meilisearch Cloud or your own server)
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </div>
+              {!instanceSettings.use_embedded && (
+                <>
+                  <Alert variant="warning">
+                    <AlertTitle>Switching to external instance</AlertTitle>
+                    <AlertDescription>
+                      Search data will not migrate from the embedded instance. After saving,
+                      go to Index statistics and run &quot;Reindex all&quot; to populate the external instance.
+                    </AlertDescription>
+                  </Alert>
+                <div className="space-y-4 rounded-lg border p-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="meili-host">Meilisearch URL</Label>
+                    <Input
+                      id="meili-host"
+                      type="url"
+                      placeholder="https://your-meilisearch.example.com"
+                      value={instanceSettings.host}
+                      onChange={(e) =>
+                        setInstanceSettings((s) => ({ ...s, host: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="meili-key">API key</Label>
+                    <PasswordInput
+                      id="meili-key"
+                      placeholder="Leave empty if no auth"
+                      value={instanceSettings.api_key}
+                      onChange={(e) =>
+                        setInstanceSettings((s) => ({ ...s, api_key: e.target.value }))
+                      }
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={handleTestConnection}
+                    disabled={isTestingConnection}
+                  >
+                    {isTestingConnection ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : null}
+                    Test connection
+                  </Button>
+                </div>
+                </>
+              )}
+              {instanceSettings.enabled && health && (
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge variant={health.healthy ? "default" : "destructive"}>
+                    {health.healthy ? "Connected" : "Error"}
+                  </Badge>
+                  {!health.healthy && health.message && (
+                    <span className="text-sm text-muted-foreground">{health.message}</span>
+                  )}
+                </div>
+              )}
+              <Button onClick={handleSaveInstance} disabled={isSavingInstance}>
+                {isSavingInstance ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Save instance settings
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
         <TabsContent value="indexes" className="space-y-4">
           <Card>
             <CardHeader>

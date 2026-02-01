@@ -12,13 +12,13 @@ use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
-use Laragear\WebAuthn\WebAuthnAuthenticatable;
+use Laragear\WebAuthn\WebAuthnAuthentication;
 use App\Models\ApiToken;
 use App\Traits\HasGroups;
 
 class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVerifyEmail
 {
-    use HasApiTokens, HasFactory, HasGroups, MustVerifyEmail, Notifiable, Searchable, WebAuthnAuthenticatable;
+    use HasApiTokens, HasFactory, HasGroups, MustVerifyEmail, Notifiable, Searchable, WebAuthnAuthentication;
 
     /**
      * The attributes that are mass assignable.

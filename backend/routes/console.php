@@ -51,3 +51,8 @@ Schedule::command('queue:monitor')
 Schedule::command('log:check-suspicious')
     ->everyFifteenMinutes()
     ->withoutOverlapping(15);
+
+// Storage usage alert (when enabled in settings)
+Schedule::command('storage:check-alerts')
+    ->daily()
+    ->withoutOverlapping(60);

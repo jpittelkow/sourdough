@@ -184,4 +184,11 @@ return [
         'suggestions_limit' => ['env' => 'SEARCH_SUGGESTIONS_LIMIT', 'default' => 5],
         'min_query_length' => ['env' => 'SEARCH_MIN_QUERY_LENGTH', 'default' => 2],
     ],
+
+    'storage' => [
+        'storage_alert_enabled' => ['env' => 'STORAGE_ALERT_ENABLED', 'default' => false],
+        'storage_alert_threshold' => ['env' => 'STORAGE_ALERT_THRESHOLD', 'default' => 80],
+        'storage_alert_critical' => ['env' => 'STORAGE_ALERT_CRITICAL', 'default' => 95],
+        'storage_alert_email' => ['env' => 'STORAGE_ALERT_EMAIL', 'default' => true],
+    ],
 ];

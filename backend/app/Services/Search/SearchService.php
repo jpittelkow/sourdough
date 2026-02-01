@@ -49,6 +49,66 @@ class SearchService
     }
 
     /**
+     * Check if search is enabled (admin can disable via Configuration > Search).
+     */
+    public function isEnabled(): bool
+    {
+        return filter_var(config('search.enabled', true), FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Test Meilisearch connection with provided credentials.
+     *
+     * @return array{success: bool, message: string}
+     */
+    public function testConnection(string $host, ?string $apiKey = null): array
+    {
+        $host = rtrim($host, '/');
+        if ($host === '') {
+            return ['success' => false, 'message' => 'Host URL is required.'];
+        }
+        if (! preg_match('#^https?://#', $host)) {
+            return ['success' => false, 'message' => 'Host must be a valid HTTP or HTTPS URL.'];
+        }
+        try {
+            $client = new \Meilisearch\Client($host, $apiKey);
+            $client->health();
+            return ['success' => true, 'message' => 'Connection successful.'];
+        } catch (\Exception $e) {
+            Log::warning('Meilisearch connection test failed', [
+                'host' => $host,
+                'error' => $e->getMessage(),
+            ]);
+            return ['success' => false, 'message' => $e->getMessage()];
+        }
+    }
+
+    /**
+     * Get current Meilisearch connection health status.
+     *
+     * @return array{status: string, healthy: bool, message?: string}
+     */
+    public function getHealth(): array
+    {
+        try {
+            $client = app(\Meilisearch\Client::class);
+            $health = $client->health();
+            $status = $health['status'] ?? 'unknown';
+            return [
+                'status' => $status,
+                'healthy' => ($status === 'available'),
+            ];
+        } catch (\Exception $e) {
+            Log::warning('Meilisearch health check failed', ['error' => $e->getMessage()]);
+            return [
+                'status' => 'error',
+                'healthy' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Search users (admin-only: sees all users).
      * For user-scoped search, filter results by user_id in controller.
      *
