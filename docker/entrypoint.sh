@@ -49,7 +49,7 @@ fi
 echo "Setting up data directory..."
 mkdir -p ${DATA_DIR}
 chown -R www-data:www-data ${DATA_DIR}
-chmod 755 ${DATA_DIR}
+chmod 775 ${DATA_DIR}
 
 # Setup Meilisearch data directory
 echo "Setting up Meilisearch data directory..."
@@ -77,9 +77,10 @@ chmod -R 755 /tmp/nginx_client_body
 if [ ! -f "${DB_PATH}" ]; then
     echo "Creating SQLite database..."
     touch ${DB_PATH}
-    chown www-data:www-data ${DB_PATH}
-    chmod 664 ${DB_PATH}
 fi
+# Always ensure database has correct permissions (volume mounts may have wrong ownership)
+chown www-data:www-data ${DB_PATH}
+chmod 664 ${DB_PATH}
 
 # Update .env database path
 cd ${BACKEND_DIR}
