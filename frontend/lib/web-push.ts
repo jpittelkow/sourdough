@@ -99,7 +99,8 @@ export async function subscribe(vapidPublicKey: string): Promise<PushSubscriptio
     const key = urlBase64ToUint8Array(vapidPublicKey);
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: key,
+      // Type assertion needed due to Node.js/browser ArrayBuffer type mismatch during build
+      applicationServerKey: key as unknown as ArrayBuffer,
     });
     return subscriptionToPayload(subscription);
   } catch (error) {
