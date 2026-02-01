@@ -254,7 +254,7 @@ Production:
 version: '3.8'
 services:
   app:
-    image: ghcr.io/username/sourdough:latest
+    image: ghcr.io/jpittelkow/sourdough:latest
     ports:
       - "80:80"
     volumes:

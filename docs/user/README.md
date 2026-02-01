@@ -32,7 +32,7 @@ docker run -d \
   --name sourdough \
   -p 8080:80 \
   -v sourdough_data:/data \
-  ghcr.io/username/sourdough:latest
+  ghcr.io/jpittelkow/sourdough:latest
 
 # Access at http://localhost:8080
 ```
@@ -41,7 +41,7 @@ docker run -d \
 
 ```bash
 # Clone repository
-git clone https://github.com/username/sourdough.git
+git clone https://github.com/jpittelkow/sourdough.git
 cd sourdough
 
 # Start services
@@ -509,5 +509,5 @@ Variables available for each template are listed in the template description. In
 ## Getting Help
 
 - **Documentation**: [docs/](../)
-- **Issues**: [GitHub Issues](https://github.com/username/sourdough/issues)
+- **Issues**: [GitHub Issues](https://github.com/jpittelkow/sourdough/issues)
 - **Email**: support@example.com
