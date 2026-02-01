@@ -1,0 +1,165 @@
+# Using Sourdough as Your Starting Point
+
+Sourdough is designed to be forked and customized. This guide helps you get started with your own project based on Sourdough.
+
+## What You're Getting
+
+A complete full-stack application framework with enterprise-grade features ready to use:
+
+**Authentication & Users**
+- Email/password authentication with Laravel Sanctum
+- SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab)
+- Two-factor authentication (TOTP + recovery codes)
+- Passkeys (WebAuthn/FIDO2) for passwordless login
+- User groups and granular permissions
+
+**Notifications**
+- 10+ channels: Email, Telegram, Discord, Slack, SMS (Twilio/Vonage/SNS), Matrix, ntfy, Web Push, In-App
+- Customizable notification templates
+- Per-user channel preferences
+
+**AI/LLM Integration**
+- Multi-provider support: Claude, OpenAI, Gemini, Ollama, AWS Bedrock, Azure OpenAI
+- Three modes: Single, Aggregation, Council (consensus)
+- Model discovery from provider APIs
+
+**Infrastructure**
+- Single Docker container (Nginx + PHP-FPM + Next.js via Supervisor)
+- SQLite default, supports MySQL/PostgreSQL/Supabase
+- Full-text search with Meilisearch
+- Backup/restore with local, S3, SFTP, Google Drive destinations
+- PWA support with offline capability
+
+**Observability**
+- Audit logging with real-time streaming
+- HIPAA-compliant access logging
+- Application logging with correlation IDs
+- Suspicious activity detection
+
+## Philosophy
+
+Sourdough is **opinionated but modular**:
+
+- Architecture decisions are documented in `docs/adr/` (24 ADRs)
+- Features can be removed if you don't need them
+- Patterns and structure should remain consistent
+- Code follows established conventions (see `docs/ai/patterns.md`)
+
+## For AI-Assisted Development
+
+This codebase is **optimized for AI coding assistants**. The documentation structure helps AI understand and work with the code effectively.
+
+**Key resources for AI:**
+
+| Location | Purpose |
+|----------|---------|
+| `docs/ai/README.md` | Development workflows and quick links |
+| `docs/ai/context-loading.md` | Which files to read for each task type |
+| `docs/ai/recipes/` | 32 step-by-step implementation guides |
+| `docs/ai/patterns.md` | Code patterns with copy-paste examples |
+| `docs/ai/anti-patterns.md` | Common mistakes to avoid |
+| `.cursor/rules/` | Auto-loaded rules for Cursor IDE |
+
+**Recommended workflow:**
+
+1. Tell your AI assistant to read `docs/ai/README.md`
+2. Describe what you want to build
+3. The AI will find the relevant recipe and context files
+4. Follow the established patterns
+
+**Example prompt:**
+> "I want to add a new notification channel. Please read docs/ai/README.md and find the relevant recipe, then implement it."
+
+## First Steps
+
+### 1. Clone and Run
+
+```bash
+git clone https://github.com/jpittelkow/sourdough.git my-project
+cd my-project
+docker-compose up -d
+```
+
+Access at http://localhost:8080. The first user to register becomes admin.
+
+### 2. Explore the Application
+
+- Create an account and explore the features
+- Check Configuration pages (admin-only) to see what's configurable
+- Review the documentation structure in `docs/`
+
+### 3. Customize for Your Project
+
+Follow the [Customization Checklist](docs/customization-checklist.md) to systematically update:
+
+- Branding (app name, short name)
+- Environment configuration
+- Remove features you don't need
+- Add your own features
+
+### 4. Start Building
+
+Use the AI development guide (`docs/ai/README.md`) to add your own features. The recipes cover common tasks like:
+
+- Adding API endpoints
+- Adding configuration pages
+- Adding notification channels
+- Adding dashboard widgets
+- And 28 more...
+
+## What to Keep
+
+**Always keep:**
+- `docs/ai/` - The AI development guide works for any features you add
+- `.cursor/rules/` - Cursor IDE rules remain useful
+- Core authentication - Even if you simplify, the base auth is solid
+- Docker setup - Single container deployment is convenient
+- Audit logging - Useful for any application
+
+**Add your own:**
+- Recipes in `docs/ai/recipes/` for patterns specific to your app
+- Journal entries in `docs/journal/` for your development history
+- ADRs in `docs/adr/` for your architecture decisions
+
+## What to Remove (If Needed)
+
+If you don't need certain features, you can remove them:
+
+| Feature | Files to Remove |
+|---------|-----------------|
+| LLM/AI | `backend/app/Services/LLM/`, `backend/config/llm.php`, `frontend/app/(dashboard)/configuration/ai/` |
+| Specific notification channels | Individual files in `backend/app/Services/Notifications/Channels/` |
+| Backup remote destinations | Individual files in `backend/app/Services/Backup/Destinations/` |
+| PWA | `frontend/public/sw.js`, `frontend/public/manifest.json`, `frontend/lib/use-install-prompt.ts` |
+
+See the [Customization Checklist](docs/customization-checklist.md) for detailed guidance.
+
+## Documentation Structure
+
+```
+docs/
+├── overview.md              # Main documentation hub
+├── ai/                      # AI development guide (start here)
+│   ├── README.md            # Quick start for AI assistants
+│   ├── context-loading.md   # Which files to read per task
+│   ├── patterns.md          # Code patterns
+│   ├── anti-patterns.md     # What to avoid
+│   └── recipes/             # 32 step-by-step guides
+├── adr/                     # Architecture Decision Records
+├── features.md              # Feature documentation
+├── architecture.md          # Architecture overview
+├── roadmaps.md              # Development plans
+├── journal/                 # Development history
+└── quick-reference.md       # Commands, structure, conventions
+```
+
+## Getting Help
+
+- Read the documentation in `docs/`
+- Check existing recipes for similar tasks
+- Review ADRs for architectural context
+- Look at existing implementations as examples
+
+## License
+
+Sourdough is MIT licensed. You can use it for any purpose, including commercial projects.

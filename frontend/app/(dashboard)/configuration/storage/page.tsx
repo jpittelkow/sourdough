@@ -195,9 +195,10 @@ function StorageByTypeChart({ byType }: { byType: Record<string, number> }) {
           content={
             <ChartTooltipContent
               nameKey="name"
-              formatter={(value: number, _name: string, item: { payload?: { name: string; size: number } }) => {
-                const ext = item?.payload?.name ?? "";
-                const size = item?.payload?.size ?? 0;
+              formatter={(value, _name, item) => {
+                const payload = (item as { payload?: { name: string; size: number } })?.payload;
+                const ext = payload?.name ?? "";
+                const size = payload?.size ?? 0;
                 return (
                   <span>
                     {ext === "none" ? "(no ext)" : `.${ext}`}: {formatBytes(size)} ({value}%)
