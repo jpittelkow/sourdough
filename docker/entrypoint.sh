@@ -108,8 +108,8 @@ if [ "${APP_ENV}" = "production" ]; then
     php artisan view:cache
 fi
 
-# Create storage link
-php artisan storage:link 2>/dev/null || true
+# Create storage link (ignore if already exists)
+php artisan storage:link >/dev/null 2>&1 || true
 
 echo "=== Sourdough Ready ==="
 
