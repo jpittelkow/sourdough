@@ -75,6 +75,77 @@ Edit `.env` to configure:
 | `APP_PORT` | `8080` | Host port |
 | `CONTAINER_NAME` | `sourdough-dev` | Container name |
 
+## NAS Deployment (Unraid, Synology, TrueNAS)
+
+When deploying on NAS systems using their Docker GUI (not docker-compose), you must manually configure environment variables and volume mappings.
+
+### Required Environment Variables
+
+These variables are set automatically by `docker-compose.prod.yml` but **must be added manually** in NAS Docker templates:
+
+| Variable | Required Value | Notes |
+|----------|----------------|-------|
+| `DB_DATABASE` | `/var/www/html/data/database.sqlite` | **Critical** - Without this, migrations write to a non-persistent location |
+| `DB_CONNECTION` | `sqlite` | Database driver |
+| `APP_KEY` | `base64:...` | Generate with `php artisan key:generate --show` |
+| `APP_ENV` | `production` | Environment mode |
+| `APP_URL` | `http://your-nas-ip:port` | Your access URL |
+| `FRONTEND_URL` | `http://your-nas-ip:port` | Same as APP_URL |
+| `MEILI_MASTER_KEY` | (random string) | Search engine API key |
+
+### Required Volume Mappings
+
+| Container Path | Host Path Example | Purpose |
+|----------------|-------------------|---------|
+| `/var/www/html/data` | `/mnt/user/appdata/sourdough/data` | SQLite database |
+| `/var/www/html/backend/storage/app` | `/mnt/user/appdata/sourdough/storage` | File uploads, backups |
+| `/var/lib/meilisearch` | `/mnt/user/appdata/sourdough/meilisearch` | Search index |
+
+### Permission Configuration (PUID/PGID)
+
+NAS systems often use specific user/group IDs. Set these to match your host volume ownership:
+
+| Variable | Unraid Default | Synology Default | Purpose |
+|----------|----------------|------------------|---------|
+| `PUID` | `99` | `1000` | User ID for www-data |
+| `PGID` | `100` | `1000` | Group ID for www-data |
+
+**Finding your IDs:** On Unraid, `nobody:users` is typically `99:100`. On Synology, check with `id your-username`.
+
+### Unraid Template Example
+
+In Unraid's Docker tab, add these variables:
+
+```
+APP_KEY=base64:YourGeneratedKeyHere
+APP_ENV=production
+APP_URL=http://192.168.1.100:8080
+FRONTEND_URL=http://192.168.1.100:8080
+DB_CONNECTION=sqlite
+DB_DATABASE=/var/www/html/data/database.sqlite
+MEILI_MASTER_KEY=YourRandomSecretKey
+PUID=99
+PGID=100
+```
+
+### Troubleshooting NAS Deployments
+
+**"attempt to write a readonly database" error:**
+- Ensure `DB_DATABASE=/var/www/html/data/database.sqlite` is set as an environment variable
+- Check volume permissions: `ls -la /mnt/user/appdata/sourdough/data/`
+- Verify PUID/PGID match host directory ownership
+
+**Meilisearch "Permission denied" errors:**
+- This was a known issue caused by Supervisor's `user=` directive not setting HOME properly
+- Fixed in the supervisor config by using `su` to properly set up the user environment
+- If you're running an older image, rebuild: `docker-compose up -d --build`
+- For NAS volume permission issues: `chmod -R 775 /path/to/meilisearch && chown -R PUID:PGID /path/to/meilisearch`
+
+**Migrations run but database is empty (0 bytes):**
+- This means `DB_DATABASE` isn't set - Laravel is using the default path
+- Add `DB_DATABASE=/var/www/html/data/database.sqlite` to environment variables
+- Restart the container
+
 ## Meilisearch (Search Engine)
 
 Meilisearch runs inside the main app container, managed by Supervisor alongside Nginx, PHP-FPM, and Next.js. It listens on `127.0.0.1:7700` and persists data to the `meilisearch_data` volume at `/var/lib/meilisearch`. The Docker image uses Debian (not Alpine) because Meilisearch binaries require glibc.
