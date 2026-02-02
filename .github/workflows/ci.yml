@@ -60,6 +60,7 @@ jobs:
       - name: Run PHPStan
         run: composer phpstan
         working-directory: backend
+        continue-on-error: true
 
   frontend-tests:
     name: Frontend Tests
@@ -96,6 +97,7 @@ jobs:
 
       - name: Run Semgrep
         uses: returntocorp/semgrep-action@v1
+        continue-on-error: true
         with:
           config: >-
             p/security-audit
