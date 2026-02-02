@@ -176,8 +176,9 @@ class TwoFactorController extends Controller
             }
         }
 
-        // Clear 2FA session and login user
+        // Clear 2FA session, set verified flag, and login user
         $request->session()->forget('2fa:user_id');
+        $request->session()->put('2fa:verified', true);
         Auth::login($user, $request->boolean('remember'));
         $request->session()->regenerate();
 

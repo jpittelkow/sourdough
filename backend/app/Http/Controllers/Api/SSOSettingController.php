@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponseTrait;
 use App\Services\AuditService;
 use App\Services\SettingService;
+use App\Services\UrlValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -19,7 +20,8 @@ class SSOSettingController extends Controller
 
     public function __construct(
         private SettingService $settingService,
-        private AuditService $auditService
+        private AuditService $auditService,
+        private UrlValidationService $urlValidator
     ) {}
 
     /**
@@ -166,6 +168,12 @@ class SSOSettingController extends Controller
                 return $this->errorResponse('OIDC requires Client Secret to be set to validate credentials.', 422);
             }
             $discoveryUrl = rtrim($issuerUrl, '/') . '/.well-known/openid-configuration';
+
+            // Validate OIDC issuer URL for SSRF protection
+            if (!$this->urlValidator->validateUrl($discoveryUrl)) {
+                return $this->errorResponse('Invalid OIDC Issuer URL: URLs pointing to internal or private addresses are not allowed.');
+            }
+
             try {
                 $response = Http::timeout(10)->get($discoveryUrl);
                 if (!$response->successful()) {

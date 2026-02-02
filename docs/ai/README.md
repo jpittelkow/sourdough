@@ -22,6 +22,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
 | PWA | [PWA roadmap](../plans/pwa-roadmap.md), `frontend/public/sw.js`, `frontend/lib/use-install-prompt.ts`, [add-pwa-install-prompt](recipes/add-pwa-install-prompt.md), [context-loading: PWA Work](context-loading.md#pwa-work) |
+| Security | [ADR-024](../adr/024-security-hardening.md), [Security roadmap](../plans/security-compliance-roadmap.md), `backend/app/Services/UrlValidationService.php`, `backend/app/Providers/AppServiceProvider.php` |
 
 **Full context loading details:** [context-loading.md](context-loading.md)
 

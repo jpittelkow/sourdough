@@ -50,16 +50,72 @@ class SSOService
 
     /**
      * Get the redirect URL for a provider.
+     * Generates a cryptographic state token for CSRF protection.
      */
-    public function getRedirectUrl(string $provider, ?string $state = null): string
+    public function getRedirectUrl(string $provider, ?string $customState = null): string
     {
         $driver = Socialite::driver($provider);
 
-        if ($state) {
-            $driver->with(['state' => $state]);
-        }
+        // Generate a cryptographic state token for CSRF protection
+        $stateToken = bin2hex(random_bytes(32));
+
+        // If custom state is provided (e.g., for linking), append it
+        $fullState = $customState ? "{$stateToken}:{$customState}" : $stateToken;
+
+        // Store the state token in session for validation on callback
+        session()->put("sso_state:{$provider}", $stateToken);
+
+        $driver->with(['state' => $fullState]);
 
         return $driver->redirect()->getTargetUrl();
+    }
+
+    /**
+     * Validate the OAuth state token from callback.
+     *
+     * @param string $provider The OAuth provider
+     * @param string|null $state The state parameter from callback
+     * @return array{valid: bool, custom_state: string|null, error: string|null}
+     */
+    public function validateStateToken(string $provider, ?string $state): array
+    {
+        if (empty($state)) {
+            return [
+                'valid' => false,
+                'custom_state' => null,
+                'error' => 'missing_state',
+            ];
+        }
+
+        $expectedToken = session()->pull("sso_state:{$provider}");
+
+        if (empty($expectedToken)) {
+            return [
+                'valid' => false,
+                'custom_state' => null,
+                'error' => 'state_not_found',
+            ];
+        }
+
+        // Parse the state - it may contain custom state after the token
+        $parts = explode(':', $state, 2);
+        $receivedToken = $parts[0];
+        $customState = $parts[1] ?? null;
+
+        // Use timing-safe comparison to prevent timing attacks
+        if (!hash_equals($expectedToken, $receivedToken)) {
+            return [
+                'valid' => false,
+                'custom_state' => null,
+                'error' => 'invalid_state',
+            ];
+        }
+
+        return [
+            'valid' => true,
+            'custom_state' => $customState,
+            'error' => null,
+        ];
     }
 
     /**

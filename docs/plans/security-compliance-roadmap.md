@@ -2,9 +2,9 @@
 
 Review and implement compliance requirements for security standards including SOC 2 Type II and ISO 27001.
 
-**Priority**: MEDIUM  
-**Status**: Planned  
-**Last Updated**: 2026-01-30
+**Priority**: MEDIUM
+**Status**: In Progress
+**Last Updated**: 2026-02-02
 
 **Dependencies**:
 - [Audit Logs & Logging](audit-logs-roadmap.md) - Comprehensive logging required for compliance
@@ -19,8 +19,8 @@ Review and implement compliance requirements for security standards including SO
 - [ ] Review access control mechanisms (authentication, authorization)
 - [ ] Implement/verify role-based access control (RBAC)
 - [ ] Document user provisioning and deprovisioning procedures
-- [ ] Review password policies and MFA implementation
-- [ ] Audit session management and timeout policies
+- [x] Review password policies and MFA implementation - [ADR-024](../adr/024-security-hardening.md)
+- [x] Audit session management and timeout policies - Token expiration configured (7 days)
 - [ ] Review encryption at rest and in transit
 - [ ] Document incident response procedures
 
@@ -77,14 +77,14 @@ Review and implement compliance requirements for security standards including SO
 - [ ] Review vendor security assessments
 
 ### General Security Hardening (MEDIUM Priority)
-- [ ] Perform security code review
-- [ ] Run automated security scanning (SAST/DAST)
-- [ ] Review dependency vulnerabilities
-- [ ] Check for abandoned/unmaintained packages (npm, Composer)
-- [ ] Implement Content Security Policy (CSP)
-- [ ] Review CORS configuration
-- [ ] Implement rate limiting
-- [ ] Review SQL injection and XSS protections
+- [x] Perform security code review - 9 vulnerabilities identified and fixed ([ADR-024](../adr/024-security-hardening.md))
+- [x] Run automated security scanning (SAST/DAST) - PHPStan, ESLint Security, Semgrep integrated into CI
+- [x] Review dependency vulnerabilities - Composer: clean; npm: dev-only vulnerabilities (eslint, vitest)
+- [x] Check for abandoned/unmaintained packages (npm, Composer) - 1 abandoned (azure-blob-storage)
+- [x] Implement Content Security Policy (CSP) - Added to nginx.conf
+- [x] Review CORS configuration - Tightened allowed methods/headers, added max_age
+- [x] Implement rate limiting - Already implemented via `rate.sensitive` middleware on auth routes
+- [x] Review SQL injection and XSS protections - Backup SQL injection fixed, SSRF protection added
 - [ ] Document secure development lifecycle (SDLC)
 
 ### Documentation & Policies (HIGH Priority)
@@ -98,13 +98,54 @@ Review and implement compliance requirements for security standards including SO
 
 ## Current State
 
-**Authentication**: Laravel Sanctum with session-based auth implemented.
+**Authentication**: Laravel Sanctum with session-based auth implemented. 2FA properly enforces session flag after verification.
 
-**Authorization**: Basic role system in place, may need RBAC enhancements.
+**Authorization**: Group-based RBAC implemented via user_groups system.
 
-**Logging**: Basic audit logging exists, improvements planned in Audit Logs roadmap.
+**Logging**: Comprehensive audit logging with HIPAA-compliant access logs.
 
 **Encryption**: HTTPS enforced, Laravel encryption for sensitive data.
+
+**Password Policy**: Strong passwords enforced (8+ chars, mixed case, numbers, symbols). Compromised password check in production.
+
+**Token Expiration**: API tokens expire after 7 days (configurable via `SANCTUM_TOKEN_EXPIRATION`).
+
+**SSRF Protection**: UrlValidationService prevents internal/private URL access across all HTTP fetch operations.
+
+**OAuth Security**: State token validation prevents CSRF attacks on SSO flows.
+
+**Webhook Security**: HMAC-SHA256 signatures for webhook payload verification.
+
+**File Upload**: Default whitelist blocks dangerous file types; MIME validation prevents extension spoofing.
+
+**Security Headers**: nginx configured with X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, and Content-Security-Policy.
+
+**CORS**: Restricted to specific HTTP methods and headers; preflight cached for 24 hours.
+
+**Rate Limiting**: Auth-sensitive routes (login, register, password reset, 2FA) protected via `rate.sensitive` middleware.
+
+---
+
+## SAST Implementation (Complete)
+
+Automated security scanning is integrated into CI/CD:
+
+**PHP (Backend):**
+- **PHPStan** with strict rules and Larastan (`backend/phpstan.neon`)
+- Run locally: `composer phpstan` in `backend/`
+
+**JavaScript/TypeScript (Frontend):**
+- **ESLint security plugin** (`frontend/.eslintrc.json`)
+- Run locally: `npm run lint` in `frontend/`
+
+**Full Codebase:**
+- **Semgrep** with `p/security-audit`, `p/php-laravel`, `p/typescript`, `p/owasp-top-ten`
+- Runs automatically in CI on push/PR to main
+
+**Local Development:**
+- Run `./scripts/security-scan.sh` to execute all security checks locally
+- Use `--quick` to skip Semgrep for faster iteration
+- Use `--fix` to auto-fix ESLint issues
 
 ---
 
@@ -128,7 +169,16 @@ Review and implement compliance requirements for security standards including SO
 - `backend/app/Policies/` - Authorization policies
 - `backend/config/cors.php` - CORS configuration
 - `backend/config/session.php` - Session configuration
+- `backend/config/sanctum.php` - Token expiration configuration
 - `docker/nginx.conf` - Web server security headers
+- `backend/app/Services/UrlValidationService.php` - SSRF protection service
+- `backend/app/Services/Auth/SSOService.php` - OAuth state validation
+- `backend/app/Http/Controllers/Api/WebhookController.php` - Webhook signatures
+- `backend/app/Providers/AppServiceProvider.php` - Password policy configuration
+- `backend/phpstan.neon` - PHPStan configuration (SAST)
+- `frontend/.eslintrc.json` - ESLint security plugin configuration
+- `.github/workflows/ci.yml` - CI/CD with security scanning
+- `scripts/security-scan.sh` - Local security scan script
 
 ---
 

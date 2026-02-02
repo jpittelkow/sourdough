@@ -10,12 +10,18 @@ Backup and restore is a core feature for self-hosted deployments. This page is t
 
 ### What gets backed up
 
-- **Database** – All application data (users, settings, notifications, etc.). SQLite: file copy; MySQL/PostgreSQL: export compatible with the current implementation.
+- **Database** – All application data (users, settings, notifications, etc.). SQLite: file copy; MySQL/PostgreSQL: JSON export with SHA-256 integrity hash for tamper detection.
 - **Files** – Uploaded files under `storage/app/public` (avatars, attachments, etc.).
 - **Settings** – Application settings stored in the database (exported; sensitive values handled securely).
 - **Access logs** – HIPAA access logs (`access_logs` table) exported as `access_logs.json`; restored with merge-by-ID. See [Logging](logging.md#hipaa-access-logging).
 
 Backups are ZIP archives with a `manifest.json` that describes version and contents ([ADR-007: Backup System Design](adr/007-backup-system-design.md)).
+
+### Security
+
+- **SQL Injection protection:** MySQL/PostgreSQL backups use JSON format instead of raw SQL. Restore uses parameterized queries via `DB::table()->updateOrInsert()`.
+- **Integrity verification:** JSON backups include SHA-256 hash; restore verifies hash before importing data.
+- **Legacy support:** Old SQL-format backups can still be restored via strict parsing into parameterized queries (backwards compatibility).
 
 ### Where backups live
 

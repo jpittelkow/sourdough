@@ -15,6 +15,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\Rules\Password;
 
 class UserController extends Controller
 {
@@ -76,7 +77,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', Password::defaults()],
             'admin' => ['sometimes', 'boolean'],
             'skip_verification' => ['sometimes', 'boolean'],
         ]);
@@ -117,7 +118,7 @@ class UserController extends Controller
         $validated = $request->validate([
             'name' => ['sometimes', 'string', 'max:255'],
             'email' => ['sometimes', 'string', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'password' => ['sometimes', 'string', 'min:8'],
+            'password' => ['sometimes', 'string', Password::defaults()],
         ]);
 
         $oldValues = $user->only(array_keys($validated));
@@ -198,7 +199,7 @@ class UserController extends Controller
     public function resetPassword(Request $request, User $user): JsonResponse
     {
         $validated = $request->validate([
-            'password' => ['required', 'string', 'min:8'],
+            'password' => ['required', 'string', Password::defaults()],
         ]);
 
         $user->update([

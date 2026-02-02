@@ -160,7 +160,7 @@ Before submitting UI changes:
 
 ## Related Documentation
 
-- [ADR-013: Responsive Mobile-First Design](../../docs/adr/013-responsive-mobile-first-design.md)
-- [Mobile Responsiveness Roadmap](../../docs/plans/mobile-responsive-roadmap.md)
-- [Recipe: Make Component Responsive](../../docs/ai/recipes/make-component-responsive.md)
+- [ADR-013: Responsive Mobile-First Design](docs/adr/013-responsive-mobile-first-design.md)
+- [Mobile Responsiveness Roadmap](docs/plans/mobile-responsive-roadmap.md)
+- [Recipe: Make Component Responsive](docs/ai/recipes/make-component-responsive.md)
 - `frontend/lib/use-mobile.ts` - Mobile detection hook

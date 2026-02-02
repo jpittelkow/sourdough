@@ -40,7 +40,7 @@ A complete full-stack application framework with enterprise-grade features ready
 
 Sourdough is **opinionated but modular**:
 
-- Architecture decisions are documented in `docs/adr/` (24 ADRs)
+- Architecture decisions are documented in `docs/adr/` (23 ADRs)
 - Features can be removed if you don't need them
 - Patterns and structure should remain consistent
 - Code follows established conventions (see `docs/ai/patterns.md`)
@@ -58,7 +58,19 @@ This codebase is **optimized for AI coding assistants**. The documentation struc
 | `docs/ai/recipes/` | 32 step-by-step implementation guides |
 | `docs/ai/patterns.md` | Code patterns with copy-paste examples |
 | `docs/ai/anti-patterns.md` | Common mistakes to avoid |
-| `.cursor/rules/` | Auto-loaded rules for Cursor IDE |
+
+### IDE-Specific Configuration
+
+Sourdough includes AI configuration for multiple IDEs:
+
+| IDE | Configuration File | Auto-loads |
+|-----|-------------------|------------|
+| Cursor | `.cursor/rules/*.mdc` | Yes |
+| GitHub Copilot | `.github/copilot-instructions.md` | Yes |
+| Windsurf | `.windsurfrules` | Yes |
+| Other AI tools | Point to `docs/ai/README.md` | Manual |
+
+All configurations contain the same core rules - choose the IDE that works best for you.
 
 **Recommended workflow:**
 
@@ -111,7 +123,7 @@ Use the AI development guide (`docs/ai/README.md`) to add your own features. The
 
 **Always keep:**
 - `docs/ai/` - The AI development guide works for any features you add
-- `.cursor/rules/` - Cursor IDE rules remain useful
+- AI IDE configs (`.cursor/rules/`, `.github/copilot-instructions.md`, `.windsurfrules`) - Keep the ones for IDEs you use
 - Core authentication - Even if you simplify, the base auth is solid
 - Docker setup - Single container deployment is convenient
 - Audit logging - Useful for any application

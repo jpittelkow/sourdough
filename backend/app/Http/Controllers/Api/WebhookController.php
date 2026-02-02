@@ -5,12 +5,17 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Webhook;
 use App\Models\WebhookDelivery;
+use App\Services\UrlValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class WebhookController extends Controller
 {
+    public function __construct(
+        private UrlValidationService $urlValidator
+    ) {}
+
     /**
      * Get all webhooks.
      */
@@ -37,6 +42,13 @@ class WebhookController extends Controller
             'active' => ['sometimes', 'boolean'],
         ]);
 
+        // Validate URL for SSRF protection
+        if (!$this->urlValidator->validateUrl($validated['url'])) {
+            return response()->json([
+                'message' => 'Invalid webhook URL: URLs pointing to internal or private addresses are not allowed',
+            ], 422);
+        }
+
         $webhook = Webhook::create($validated);
 
         return response()->json([
@@ -58,6 +70,13 @@ class WebhookController extends Controller
             'events.*' => ['string'],
             'active' => ['sometimes', 'boolean'],
         ]);
+
+        // Validate URL for SSRF protection if being updated
+        if (isset($validated['url']) && !$this->urlValidator->validateUrl($validated['url'])) {
+            return response()->json([
+                'message' => 'Invalid webhook URL: URLs pointing to internal or private addresses are not allowed',
+            ], 422);
+        }
 
         $webhook->update($validated);
 
@@ -98,6 +117,14 @@ class WebhookController extends Controller
      */
     public function test(Webhook $webhook): JsonResponse
     {
+        // Validate URL for SSRF protection before making request
+        if (!$this->urlValidator->validateUrl($webhook->url)) {
+            return response()->json([
+                'message' => 'Webhook test failed: URL points to an internal or private address',
+                'success' => false,
+            ], 422);
+        }
+
         try {
             $payload = [
                 'event' => 'webhook.test',
@@ -107,7 +134,11 @@ class WebhookController extends Controller
                 ],
             ];
 
-            $response = Http::timeout(10)->post($webhook->url, $payload);
+            $headers = $this->buildWebhookHeaders($webhook, $payload);
+
+            $response = Http::timeout(10)
+                ->withHeaders($headers)
+                ->post($webhook->url, $payload);
 
             // Log the delivery
             $webhook->deliveries()->create([
@@ -140,5 +171,40 @@ class WebhookController extends Controller
                 'success' => false,
             ], 500);
         }
+    }
+
+    /**
+     * Build webhook headers including signature if secret is configured.
+     */
+    private function buildWebhookHeaders(Webhook $webhook, array $payload): array
+    {
+        $headers = [
+            'Content-Type' => 'application/json',
+            'User-Agent' => 'Sourdough-Webhook/1.0',
+        ];
+
+        if (!empty($webhook->secret)) {
+            $timestamp = time();
+            $signature = $this->generateSignature($webhook->secret, $timestamp, $payload);
+
+            $headers['X-Webhook-Timestamp'] = $timestamp;
+            $headers['X-Webhook-Signature'] = 'sha256=' . $signature;
+        }
+
+        return $headers;
+    }
+
+    /**
+     * Generate HMAC-SHA256 signature for webhook payload.
+     *
+     * The signature is computed over: timestamp.json_payload
+     * This prevents replay attacks by binding the signature to a specific timestamp.
+     */
+    private function generateSignature(string $secret, int $timestamp, array $payload): string
+    {
+        $payloadJson = json_encode($payload);
+        $signaturePayload = $timestamp . '.' . $payloadJson;
+
+        return hash_hmac('sha256', $signaturePayload, $secret);
     }
 }

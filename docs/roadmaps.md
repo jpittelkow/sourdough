@@ -12,7 +12,11 @@ _No items. Documentation Audit complete._
 
 Ready to start. These are unblocked and can begin immediately.
 
-_No items. See Planned Features._
+| Task | Priority | Description |
+|------|----------|-------------|
+| PWA Review | HIGH | Review PWA functionality, manifest, install experience, offline behavior |
+| Login Testing & Review | HIGH | Test and review login flows, error handling, edge cases, session management |
+| Page Title Fixing | MEDIUM | Audit and fix page titles across all routes for consistency and SEO |
 
 ## Planned Features
 
@@ -21,7 +25,7 @@ Requires foundation work or longer-term planning.
 | Roadmap | Priority | Status |
 |---------|----------|--------|
 | [Docker Container Audit](plans/docker-audit-roadmap.md) | MEDIUM | None |
-| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Audit Logs (complete) |
+| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Phase 1 Security Hardening, ✅ Phase 2 SAST Automation |
 | [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
 | [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
 
@@ -100,6 +104,8 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-02 | [Security SAST Automation](journal/2026-02-02-security-sast-automation.md) |
+| 2026-02-02 | [Security Review Phase 1: Security Headers & CORS Hardening](journal/2026-02-02-security-review-phase-1.md) |
 | 2026-01-31 | [Documentation Audit Phase 8: Cross-Reference & Completeness](journal/2026-01-31-documentation-audit-phase-8.md) |
 | 2026-01-31 | [Documentation Audit Phase 4: ADR & Architecture](journal/2026-01-31-documentation-audit-phase-4-adr.md) |
 | 2026-01-31 | [Documentation Audit Phase 3: Patterns & Anti-Patterns](journal/2026-01-31-documentation-audit-phase-3.md) |

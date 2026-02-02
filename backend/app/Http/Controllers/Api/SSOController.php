@@ -49,6 +49,16 @@ class SSOController extends Controller
             return $this->redirectToFrontend('error=invalid_provider');
         }
 
+        // Validate OAuth state token for CSRF protection
+        $stateValidation = $this->ssoService->validateStateToken(
+            $provider,
+            $request->input('state')
+        );
+
+        if (!$stateValidation['valid']) {
+            return $this->redirectToFrontend('error=' . ($stateValidation['error'] ?? 'invalid_state'));
+        }
+
         $result = $this->ssoService->handleCallback($provider);
 
         if (!$result['success']) {

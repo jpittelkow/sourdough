@@ -206,7 +206,7 @@ Core functionality and feature documentation:
 
 **Capabilities:**
 - ZIP-based backup format with manifest (version 2.0)
-- Database backup (SQLite copy or export; MySQL/PostgreSQL export)
+- Database backup (SQLite file copy; MySQL/PostgreSQL export as JSON with integrity hash for security)
 - File backup (uploaded files under `storage/app/public`)
 - Settings backup (database-stored settings; sensitive values handled securely)
 - Scheduled backups (daily/weekly/monthly; configurable time and destinations)
@@ -289,8 +289,57 @@ User-facing pages for managing personal account settings.
 **Configuration > API** (`/configuration/api`): Manage API access and webhook integrations.
 
 **Capabilities:**
-- **Personal access tokens (all users):** Create, view, and revoke API tokens; token preview (last 4 chars) shown after creation; last used date; tokens are shown once on creation and cannot be viewed again
+- **Personal access tokens (all users):** Create, view, and revoke API tokens; token preview (last 4 chars) shown after creation; last used date; tokens are shown once on creation and cannot be viewed again; **tokens expire after 7 days** (configurable via `SANCTUM_TOKEN_EXPIRATION`)
 - **Outgoing webhooks (admin only):** Configure webhook endpoints for system events; available events: `user.created`, `user.updated`, `user.deleted`, `backup.completed`, `backup.failed`, `settings.updated`
 - **Webhook management:** Create/delete webhooks, enable/disable, set secret for signature verification
+- **Webhook signatures:** When a secret is configured, webhooks include HMAC-SHA256 signatures (`X-Webhook-Signature: sha256=...`) and timestamps (`X-Webhook-Timestamp`) for payload verification
+- **Webhook URL validation:** Webhooks cannot point to internal/private addresses (SSRF protection)
 - **Webhook testing:** Test button sends a test payload to the configured URL; last triggered timestamp shown
 - **API**: `GET/POST/DELETE /api-tokens` for tokens; `GET/POST/DELETE /webhooks`, `POST /webhooks/{id}/test` for webhooks
+
+## Security
+
+- [ADR-024: Security Hardening](adr/024-security-hardening.md) - SSRF protection, SQL injection fixes, OAuth security, password policy
+- [Security Compliance Roadmap](plans/security-compliance-roadmap.md) - SOC 2, ISO 27001 compliance tracking
+
+**Capabilities:**
+
+### SSRF Protection
+- `UrlValidationService` validates all external URL fetches
+- Blocks private IP ranges (10.x, 172.16-31.x, 192.168.x, 127.x)
+- Blocks cloud metadata endpoints (169.254.169.254)
+- Validates redirect targets during fetch operations
+- Applied to: LLM vision queries (image URLs), webhooks, OIDC issuer discovery
+
+### Authentication Security
+- **Password policy:** Requires mixed case, numbers, symbols (8+ characters); compromised password check in production via Have I Been Pwned API
+- **2FA enforcement:** Session flag properly set after verification; middleware validates protected routes
+- **OAuth CSRF protection:** Cryptographic state tokens validated on SSO callbacks
+- **Token expiration:** API tokens expire after 7 days (configurable)
+
+### Data Security
+- **Backup format:** MySQL/PostgreSQL backups use JSON format with integrity hash; parameterized queries on restore (no SQL injection)
+- **File upload whitelist:** Default safe file types when none configured; MIME validation prevents extension spoofing
+
+### Webhook Security
+- **HMAC signatures:** Payloads signed with SHA-256 when secret configured
+- **Timestamp binding:** Signatures include timestamp to prevent replay attacks
+- **URL validation:** Cannot target internal/private addresses
+
+### HTTP Security Headers
+- **Content-Security-Policy:** Controls resource loading; restricts scripts, styles, images, fonts, and connections to trusted sources
+- **X-Frame-Options:** `SAMEORIGIN` prevents clickjacking attacks
+- **X-Content-Type-Options:** `nosniff` prevents MIME type sniffing
+- **Referrer-Policy:** `strict-origin-when-cross-origin` controls referrer header exposure
+- **Permissions-Policy:** Disables camera, microphone, and geolocation browser APIs
+
+### CORS Configuration
+- **Restricted origins:** Only `FRONTEND_URL` allowed (configured via environment)
+- **Restricted methods:** Only `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`
+- **Restricted headers:** Only necessary headers (`Content-Type`, `Authorization`, `X-XSRF-TOKEN`, etc.)
+- **Preflight caching:** 24-hour cache for CORS preflight responses
+
+### Rate Limiting
+- **Auth endpoints:** Login, register, password reset, 2FA verification protected via `rate.sensitive` middleware
+- **Client error reporting:** Limited to 10 requests/minute
+- **Email checks:** Limited to 10 requests/minute to prevent enumeration

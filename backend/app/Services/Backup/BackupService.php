@@ -266,52 +266,58 @@ class BackupService
 
     /**
      * Backup the database.
+     * Returns JSON format for all database types for security and consistency.
      */
     private function backupDatabase(): string
     {
         $connection = config('database.default');
 
         if ($connection === 'sqlite') {
+            // For SQLite, we can still return the raw database file
+            // It's safe because SQLite restore is a file replacement, not SQL execution
             $dbPath = config('database.connections.sqlite.database');
             return file_get_contents($dbPath);
         }
 
-        // For MySQL/PostgreSQL, would need to use mysqldump/pg_dump
-        // For now, export as SQL statements
-        return $this->exportTablesAsSQL();
+        // For MySQL/PostgreSQL, export as JSON (not SQL) for security
+        return $this->exportTablesAsJSON();
     }
 
     /**
-     * Export tables as SQL.
+     * Export tables as JSON.
+     * This is the secure alternative to SQL export - no SQL injection possible.
      */
-    private function exportTablesAsSQL(): string
+    private function exportTablesAsJSON(): string
     {
-        $sql = "";
         $tables = ['users', 'settings', 'notifications', 'social_accounts', 'ai_providers'];
-        $connection = DB::connection();
-        $pdo = $connection->getPdo();
+        $data = [
+            'format' => 'json',
+            'format_version' => '2.0',
+            'exported_at' => now()->toISOString(),
+            'tables' => [],
+        ];
 
         foreach ($tables as $table) {
             try {
-                $rows = DB::table($table)->get();
-                foreach ($rows as $row) {
-                    $rowArray = (array) $row;
-                    $columns = implode(', ', array_map(fn ($col) => "`{$col}`", array_keys($rowArray)));
-                    $values = collect($rowArray)
-                        ->map(fn ($v) => $v === null ? 'NULL' : $pdo->quote((string) $v))
-                        ->implode(', ');
-                    $sql .= "INSERT INTO `{$table}` ({$columns}) VALUES ({$values});\n";
-                }
+                $rows = DB::table($table)->get()->map(fn ($row) => (array) $row)->toArray();
+                $data['tables'][$table] = $rows;
             } catch (\Exception $e) {
                 // Table might not exist yet
+                $data['tables'][$table] = [];
             }
         }
 
-        return $sql;
+        // Add integrity hash to detect tampering
+        $content = json_encode($data['tables'], JSON_UNESCAPED_UNICODE);
+        $data['integrity_hash'] = hash('sha256', $content);
+
+        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
     }
 
     /**
      * Restore the database.
+     * Supports both legacy SQL format (read-only, for backwards compatibility)
+     * and new JSON format (preferred, secure).
      */
     private function restoreDatabase(string $content): void
     {
@@ -324,10 +330,85 @@ class BackupService
             return;
         }
 
-        // For SQL statements, only allow INSERT statements for safety
+        // Detect format: JSON starts with '{', SQL starts with INSERT
+        $trimmed = ltrim($content);
+        if (str_starts_with($trimmed, '{')) {
+            $this->restoreDatabaseFromJSON($content);
+        } else {
+            $this->restoreDatabaseFromLegacySQL($content);
+        }
+    }
+
+    /**
+     * Restore database from JSON format (secure method).
+     * Uses Eloquent's updateOrCreate with proper parameter binding.
+     */
+    private function restoreDatabaseFromJSON(string $content): void
+    {
+        $data = json_decode($content, true);
+
+        if (!is_array($data) || !isset($data['tables'])) {
+            throw new \RuntimeException('Invalid JSON backup format');
+        }
+
+        // Verify format version
+        $formatVersion = $data['format_version'] ?? '1.0';
+        if (version_compare($formatVersion, '3.0', '>=')) {
+            throw new \RuntimeException('Backup format version not supported');
+        }
+
+        // Verify integrity hash if present
+        if (isset($data['integrity_hash'])) {
+            $expectedHash = $data['integrity_hash'];
+            $actualHash = hash('sha256', json_encode($data['tables'], JSON_UNESCAPED_UNICODE));
+            if (!hash_equals($expectedHash, $actualHash)) {
+                throw new \RuntimeException('Backup integrity check failed: data may have been tampered with');
+            }
+        }
+
+        $allowedTables = ['users', 'settings', 'notifications', 'social_accounts', 'ai_providers'];
+
+        foreach ($data['tables'] as $table => $rows) {
+            // Only restore to allowed tables
+            if (!in_array($table, $allowedTables, true)) {
+                Log::warning('Skipping unknown table in backup restore', ['table' => $table]);
+                continue;
+            }
+
+            if (!is_array($rows)) {
+                continue;
+            }
+
+            foreach ($rows as $row) {
+                if (!is_array($row)) {
+                    continue;
+                }
+
+                // Use updateOrCreate with proper parameter binding (safe from SQL injection)
+                $id = $row['id'] ?? null;
+                if ($id !== null) {
+                    // Remove timestamps to let Eloquent handle them
+                    $attributes = array_filter($row, fn ($key) => !in_array($key, ['created_at', 'updated_at'], true), ARRAY_FILTER_USE_KEY);
+                    DB::table($table)->updateOrInsert(['id' => $id], $attributes);
+                }
+            }
+        }
+    }
+
+    /**
+     * Restore database from legacy SQL format.
+     * This method exists for backwards compatibility with old backups.
+     * It uses a very strict whitelist approach but is NOT recommended.
+     *
+     * @deprecated Use JSON format instead
+     */
+    private function restoreDatabaseFromLegacySQL(string $content): void
+    {
+        Log::warning('Restoring from legacy SQL backup format - consider re-exporting in JSON format');
+
+        // For legacy SQL format, we parse the INSERT statements and use parameterized queries
         $statements = array_filter(explode(";\n", $content));
         $allowedTables = ['users', 'settings', 'notifications', 'social_accounts', 'ai_providers'];
-        $allowedPattern = '/^\s*INSERT\s+INTO\s+`?(' . implode('|', $allowedTables) . ')`?\s+/i';
 
         foreach ($statements as $statement) {
             $statement = trim($statement);
@@ -335,13 +416,138 @@ class BackupService
                 continue;
             }
 
-            // Validate that the statement is a safe INSERT into an allowed table
-            if (!preg_match($allowedPattern, $statement)) {
-                throw new \RuntimeException('Invalid SQL statement in backup: only INSERT statements to known tables are allowed');
+            // Parse INSERT statement strictly
+            $parsed = $this->parseLegacyInsertStatement($statement, $allowedTables);
+            if ($parsed === null) {
+                throw new \RuntimeException('Invalid or unsafe SQL statement in backup');
             }
 
-            DB::unprepared($statement);
+            // Use parameterized query instead of raw SQL
+            DB::table($parsed['table'])->updateOrInsert(
+                ['id' => $parsed['values']['id'] ?? null],
+                $parsed['values']
+            );
         }
+    }
+
+    /**
+     * Parse a legacy INSERT statement into table name and values.
+     * Returns null if the statement is invalid or unsafe.
+     */
+    private function parseLegacyInsertStatement(string $statement, array $allowedTables): ?array
+    {
+        // Match: INSERT INTO `table` (columns) VALUES (values)
+        $pattern = '/^\s*INSERT\s+INTO\s+`?(\w+)`?\s*\(([^)]+)\)\s*VALUES\s*\((.+)\)\s*$/is';
+
+        if (!preg_match($pattern, $statement, $matches)) {
+            return null;
+        }
+
+        $table = $matches[1];
+        $columnsStr = $matches[2];
+        $valuesStr = $matches[3];
+
+        // Verify table is allowed
+        if (!in_array($table, $allowedTables, true)) {
+            return null;
+        }
+
+        // Parse columns (remove backticks and whitespace)
+        $columns = array_map(
+            fn ($col) => trim(str_replace('`', '', $col)),
+            explode(',', $columnsStr)
+        );
+
+        // Parse values - this is tricky due to quoted strings with commas
+        $values = $this->parseCSVValues($valuesStr);
+
+        if (count($columns) !== count($values)) {
+            return null;
+        }
+
+        $result = [];
+        foreach ($columns as $i => $column) {
+            // Validate column name is safe (alphanumeric and underscores only)
+            if (!preg_match('/^[a-zA-Z_][a-zA-Z0-9_]*$/', $column)) {
+                return null;
+            }
+            $result[$column] = $values[$i];
+        }
+
+        return [
+            'table' => $table,
+            'values' => $result,
+        ];
+    }
+
+    /**
+     * Parse CSV-style values, handling quoted strings.
+     */
+    private function parseCSVValues(string $valuesStr): array
+    {
+        $values = [];
+        $current = '';
+        $inQuote = false;
+        $quoteChar = null;
+        $length = strlen($valuesStr);
+
+        for ($i = 0; $i < $length; $i++) {
+            $char = $valuesStr[$i];
+
+            if (!$inQuote) {
+                if ($char === "'" || $char === '"') {
+                    $inQuote = true;
+                    $quoteChar = $char;
+                } elseif ($char === ',') {
+                    $values[] = $this->parseValue(trim($current));
+                    $current = '';
+                    continue;
+                } else {
+                    $current .= $char;
+                }
+            } else {
+                if ($char === $quoteChar) {
+                    // Check for escaped quote
+                    if ($i + 1 < $length && $valuesStr[$i + 1] === $quoteChar) {
+                        $current .= $char;
+                        $i++; // Skip next quote
+                    } else {
+                        $inQuote = false;
+                        $quoteChar = null;
+                    }
+                } else {
+                    $current .= $char;
+                }
+            }
+        }
+
+        // Add last value
+        $values[] = $this->parseValue(trim($current));
+
+        return $values;
+    }
+
+    /**
+     * Parse a single SQL value into PHP type.
+     */
+    private function parseValue(string $value): mixed
+    {
+        if (strtoupper($value) === 'NULL') {
+            return null;
+        }
+
+        // Remove surrounding quotes
+        if ((str_starts_with($value, "'") && str_ends_with($value, "'")) ||
+            (str_starts_with($value, '"') && str_ends_with($value, '"'))) {
+            return substr($value, 1, -1);
+        }
+
+        // Check if numeric
+        if (is_numeric($value)) {
+            return str_contains($value, '.') ? (float) $value : (int) $value;
+        }
+
+        return $value;
     }
 
     /**

@@ -5,6 +5,7 @@ namespace App\Providers;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rules\Password;
 use App\Enums\Permission;
 use App\Models\User;
 
@@ -62,6 +63,11 @@ class AppServiceProvider extends ServiceProvider
             return new \App\Services\StorageService();
         });
 
+        // Register URL Validation Service (SSRF Protection)
+        $this->app->singleton(\App\Services\UrlValidationService::class, function ($app) {
+            return new \App\Services\UrlValidationService();
+        });
+
     }
 
     /**
@@ -76,6 +82,21 @@ class AppServiceProvider extends ServiceProvider
 
         // Admin gate for backwards compatibility (super-permission)
         Gate::define('admin', fn (User $user) => $user->isAdmin());
+
+        // Configure password validation defaults
+        Password::defaults(function () {
+            $rule = Password::min(8)
+                ->mixedCase()
+                ->numbers()
+                ->symbols();
+
+            // In production, also check against compromised password databases
+            if (app()->isProduction()) {
+                $rule->uncompromised();
+            }
+
+            return $rule;
+        });
 
         $this->registerCustomFilesystemDrivers();
     }

@@ -146,6 +146,26 @@ PGID=100
 - Add `DB_DATABASE=/var/www/html/data/database.sqlite` to environment variables
 - Restart the container
 
+## Security Headers
+
+Nginx is configured with security headers in `docker/nginx.conf`:
+
+| Header | Value | Purpose |
+|--------|-------|---------|
+| `X-Frame-Options` | `SAMEORIGIN` | Prevents clickjacking |
+| `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing |
+| `X-XSS-Protection` | `1; mode=block` | Legacy XSS filter |
+| `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer information |
+| `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Disables sensitive browser features |
+| `Content-Security-Policy` | See below | Controls resource loading |
+
+**CSP Policy:** `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'self';`
+
+Notes:
+- `unsafe-inline` and `unsafe-eval` are required for Next.js/React hydration
+- `ws: wss:` allows Laravel Echo/Pusher websocket connections
+- `blob:` and `data:` are needed for image handling
+
 ## Meilisearch (Search Engine)
 
 Meilisearch runs inside the main app container, managed by Supervisor alongside Nginx, PHP-FPM, and Next.js. It listens on `127.0.0.1:7700` and persists data to the `meilisearch_data` volume at `/var/lib/meilisearch`. The Docker image uses Debian (not Alpine) because Meilisearch binaries require glibc.

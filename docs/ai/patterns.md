@@ -2482,6 +2482,111 @@ const handleRestore = async () => {
 
 **Used in:** Backup restore, dangerous settings operations.
 
+## Security Patterns
+
+### URL Validation (SSRF Protection)
+
+Use `UrlValidationService` for all external URL fetches to prevent SSRF attacks:
+
+```php
+use App\Services\UrlValidationService;
+
+class MyController extends Controller
+{
+    public function __construct(
+        private UrlValidationService $urlValidator
+    ) {}
+
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'url' => ['required', 'url'],
+        ]);
+
+        // Validate URL is not private/internal
+        if (!$this->urlValidator->validateUrl($validated['url'])) {
+            return response()->json([
+                'message' => 'Invalid URL: internal or private addresses are not allowed',
+            ], 422);
+        }
+
+        // Safe to use the URL
+        // ...
+    }
+
+    public function fetchContent(string $url): ?string
+    {
+        // Use fetchContent for safe HTTP requests with redirect validation
+        return $this->urlValidator->fetchContent($url, timeout: 10);
+    }
+}
+```
+
+**Use for:** Webhook URLs, OIDC discovery, image URLs in LLM vision queries, any user-provided URL that will be fetched.
+
+### Webhook Signature Verification (Consumer Side)
+
+When receiving webhooks from Sourdough, verify the signature:
+
+```php
+public function handleWebhook(Request $request): JsonResponse
+{
+    $secret = config('services.sourdough.webhook_secret');
+    $timestamp = $request->header('X-Webhook-Timestamp');
+    $signature = $request->header('X-Webhook-Signature');
+    $payload = $request->getContent();
+
+    // Verify signature
+    $expected = 'sha256=' . hash_hmac('sha256', $timestamp . '.' . $payload, $secret);
+
+    if (!hash_equals($expected, $signature)) {
+        return response()->json(['error' => 'Invalid signature'], 401);
+    }
+
+    // Prevent replay attacks (optional but recommended)
+    if (abs(time() - (int) $timestamp) > 300) { // 5 minute window
+        return response()->json(['error' => 'Request too old'], 401);
+    }
+
+    // Process webhook
+    $data = json_decode($payload, true);
+    // ...
+}
+```
+
+### Password Validation
+
+Use `Password::defaults()` for all password fields to enforce the application-wide policy:
+
+```php
+use Illuminate\Validation\Rules\Password;
+
+$validated = $request->validate([
+    'password' => ['required', 'string', Password::defaults()],
+]);
+```
+
+The policy is configured in `AppServiceProvider::boot()` and includes: mixed case, numbers, symbols, and compromised password check in production.
+
+### OAuth State Validation
+
+When implementing OAuth flows, always validate state tokens:
+
+```php
+// Generate state on redirect
+$stateToken = bin2hex(random_bytes(32));
+session()->put("oauth_state:{$provider}", $stateToken);
+$redirectUrl = $this->buildOAuthUrl($provider, state: $stateToken);
+
+// Validate on callback
+$receivedState = $request->input('state');
+$expectedState = session()->pull("oauth_state:{$provider}");
+
+if (!$expectedState || !hash_equals($expectedState, $receivedState)) {
+    return response()->json(['error' => 'Invalid state'], 400);
+}
+```
+
 ## Naming Conventions Summary
 
 | Type | Pattern | Example |

@@ -4,6 +4,7 @@ namespace App\Services\LLM\Providers;
 
 use App\Models\AIProvider;
 use App\Services\LLM\LLMProviderInterface;
+use App\Services\UrlValidationService;
 use Illuminate\Support\Facades\Http;
 
 class GeminiProvider implements LLMProviderInterface
@@ -68,8 +69,12 @@ class GeminiProvider implements LLMProviderInterface
         $parts = [];
 
         if (str_starts_with($imageData, 'http')) {
-            // For URL, we need to fetch and convert to base64
-            $imageContent = file_get_contents($imageData);
+            // For URL, we need to fetch and convert to base64 with SSRF protection
+            $urlValidator = app(UrlValidationService::class);
+            $imageContent = $urlValidator->fetchContent($imageData);
+            if ($imageContent === null) {
+                throw new \RuntimeException('Failed to fetch image: URL validation failed or request error');
+            }
             $imageData = base64_encode($imageContent);
         }
 

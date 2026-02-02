@@ -4,6 +4,7 @@ namespace App\Services\LLM\Providers;
 
 use App\Models\AIProvider;
 use App\Services\LLM\LLMProviderInterface;
+use App\Services\UrlValidationService;
 use Illuminate\Support\Facades\Http;
 
 class BedrockProvider implements LLMProviderInterface
@@ -120,14 +121,23 @@ class BedrockProvider implements LLMProviderInterface
     public function visionQuery(string $prompt, string $imageData, string $mimeType = 'image/jpeg', ?string $systemPrompt = null): array
     {
         // Bedrock Claude supports vision with base64 images
+        $base64Data = $imageData;
+        if (str_starts_with($imageData, 'http')) {
+            // Fetch with SSRF protection
+            $urlValidator = app(UrlValidationService::class);
+            $fetchedContent = $urlValidator->fetchContent($imageData);
+            if ($fetchedContent === null) {
+                throw new \RuntimeException('Failed to fetch image: URL validation failed or request error');
+            }
+            $base64Data = base64_encode($fetchedContent);
+        }
+
         $imageContent = [
             'type' => 'image',
             'source' => [
                 'type' => 'base64',
                 'media_type' => $mimeType,
-                'data' => str_starts_with($imageData, 'http') 
-                    ? base64_encode(file_get_contents($imageData))
-                    : $imageData,
+                'data' => $base64Data,
             ],
         ];
 

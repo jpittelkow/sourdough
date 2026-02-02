@@ -122,3 +122,51 @@ TELEGRAM_BOT_TOKEN=your-token
 
 - `playwright.config.ts` - E2E test configuration
 - `backend/phpunit.xml` - PHPUnit/Pest configuration
+
+## Security Scanning
+
+Automated security scanning (SAST) is integrated into the CI/CD pipeline and available for local development.
+
+### Local Security Checks
+
+Run all security scans locally before pushing:
+
+```bash
+# Run all security checks
+./scripts/security-scan.sh
+
+# Skip Semgrep for faster iteration
+./scripts/security-scan.sh --quick
+
+# Auto-fix ESLint issues
+./scripts/security-scan.sh --fix
+```
+
+### Individual Tools
+
+**Backend (PHPStan):**
+```bash
+cd backend
+composer phpstan
+```
+
+**Frontend (ESLint Security):**
+```bash
+cd frontend
+npm run lint
+```
+
+**Full Codebase (Semgrep):**
+```bash
+# Install: pip install semgrep
+semgrep scan --config=p/security-audit --config=p/php-laravel --config=p/typescript .
+```
+
+### CI Integration
+
+Security scanning runs automatically on push/PR to main:
+- PHPStan (backend static analysis)
+- ESLint with security plugin (frontend)
+- Semgrep (OWASP, PHP-Laravel, TypeScript rules)
+
+See `.github/workflows/ci.yml` for the full configuration.
