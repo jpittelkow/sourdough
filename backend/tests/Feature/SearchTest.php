@@ -226,6 +226,11 @@ describe('Search (Scout / Meilisearch)', function () {
         });
 
         it('POST /admin/search/reindex reindexes all when no model', function () {
+            // Skip if using collection driver (in-memory) - reindex not supported
+            if (config('scout.driver') === 'collection') {
+                $this->markTestSkipped('Reindex API not supported with collection driver');
+            }
+            
             User::factory()->count(2)->create();
             $admin = createAdminUser();
 
@@ -237,6 +242,11 @@ describe('Search (Scout / Meilisearch)', function () {
         });
 
         it('POST /admin/search/reindex reindexes single model', function () {
+            // Skip if using collection driver (in-memory) - reindex not supported
+            if (config('scout.driver') === 'collection') {
+                $this->markTestSkipped('Reindex API not supported with collection driver');
+            }
+            
             User::factory()->create();
             $admin = createAdminUser();
 
