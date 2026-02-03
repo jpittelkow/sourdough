@@ -3,6 +3,9 @@
 namespace Tests;
 
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Cache\RateLimiter;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -13,7 +16,11 @@ abstract class TestCase extends BaseTestCase
     {
         parent::setUp();
 
-        // Add any global test setup here
+        // Disable rate limiting middleware in tests to prevent 429 errors
+        $this->withoutMiddleware(ThrottleRequests::class);
+        
+        // Clear cache to reset any rate limiter state
+        Cache::flush();
     }
 
     /**

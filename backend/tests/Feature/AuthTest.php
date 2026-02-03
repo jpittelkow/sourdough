@@ -9,8 +9,8 @@ describe('Authentication', function () {
             $response = $this->postJson('/api/auth/register', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
             ]);
 
             $response->assertStatus(201)
@@ -37,8 +37,8 @@ describe('Authentication', function () {
             $response = $this->postJson('/api/auth/register', [
                 'name' => 'Test User',
                 'email' => 'test@example.com',
-                'password' => 'password123',
-                'password_confirmation' => 'password123',
+                'password' => 'Password123!',
+                'password_confirmation' => 'Password123!',
             ]);
 
             $response->assertStatus(422)
@@ -49,12 +49,12 @@ describe('Authentication', function () {
     describe('Login', function () {
         it('can login with valid credentials', function () {
             $user = User::factory()->create([
-                'password' => bcrypt('password123'),
+                'password' => bcrypt('Password123!'),
             ]);
 
             $response = $this->postJson('/api/auth/login', [
                 'email' => $user->email,
-                'password' => 'password123',
+                'password' => 'Password123!',
             ]);
 
             $response->assertStatus(200)
@@ -65,12 +65,12 @@ describe('Authentication', function () {
 
         it('fails with invalid credentials', function () {
             $user = User::factory()->create([
-                'password' => bcrypt('password123'),
+                'password' => bcrypt('Password123!'),
             ]);
 
             $response = $this->postJson('/api/auth/login', [
                 'email' => $user->email,
-                'password' => 'wrongpassword',
+                'password' => 'WrongPassword123!',
             ]);
 
             $response->assertStatus(401);

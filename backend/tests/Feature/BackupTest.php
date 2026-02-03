@@ -43,7 +43,7 @@ describe('Backup & Restore', function () {
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/backup/create');
 
-            $response->assertStatus(200)
+            $response->assertStatus(201)
                 ->assertJsonStructure([
                     'backup' => ['filename', 'size'],
                 ]);
