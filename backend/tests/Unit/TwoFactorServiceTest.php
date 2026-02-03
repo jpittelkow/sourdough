@@ -10,55 +10,71 @@ describe('TwoFactorService', function () {
     });
 
     describe('generateSecret', function () {
-        it('generates a valid secret key', function () {
-            $secret = $this->service->generateSecret();
+        it('generates a valid secret and QR code for a user', function () {
+            $user = User::factory()->create();
+            
+            $result = $this->service->generateSecret($user);
 
-            expect($secret)->toBeString();
-            expect(strlen($secret))->toBeGreaterThanOrEqual(16);
+            expect($result)->toBeArray();
+            expect($result)->toHaveKey('secret');
+            expect($result)->toHaveKey('qr_code');
+            expect($result['secret'])->toBeString();
+            expect(strlen($result['secret']))->toBeGreaterThanOrEqual(16);
         });
 
-        it('generates unique secrets', function () {
-            $secret1 = $this->service->generateSecret();
-            $secret2 = $this->service->generateSecret();
-
-            expect($secret1)->not->toBe($secret2);
-        });
-    });
-
-    describe('generateRecoveryCodes', function () {
-        it('generates the correct number of recovery codes', function () {
-            $codes = $this->service->generateRecoveryCodes(10);
-
-            expect($codes)->toBeArray();
-            expect(count($codes))->toBe(10);
-        });
-
-        it('generates unique recovery codes', function () {
-            $codes = $this->service->generateRecoveryCodes(10);
-            $uniqueCodes = array_unique($codes);
-
-            expect(count($uniqueCodes))->toBe(count($codes));
+        it('stores the secret on the user (unconfirmed)', function () {
+            $user = User::factory()->create();
+            
+            $this->service->generateSecret($user);
+            
+            $user->refresh();
+            expect($user->two_factor_secret)->not->toBeNull();
+            expect($user->two_factor_enabled)->toBeFalse();
+            expect($user->two_factor_confirmed_at)->toBeNull();
         });
     });
 
     describe('verifyCode', function () {
-        it('returns false for invalid secret', function () {
-            $result = $this->service->verifyCode('INVALIDSECRET', '123456');
+        it('returns false when user has no 2FA secret', function () {
+            $user = User::factory()->create(['two_factor_secret' => null]);
 
-            // The code will likely be invalid
-            expect($result)->toBeBool();
+            $result = $this->service->verifyCode($user, '123456');
+
+            expect($result)->toBeFalse();
         });
     });
 
-    describe('getQrCodeUrl', function () {
-        it('generates a QR code URL', function () {
-            $user = User::factory()->make(['email' => 'test@example.com']);
-            $secret = $this->service->generateSecret();
+    describe('confirmSetup', function () {
+        it('enables 2FA and generates recovery codes', function () {
+            $user = User::factory()->create();
+            $this->service->generateSecret($user);
+            
+            $codes = $this->service->confirmSetup($user);
+            
+            $user->refresh();
+            expect($codes)->toBeArray();
+            expect(count($codes))->toBe(10);
+            expect($user->two_factor_enabled)->toBeTrue();
+            expect($user->two_factor_confirmed_at)->not->toBeNull();
+        });
+    });
 
-            $url = $this->service->getQrCodeUrl($user, $secret);
-
-            expect($url)->toBeString();
-            expect($url)->toContain('otpauth://totp/');
+    describe('disable', function () {
+        it('disables 2FA and clears all related fields', function () {
+            $user = User::factory()->create([
+                'two_factor_enabled' => true,
+                'two_factor_secret' => encrypt('secret'),
+                'two_factor_confirmed_at' => now(),
+                'two_factor_recovery_codes' => ['code1', 'code2'],
+            ]);
+            
+            $this->service->disable($user);
+            
+            $user->refresh();
+            expect($user->two_factor_enabled)->toBeFalse();
+            expect($user->two_factor_secret)->toBeNull();
+            expect($user->two_factor_confirmed_at)->toBeNull();
+            expect($user->two_factor_recovery_codes)->toBeNull();
         });
     });
 });

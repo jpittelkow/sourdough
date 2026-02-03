@@ -273,9 +273,15 @@ class BackupService
         $connection = config('database.default');
 
         if ($connection === 'sqlite') {
-            // For SQLite, we can still return the raw database file
-            // It's safe because SQLite restore is a file replacement, not SQL execution
             $dbPath = config('database.connections.sqlite.database');
+            
+            // Handle in-memory database (used in tests)
+            if ($dbPath === ':memory:' || !file_exists($dbPath)) {
+                return $this->exportTablesAsJSON();
+            }
+            
+            // For file-based SQLite, return the raw database file
+            // It's safe because SQLite restore is a file replacement, not SQL execution
             return file_get_contents($dbPath);
         }
 
