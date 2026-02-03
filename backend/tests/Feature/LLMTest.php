@@ -7,7 +7,7 @@ describe('LLM API', function () {
     
     describe('Get Providers', function () {
         it('returns available LLM providers', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->getJson('/api/llm/providers');
@@ -21,7 +21,7 @@ describe('LLM API', function () {
 
     describe('Get Config', function () {
         it('returns user LLM configuration', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->getJson('/api/llm/config');
@@ -36,7 +36,7 @@ describe('LLM API', function () {
 
     describe('Update Config', function () {
         it('can update LLM mode', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->putJson('/api/llm/config', [
@@ -49,7 +49,7 @@ describe('LLM API', function () {
 
     describe('Test Provider', function () {
         it('requires provider to be configured', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/llm/test/claude');
@@ -61,7 +61,7 @@ describe('LLM API', function () {
 
     describe('Query', function () {
         it('requires at least one configured provider', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/llm/query', [
@@ -73,7 +73,7 @@ describe('LLM API', function () {
         });
 
         it('validates prompt is required', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/llm/query', []);
@@ -85,7 +85,7 @@ describe('LLM API', function () {
 
     describe('Vision Query', function () {
         it('validates image is required for vision query', function () {
-            $user = User::factory()->create();
+            $user = createAdminUser();
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/llm/query/vision', [

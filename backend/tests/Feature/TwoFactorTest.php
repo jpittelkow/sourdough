@@ -51,8 +51,9 @@ describe('Two-Factor Authentication', function () {
 
     describe('Confirm 2FA', function () {
         it('validates the TOTP code on confirm', function () {
+            // Use a valid Base32 TOTP secret (16 characters, A-Z and 2-7)
             $user = User::factory()->create([
-                'two_factor_secret' => encrypt('TESTSECRET'),
+                'two_factor_secret' => encrypt('JBSWY3DPEHPK3PXP'),
             ]);
 
             $response = $this->actingAs($user, 'sanctum')
@@ -68,14 +69,15 @@ describe('Two-Factor Authentication', function () {
     describe('Disable 2FA', function () {
         it('can disable 2FA with valid password', function () {
             $user = User::factory()->create([
-                'password' => bcrypt('password123'),
+                'password' => bcrypt('Password123!'),
+                'two_factor_enabled' => true,
                 'two_factor_secret' => encrypt('TESTSECRET'),
                 'two_factor_confirmed_at' => now(),
             ]);
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/auth/2fa/disable', [
-                    'password' => 'password123',
+                    'password' => 'Password123!',
                 ]);
 
             $response->assertStatus(200);
@@ -83,30 +85,35 @@ describe('Two-Factor Authentication', function () {
 
         it('fails to disable 2FA with invalid password', function () {
             $user = User::factory()->create([
-                'password' => bcrypt('password123'),
+                'password' => bcrypt('Password123!'),
+                'two_factor_enabled' => true,
                 'two_factor_secret' => encrypt('TESTSECRET'),
                 'two_factor_confirmed_at' => now(),
             ]);
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/auth/2fa/disable', [
-                    'password' => 'wrongpassword',
+                    'password' => 'WrongPassword123!',
                 ]);
 
-            $response->assertStatus(400);
+            // Laravel's current_password validation returns 422 for incorrect password
+            $response->assertStatus(422);
         });
     });
 
     describe('Recovery Codes', function () {
         it('can retrieve recovery codes when 2FA is enabled', function () {
             $user = User::factory()->create([
+                'password' => bcrypt('Password123!'),
+                'two_factor_enabled' => true,
                 'two_factor_secret' => encrypt('TESTSECRET'),
                 'two_factor_confirmed_at' => now(),
-                'two_factor_recovery_codes' => encrypt(json_encode(['code1', 'code2'])),
+                'two_factor_recovery_codes' => ['CODE-0001', 'CODE-0002'],
             ]);
 
+            // Password is sent as query parameter for GET request
             $response = $this->actingAs($user, 'sanctum')
-                ->getJson('/api/auth/2fa/recovery-codes');
+                ->getJson('/api/auth/2fa/recovery-codes?password=Password123!');
 
             $response->assertStatus(200)
                 ->assertJsonStructure([

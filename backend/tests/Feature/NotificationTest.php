@@ -18,7 +18,7 @@ describe('Notifications', function () {
 
             $response->assertStatus(200)
                 ->assertJsonStructure([
-                    'notifications' => [
+                    'data' => [
                         '*' => ['id', 'type', 'title', 'message', 'read_at'],
                     ],
                 ]);
@@ -36,7 +36,7 @@ describe('Notifications', function () {
                 ->getJson('/api/notifications');
 
             $response->assertStatus(200)
-                ->assertJsonCount(0, 'notifications');
+                ->assertJsonCount(0, 'data');
         });
     });
 
@@ -73,7 +73,7 @@ describe('Notifications', function () {
 
             $response = $this->actingAs($user, 'sanctum')
                 ->postJson('/api/notifications/mark-read', [
-                    'notification_ids' => [$notification->id],
+                    'ids' => [$notification->id],
                 ]);
 
             $response->assertStatus(200);
@@ -127,7 +127,8 @@ describe('Notifications', function () {
             $response = $this->actingAs($user, 'sanctum')
                 ->deleteJson("/api/notifications/{$notification->id}");
 
-            $response->assertStatus(403);
+            // Returns 404 because notifications are scoped to user - user can't find others' notifications
+            $response->assertStatus(404);
         });
     });
 });
