@@ -6,11 +6,11 @@ use Illuminate\Support\Facades\Storage;
 describe('BackupService', function () {
     
     beforeEach(function () {
-        $this->service = new BackupService();
-        
-        // Setup test storage disk
+        // Setup test storage disk BEFORE creating the service
         Storage::fake('backups');
         config(['backup.disk' => 'backups']);
+        
+        $this->service = new BackupService();
     });
 
     describe('listBackups', function () {
