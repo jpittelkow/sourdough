@@ -53,13 +53,13 @@ jobs:
         run: php artisan migrate --force
         working-directory: backend
         env:
-          SCOUT_DRIVER: null
+          SCOUT_DRIVER: collection
 
       - name: Run tests
         run: ./vendor/bin/pest
         working-directory: backend
         env:
-          SCOUT_DRIVER: null
+          SCOUT_DRIVER: collection
 
   frontend-tests:
     name: Frontend Tests
