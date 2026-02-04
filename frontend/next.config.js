@@ -39,7 +39,7 @@ const nextConfig = {
   // Environment variables exposed to the client
   env: {
     NEXT_PUBLIC_APP_NAME: process.env.NEXT_PUBLIC_APP_NAME || 'Sourdough',
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || '',
+    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || process.env.APP_URL || '',
     NEXT_PUBLIC_PUSHER_APP_KEY: process.env.NEXT_PUBLIC_PUSHER_APP_KEY || '',
     NEXT_PUBLIC_PUSHER_APP_CLUSTER: process.env.NEXT_PUBLIC_PUSHER_APP_CLUSTER || 'mt1',
   },
