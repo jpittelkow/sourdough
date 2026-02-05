@@ -4,13 +4,15 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Services\LLM\LLMOrchestrator;
+use App\Services\UrlValidationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class LLMController extends Controller
 {
     public function __construct(
-        private LLMOrchestrator $orchestrator
+        private LLMOrchestrator $orchestrator,
+        private UrlValidationService $urlValidator
     ) {}
 
     /**
@@ -344,13 +346,20 @@ class LLMController extends Controller
 
         $user = $request->user();
 
-        // Handle image upload or URL
+        // Handle image upload or URL (validate URL for SSRF before passing to any provider)
         $imageData = null;
         if ($request->hasFile('image')) {
             $imageData = base64_encode(file_get_contents($request->file('image')->path()));
             $mimeType = $request->file('image')->getMimeType();
         } elseif (isset($validated['image_url'])) {
-            $imageData = $validated['image_url'];
+            $imageUrl = $validated['image_url'];
+            if (!$this->urlValidator->validateUrl($imageUrl)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Image URL is not allowed (invalid or internal address).',
+                ], 400);
+            }
+            $imageData = $imageUrl;
             $mimeType = null;
         }
 

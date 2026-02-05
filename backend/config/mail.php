@@ -26,6 +26,14 @@ return [
             'transport' => 'postmark',
         ],
 
+        'mailgun' => [
+            'transport' => 'mailgun',
+        ],
+
+        'sendgrid' => [
+            'transport' => 'sendgrid',
+        ],
+
         'resend' => [
             'transport' => 'resend',
         ],

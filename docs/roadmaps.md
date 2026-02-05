@@ -103,6 +103,7 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-05 | [Phase 1: Security and Authentication Code Review](journal/2026-02-05-phase-1-security-review.md) |
 | 2026-02-05 | [Page Titles App Name Fix](journal/2026-02-05-page-titles-app-name-fix.md) |
 | 2026-02-05 | [Docker Build Optimization & Security Updates](journal/2026-02-05-docker-optimization-and-security-updates.md) |
 | 2026-02-05 | [In-App Documentation & Onboarding (Phases 1-3)](journal/2026-02-05-in-app-documentation-phases-1-3.md) |

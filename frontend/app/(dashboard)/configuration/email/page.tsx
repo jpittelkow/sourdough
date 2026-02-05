@@ -90,7 +90,8 @@ export default function EmailSettingsPage() {
         postmark_token: settings.postmark_token || "",
       });
     } catch (error: any) {
-      toast.error(error.message || "Failed to load mail settings");
+      const msg = error.message ?? "Failed to load mail settings";
+      setTimeout(() => toast.error(msg), 0);
     } finally {
       setIsLoading(false);
     }
@@ -104,10 +105,16 @@ export default function EmailSettingsPage() {
     setIsSaving(true);
     try {
       await api.put("/mail-settings", data);
-      toast.success("Mail settings updated successfully");
       await fetchSettings();
+      setTimeout(() => toast.success("Mail settings updated successfully"), 0);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update mail settings");
+      const data = error.response?.data;
+      let message = data?.message ?? error.message ?? "Failed to update mail settings";
+      if (data?.errors && typeof data.errors === "object") {
+        const first = Object.values(data.errors).flat();
+        if (first.length) message = (first[0] as string) || message;
+      }
+      setTimeout(() => toast.error(message), 0);
     } finally {
       setIsSaving(false);
     }
@@ -122,10 +129,11 @@ export default function EmailSettingsPage() {
     setIsTesting(true);
     try {
       await api.post("/mail-settings/test", { to: testEmail });
-      toast.success("Test email sent successfully");
       setTestEmail("");
+      setTimeout(() => toast.success("Test email sent successfully"), 0);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to send test email");
+      const message = error.response?.data?.message ?? error.message ?? "Failed to send test email";
+      setTimeout(() => toast.error(message), 0);
     } finally {
       setIsTesting(false);
     }
@@ -157,7 +165,7 @@ export default function EmailSettingsPage() {
               <Label htmlFor="provider">Provider</Label>
               <Select
                 value={provider}
-                onValueChange={(value) => setValue("provider", value as any)}
+                onValueChange={(value) => setValue("provider", value as any, { shouldDirty: true })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select provider" />
@@ -197,8 +205,8 @@ export default function EmailSettingsPage() {
                 <div className="space-y-2">
                   <Label htmlFor="encryption">Encryption</Label>
                   <Select
-                    value={watch("encryption") || ""}
-                    onValueChange={(value) => setValue("encryption", value as any)}
+                    value={(watch("encryption") as string) || undefined}
+                    onValueChange={(value) => setValue("encryption", value as any, { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select encryption" />

@@ -7,6 +7,7 @@ use App\Services\AuditService;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class MailSettingController extends Controller
@@ -160,9 +161,19 @@ class MailSettingController extends Controller
             return response()->json([
                 'message' => 'Test email sent successfully',
             ]);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
+            Log::error('Test email failed', [
+                'to' => $validated['to'],
+                'mailer' => $settings['mailer'] ?? null,
+                'exception' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+            $message = $e->getMessage();
+            if (str_contains($message, 'Class') && str_contains($message, 'not found')) {
+                $message = 'Mail driver is not installed. Run composer install in the backend (e.g. symfony/mailgun-mailer for Mailgun).';
+            }
             return response()->json([
-                'message' => 'Failed to send test email: ' . $e->getMessage(),
+                'message' => 'Failed to send test email: ' . $message,
             ], 500);
         }
     }
@@ -175,6 +186,8 @@ class MailSettingController extends Controller
         if (isset($settings['mailer'])) {
             config(['mail.default' => $settings['mailer']]);
         }
+
+        // SMTP
         config([
             'mail.mailers.smtp.host' => $settings['smtp_host'] ?? config('mail.mailers.smtp.host'),
             'mail.mailers.smtp.port' => $settings['smtp_port'] ?? config('mail.mailers.smtp.port'),
@@ -182,6 +195,37 @@ class MailSettingController extends Controller
             'mail.mailers.smtp.username' => $settings['smtp_username'] ?? config('mail.mailers.smtp.username'),
             'mail.mailers.smtp.password' => $settings['smtp_password'] ?? config('mail.mailers.smtp.password'),
         ]);
+
+        // Mailgun
+        if (!empty($settings['mailgun_domain'])) {
+            config(['services.mailgun.domain' => $settings['mailgun_domain']]);
+        }
+        if (!empty($settings['mailgun_secret'])) {
+            config(['services.mailgun.secret' => $settings['mailgun_secret']]);
+        }
+
+        // SendGrid
+        if (!empty($settings['sendgrid_api_key'])) {
+            config(['services.sendgrid.api_key' => $settings['sendgrid_api_key']]);
+        }
+
+        // SES
+        if (!empty($settings['ses_key'])) {
+            config(['services.ses.key' => $settings['ses_key']]);
+        }
+        if (!empty($settings['ses_secret'])) {
+            config(['services.ses.secret' => $settings['ses_secret']]);
+        }
+        if (!empty($settings['ses_region'])) {
+            config(['services.ses.region' => $settings['ses_region']]);
+        }
+
+        // Postmark
+        if (!empty($settings['postmark_token'])) {
+            config(['services.postmark.token' => $settings['postmark_token']]);
+        }
+
+        // From address/name
         if (isset($settings['from_address'])) {
             config(['mail.from.address' => $settings['from_address']]);
         }

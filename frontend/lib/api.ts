@@ -75,7 +75,9 @@ api.interceptors.response.use(
         }
       }
 
-      throw new Error(message);
+      const err = new Error(message) as Error & { response?: typeof error.response };
+      err.response = error.response;
+      throw err;
     } else if (error.request) {
       // Network error: queue mutations for retry when back online
       const config = error.config;

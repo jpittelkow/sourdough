@@ -5,6 +5,25 @@ All notable changes to Sourdough will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 2026-02-05
+
+### Security
+- Added SSRF validation for LLM vision `image_url` parameter via `UrlValidationService` (rejects internal/private URLs)
+- Completed Phase 1 security and authentication code review
+
+### Added
+- Mailgun and SendGrid mail driver support (composer packages, config, runtime configuration)
+- Mail settings now configure Mailgun, SendGrid, SES, and Postmark at runtime
+- Environment variables for `MAILGUN_DOMAIN`, `MAILGUN_SECRET`, `MAILGUN_ENDPOINT`, `SENDGRID_API_KEY`
+- Error logging with trace for failed test emails
+
+### Fixed
+- Email settings form: provider and encryption selects now properly mark form as dirty
+- Email test/save error messages now show validation details and driver-not-installed hints
+- Toast notifications in email settings no longer trigger React setState-in-render warnings
+- API error interceptor now preserves response object for detailed error handling
+- Fixed corrupted `.gitignore` encoding for `nul` entry
+
 ## [0.1.6] - 2026-02-05
 
 ### Fixed
