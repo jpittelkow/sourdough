@@ -1,5 +1,4 @@
 # Sourdough Production Docker Compose
-version: '3.8'
 
 services:
   app:
@@ -46,6 +45,11 @@ services:
       - MEILI_ENV=production
       - MEILI_MASTER_KEY=${MEILI_MASTER_KEY}
       - SCOUT_DRIVER=meilisearch
+      # Sanctum: set to your app domain(s) for cookie-based auth (e.g. your-nas.local:8080)
+      - SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS:-}
+      # NAS volume permission matching (Unraid, Synology)
+      - PUID=${PUID:-}
+      - PGID=${PGID:-}
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost/api/health"]

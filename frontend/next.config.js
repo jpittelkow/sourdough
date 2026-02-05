@@ -3,17 +3,10 @@ const nextConfig = {
   output: 'standalone',
   reactStrictMode: true,
   
-  // Enable webpack polling for Docker on Windows
-  // Windows filesystem events don't propagate reliably through Docker volumes
-  webpack: (config, { dev }) => {
-    if (dev) {
-      config.watchOptions = {
-        poll: 1000,           // Check for changes every second
-        aggregateTimeout: 300, // Delay before rebuilding
-      };
-    }
-    return config;
-  },
+  // Next.js 16+ uses Turbopack by default
+  // Empty config enables Turbopack (better performance than webpack)
+  // Turbopack handles file watching automatically, including Docker volumes
+  turbopack: {},
   
   // API rewrites for development
   // Note: Next.js API routes (app/api/*) take precedence over rewrites

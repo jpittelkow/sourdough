@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -28,6 +28,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { TOOLTIP_CONTENT } from "@/lib/tooltip-content";
 
 const TIMEZONES = [
   { value: "UTC", label: "UTC" },
@@ -149,11 +151,7 @@ export default function SystemSettingsPage() {
     },
   });
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/system-settings");
@@ -195,7 +193,11 @@ export default function SystemSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setValue]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const onSubmit = async (data: SystemForm) => {
     setIsSaving(true);
@@ -307,7 +309,10 @@ export default function SystemSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="app_name">Application Name</Label>
+                  <Label htmlFor="app_name" className="flex items-center gap-1.5">
+                    Application Name
+                    <HelpTooltip content={TOOLTIP_CONTENT.system.app_name} />
+                  </Label>
                   <Input
                     id="app_name"
                     {...register("general.app_name")}
@@ -321,7 +326,10 @@ export default function SystemSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="app_url">Application URL</Label>
+                  <Label htmlFor="app_url" className="flex items-center gap-1.5">
+                    Application URL
+                    <HelpTooltip content={TOOLTIP_CONTENT.system.app_url} />
+                  </Label>
                   <Input
                     id="app_url"
                     type="url"
@@ -457,7 +465,10 @@ export default function SystemSettingsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="session_timeout">Session Timeout (minutes)</Label>
+                  <Label htmlFor="session_timeout" className="flex items-center gap-1.5">
+                    Session Timeout (minutes)
+                    <HelpTooltip content={TOOLTIP_CONTENT.security.session_timeout} />
+                  </Label>
                   <Input
                     id="session_timeout"
                     type="number"
@@ -473,7 +484,10 @@ export default function SystemSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="password_min_length">Minimum Password Length</Label>
+                  <Label htmlFor="password_min_length" className="flex items-center gap-1.5">
+                    Minimum Password Length
+                    <HelpTooltip content={TOOLTIP_CONTENT.security.password_min_length} />
+                  </Label>
                   <Input
                     id="password_min_length"
                     type="number"
@@ -504,7 +518,10 @@ export default function SystemSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="max_login_attempts">Max Login Attempts</Label>
+                  <Label htmlFor="max_login_attempts" className="flex items-center gap-1.5">
+                    Max Login Attempts
+                    <HelpTooltip content={TOOLTIP_CONTENT.security.max_login_attempts} />
+                  </Label>
                   <Input
                     id="max_login_attempts"
                     type="number"

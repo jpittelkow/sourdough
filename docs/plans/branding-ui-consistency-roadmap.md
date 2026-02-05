@@ -7,7 +7,10 @@ Refactor header, logo placement, create app icon for collapsed sidebar, and ensu
 **Last Updated**: 2026-01-27  
 **Completed**: 2026-01-27
 
-**Recent Updates (2026-01-27)**:
+**Recent Updates (2026-02-05)**:
+- Fixed page titles not showing app name from database – `app_name` and `app_url` were saved but `is_public` was never persisted; added `general` group to settings schema with `public: true`, updated SettingService to set `is_public` from schema, migration to fix existing records. See [journal/2026-02-05-page-titles-app-name-fix.md](../journal/2026-02-05-page-titles-app-name-fix.md).
+
+**Earlier Updates (2026-01-27)**:
 - ✅ Completed Theme & Color Customization - Color pickers implemented, colors apply throughout app, work in both light/dark modes
 - ✅ Completed Typography - Newsreader font loaded and applied to all headings
 - ✅ Completed Favicon & PWA Icons - SVG favicons created, manifest.json added, Next.js metadata configured

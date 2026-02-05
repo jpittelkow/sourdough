@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -46,6 +47,7 @@ import {
   Check,
   AlertTriangle,
 } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 const passwordSchema = z
   .object({
@@ -310,7 +312,8 @@ export default function SecurityPage() {
             Two-Factor Authentication
           </CardTitle>
           <CardDescription>
-            Add an extra layer of security to your account using an authenticator app.
+            Add an extra layer of security to your account using an authenticator app.{" "}
+            <HelpLink articleId="two-factor" />
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -366,7 +369,8 @@ export default function SecurityPage() {
               Passkeys
             </CardTitle>
             <CardDescription>
-              Sign in with your fingerprint, face, or hardware security key.
+              Sign in with your fingerprint, face, or hardware security key.{" "}
+              <HelpLink articleId="passkeys" />
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -508,7 +512,7 @@ export default function SecurityPage() {
           <div className="space-y-4 py-4">
             {qrCode && (
               <div className="flex justify-center">
-                <img src={qrCode} alt="2FA QR Code" className="w-48 h-48" />
+                <Image src={qrCode} alt="2FA QR Code" width={192} height={192} unoptimized />
               </div>
             )}
             {setupSecret && (

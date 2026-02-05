@@ -12,7 +12,9 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # Install dependencies
-RUN npm install --legacy-peer-deps
+# Using npm install instead of npm ci for cross-platform compatibility
+# (fsevents and other platform-specific optional deps differ between Windows and Linux)
+RUN npm install
 
 # Copy frontend source
 COPY frontend/ ./
@@ -42,7 +44,7 @@ ENV APP_DEBUG=false
 ENV LOG_CHANNEL=stderr
 # Meilisearch defaults (can be overridden at runtime)
 ENV MEILI_ENV=production
-ENV MEILI_MASTER_KEY=changeThisToASecureKey
+ENV MEILI_MASTER_KEY=""
 # PUID/PGID for volume permission matching (Unraid, Synology, etc.)
 # Set these to match your host volume ownership
 # Example for Unraid: PUID=99 PGID=100
@@ -50,6 +52,8 @@ ENV PUID=""
 ENV PGID=""
 
 # Install system dependencies
+# Note: npm is needed for development mode (npm run dev)
+# Production uses standalone output and doesn't need npm at runtime
 RUN apt-get update && apt-get install -y --no-install-recommends \
     nginx \
     supervisor \
@@ -81,29 +85,30 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Meilisearch binary (Debian/glibc required; Alpine/musl incompatible)
-RUN cd /tmp && curl -L https://install.meilisearch.com | sh \
-    && mv ./meilisearch /usr/local/bin/ \
+ARG MEILISEARCH_VERSION=1.34.2
+RUN cd /tmp \
+    && curl -LO "https://github.com/meilisearch/meilisearch/releases/download/v${MEILISEARCH_VERSION}/meilisearch-linux-amd64" \
+    && mv meilisearch-linux-amd64 /usr/local/bin/meilisearch \
     && chmod +x /usr/local/bin/meilisearch
 
 # Install Composer
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY --from=composer:2.8 /usr/bin/composer /usr/bin/composer
 
 # Set working directory
 WORKDIR /var/www/html
 
 # Copy backend files
-COPY backend/ ./backend/
+COPY --chown=www-data:www-data backend/ ./backend/
 
 # Install PHP dependencies
 WORKDIR /var/www/html/backend
 RUN composer install --no-dev --optimize-autoloader --no-interaction
 
-# Copy built frontend
+# Copy built frontend (standalone output - much smaller than full node_modules)
 WORKDIR /var/www/html
-COPY --from=frontend-builder /app/frontend/.next ./frontend/.next
-COPY --from=frontend-builder /app/frontend/public ./frontend/public
-COPY --from=frontend-builder /app/frontend/package*.json ./frontend/
-COPY --from=frontend-builder /app/frontend/node_modules ./frontend/node_modules
+COPY --from=frontend-builder --chown=www-data:www-data /app/frontend/.next/standalone ./frontend/
+COPY --from=frontend-builder --chown=www-data:www-data /app/frontend/.next/static ./frontend/.next/static
+COPY --from=frontend-builder --chown=www-data:www-data /app/frontend/public ./frontend/public
 
 # Copy Docker configuration files
 COPY docker/nginx.conf /etc/nginx/nginx.conf
@@ -113,7 +118,7 @@ COPY docker/start-nextjs.sh /start-nextjs.sh
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
 
 # Copy VERSION file
-COPY VERSION ./VERSION
+COPY --chown=www-data:www-data VERSION ./VERSION
 
 # Create required directories
 RUN mkdir -p /var/www/html/backend/storage/app/public \
@@ -130,8 +135,8 @@ RUN mkdir -p /var/www/html/backend/storage/app/public \
     && chown -R www-data:www-data /var/lib/meilisearch
 
 # Set permissions and fix line endings for shell scripts
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/backend/storage \
+# Note: Most ownership already set via COPY --chown, only need storage permissions
+RUN chmod -R 755 /var/www/html/backend/storage \
     && chmod +x /entrypoint.sh \
     && chmod +x /start-nextjs.sh \
     && sed -i 's/\r$//' /entrypoint.sh \

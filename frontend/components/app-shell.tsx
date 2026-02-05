@@ -6,6 +6,8 @@ import { OfflineIndicator } from "@/components/offline-indicator";
 import { InstallPrompt } from "@/components/install-prompt";
 import { SidebarProvider, useSidebar } from "@/components/sidebar-context";
 import { SearchProvider } from "@/components/search/search-provider";
+import { WizardProvider } from "@/components/onboarding/wizard-provider";
+import { HelpProvider } from "@/components/help/help-provider";
 import { PageTitleManager } from "@/components/page-title-manager";
 import { useOnline } from "@/lib/use-online";
 import { cn } from "@/lib/utils";
@@ -42,7 +44,11 @@ export function AppShell({ children }: AppShellProps) {
   return (
     <SidebarProvider>
       <SearchProvider>
-        <AppShellContent>{children}</AppShellContent>
+        <HelpProvider>
+          <WizardProvider>
+            <AppShellContent>{children}</AppShellContent>
+          </WizardProvider>
+        </HelpProvider>
       </SearchProvider>
     </SidebarProvider>
   );

@@ -5,7 +5,27 @@ All notable changes to Sourdough will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.1.5] - 2026-02-05
+
+### Changed
+- **BREAKING**: Upgraded Next.js from 14.2.35 to 16.1.6 (uses Turbopack by default)
+- **BREAKING**: Upgraded ESLint from 8.x to 9.x with flat config format
+- **BREAKING**: Upgraded vitest from 1.x to 4.x
+- Upgraded Meilisearch from 1.6.2 to 1.34.2
+- Upgraded eslint-config-next to 16.1.6
+- Migrated ESLint config from `.eslintrc.json` to `eslint.config.mjs` (flat config)
+- Updated `next.config.js` to use Turbopack instead of webpack
+- Updated lint script from `next lint` to `eslint .`
+- Docker: Refactored to use Next.js standalone output (reduces image size ~150-200MB)
+- Docker: Pinned Composer version to 2.8
+- Docker: Optimized file ownership with `COPY --chown` flags
+
+### Fixed
+- Fixed all 8 npm security vulnerabilities (4 moderate, 4 high)
+- Fixed useEffect missing dependency warnings in 16 frontend files
+- Replaced 10 `<img>` tags with `next/image` components
+- Fixed npm cache permissions in Docker development mode
+- Page titles now respect configured app name from System Settings on all routes (auth, dashboard, landing, share). Auth pages use `usePageTitle` via `AuthPageLayout`; root and share pages call it directly; dashboard routes use `PageTitleManager` with full route-to-title map including configuration, notifications, and share.
 
 ### Added
 - Initial documentation structure

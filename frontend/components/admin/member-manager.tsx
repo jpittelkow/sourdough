@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -84,7 +84,7 @@ export function MemberManager({
 
   const isUserSelected = (user: User) => selectedUsers.some((u) => u.id === user.id);
 
-  const fetchMembers = async () => {
+  const fetchMembers = useCallback(async () => {
     if (!group?.id) return;
     setIsLoadingMembers(true);
     try {
@@ -99,23 +99,9 @@ export function MemberManager({
     } finally {
       setIsLoadingMembers(false);
     }
-  };
+  }, [group?.id, membersPage]);
 
-  useEffect(() => {
-    if (open) {
-      setMembersPage(1);
-    } else {
-      setSelectedUsers([]);
-    }
-  }, [open]);
-
-  useEffect(() => {
-    if (open && group?.id) {
-      fetchMembers();
-    }
-  }, [open, group?.id, membersPage]);
-
-  const fetchUsersToAdd = async () => {
+  const fetchUsersToAdd = useCallback(async () => {
     setIsLoadingUsers(true);
     try {
       const params = new URLSearchParams({
@@ -132,13 +118,27 @@ export function MemberManager({
     } finally {
       setIsLoadingUsers(false);
     }
-  };
+  }, [group?.id, userSearch, memberIds]);
+
+  useEffect(() => {
+    if (open) {
+      setMembersPage(1);
+    } else {
+      setSelectedUsers([]);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (open && group?.id) {
+      fetchMembers();
+    }
+  }, [open, group?.id, fetchMembers]);
 
   useEffect(() => {
     if (open && group?.id) {
       fetchUsersToAdd();
     }
-  }, [open, group?.id, userSearch, members.length]);
+  }, [open, group?.id, fetchUsersToAdd]);
 
   const handleAddMember = async (user: User) => {
     if (!group?.id) return;

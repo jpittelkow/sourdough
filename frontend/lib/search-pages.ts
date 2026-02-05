@@ -44,8 +44,9 @@ export const SEARCH_PAGES: SearchPage[] = [
   {
     id: "user-security",
     title: "User Security",
+    subtitle: "Password, 2FA, passkeys, connected accounts",
     url: "/user/security",
-    keywords: ["password", "2fa", "two-factor"],
+    keywords: ["password", "2fa", "two-factor", "mfa", "passkeys", "sso", "connected accounts"],
   },
   // Configuration pages (admin only)
   {

@@ -407,7 +407,7 @@ $this->settingService->reset('mail', 'smtp_password');
 $all = $this->settingService->all();
 ```
 
-- Define new migratable settings in `backend/config/settings-schema.php` with `env`, `default`, and `encrypted` keys.
+- Define new migratable settings in `backend/config/settings-schema.php` with `env`, `default`, `encrypted`, and optionally `public` keys. Use `'public' => true` for settings that must be exposed via `GET /system-settings/public` (e.g. `general.app_name` for page titles and branding).
 - Add boot-time injection in `ConfigServiceProvider::boot()` for new groups.
 - Use file cache only for settings (not DB) to avoid circular dependency.
 
@@ -1055,7 +1055,7 @@ User::create(['password' => Hash::make($validated['password'])]);
 
 **Examples of global components:**
 - `Logo` - Used on auth pages, sidebar, dashboard
-- `usePageTitle` - Sets document title consistently
+- `usePageTitle` - Sets document title consistently (format: "Page Name | App Name" from config). Used by `AuthPageLayout` for auth pages, by root and share pages directly, and by `PageTitleManager` for dashboard routes.
 - `api` - API client with auth handling
 - `formatDate` - Date formatting utility
 
@@ -1684,7 +1684,7 @@ export const api = axios.create({
 // Response interceptor handles:
 // - Correlation ID capture from headers
 // - 401 redirect to /login
-// - 403 with requires_2fa_setup redirect to /configuration/security
+// - 403 with requires_2fa_setup redirect to /user/security
 // - Network errors queued for retry when online (mutations only)
 ```
 

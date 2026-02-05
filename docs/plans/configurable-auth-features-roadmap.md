@@ -194,9 +194,9 @@ AUTH_PASSKEY_MODE=disabled|optional|required
 
 **Frontend**:
 - `frontend/app/(auth)/` - Auth pages (login, register, forgot-password; login hides "Forgot password?" when `passwordResetAvailable` false)
-- `frontend/app/(dashboard)/configuration/security/page.tsx` - Security page: Authentication (system-wide) card + user password/2FA/SSO
+- `frontend/app/(dashboard)/configuration/security/page.tsx` - Admin-only security page: Authentication (system-wide) card (email verification, password reset, 2FA mode, passkey mode). Per-user password/2FA/passkeys/SSO are on User menu > Security (`/user/security`).
 - `frontend/lib/app-config.tsx` - Maps public features (emailVerificationMode, twoFactorMode)
-- `frontend/lib/api.ts` - Redirects to `/configuration/security` on 403 with `requires_2fa_setup`
+- `frontend/lib/api.ts` - Redirects to `/user/security` on 403 with `requires_2fa_setup`
 
 **Documentation**:
 - `docs/adr/002-authentication-architecture.md`

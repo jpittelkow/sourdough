@@ -86,7 +86,7 @@ docker-compose up -d
 
 ### Profile Settings
 
-Access via **Settings > Profile**
+Access via **User menu** (click your name in the header) → **My Profile**
 
 - **Name**: Your display name
 - **Email**: Your email address (requires verification if changed)
@@ -95,15 +95,14 @@ Access via **Settings > Profile**
 
 ### Changing Password
 
-1. Go to **Settings > Profile**
-2. Click **Change Password**
-3. Enter your current password
-4. Enter and confirm your new password
-5. Click **Update Password**
+1. Go to **User menu** → **Security**
+2. In the **Change Password** section, enter your current password
+3. Enter and confirm your new password
+4. Click **Update Password**
 
 ### Deleting Your Account
 
-1. Go to **Settings > Profile**
+1. Go to **User menu** → **My Profile**
 2. Scroll to **Danger Zone**
 3. Click **Delete Account**
 4. Confirm by typing your email
@@ -115,7 +114,7 @@ Access via **Settings > Profile**
 
 ## Security Settings
 
-Access via **Settings > Security**
+Access via **User menu** (click your name in the header) → **Security**. Here you can change your password, manage two-factor authentication, add or remove passkeys, and link or unlink SSO accounts.
 
 ### Two-Factor Authentication (2FA)
 
@@ -123,8 +122,8 @@ Access via **Settings > Security**
 
 #### Enabling 2FA
 
-1. Go to **Settings > Security**
-2. Click **Enable Two-Factor Authentication**
+1. Go to **User menu** → **Security**
+2. In the **Two-Factor Authentication** section, turn the switch **On** (or click to enable)
 3. Scan the QR code with an authenticator app:
    - Google Authenticator
    - Authy
@@ -149,10 +148,9 @@ When logging in:
 
 #### Disabling 2FA
 
-1. Go to **Settings > Security**
-2. Click **Disable Two-Factor Authentication**
-3. Enter your password to confirm
-4. 2FA is now disabled
+1. Go to **User menu** → **Security**
+2. In the **Two-Factor Authentication** section, turn the switch **Off**
+3. 2FA is now disabled
 
 ### Passkeys (when enabled by your administrator)
 
@@ -160,7 +158,7 @@ Passkeys let you sign in with your fingerprint, face, or a hardware security key
 
 #### Adding a passkey
 
-1. Go to **Settings > Security**
+1. Go to **User menu** → **Security**
 2. In the **Passkeys** section, click **Add Passkey**
 3. Enter a name (e.g. "MacBook" or "Phone")
 4. Follow your device prompt to create the passkey (fingerprint, face, or security key)
@@ -174,7 +172,7 @@ Passkeys let you sign in with your fingerprint, face, or a hardware security key
 
 #### Removing a passkey
 
-1. Go to **Settings > Security**
+1. Go to **User menu** → **Security**
 2. In the **Passkeys** section, click the delete (trash) icon next to the passkey
 3. Confirm removal
 
@@ -184,7 +182,7 @@ Passkeys let you sign in with your fingerprint, face, or a hardware security key
 
 View and manage linked social accounts:
 
-1. Go to **Settings > Security**
+1. Go to **User menu** → **Security**
 2. See **Connected Accounts** section
 3. Click **Connect** to link a new provider
 4. Click **Disconnect** to unlink a provider
@@ -193,8 +191,8 @@ View and manage linked social accounts:
 
 View and manage your login sessions:
 
-1. Go to **Settings > Security**
-2. See **Active Sessions** section
+1. Go to **User menu** → **Security**
+2. See **Active Sessions** section (if available)
 3. Click **Revoke** to end a specific session
 4. Click **Revoke All** to sign out everywhere
 

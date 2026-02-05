@@ -10,6 +10,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Laravel\Sanctum\HasApiTokens;
 use Laravel\Scout\Searchable;
 use Laragear\WebAuthn\WebAuthnAuthentication;
@@ -138,6 +139,14 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
     public function apiTokens(): HasMany
     {
         return $this->hasMany(ApiToken::class);
+    }
+
+    /**
+     * User onboarding record
+     */
+    public function onboarding(): HasOne
+    {
+        return $this->hasOne(UserOnboarding::class);
     }
 
     /**

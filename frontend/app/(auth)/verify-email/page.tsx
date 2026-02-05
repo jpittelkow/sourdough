@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -23,18 +23,7 @@ function VerifyEmailContent() {
   const id = searchParams.get("id");
   const hash = searchParams.get("hash");
 
-  useEffect(() => {
-    if (id && hash) {
-      verifyEmail();
-    } else if (user) {
-      setStatus("pending");
-    } else {
-      setStatus("error");
-      setErrorMessage("Invalid verification link");
-    }
-  }, [id, hash, user]);
-
-  const verifyEmail = async () => {
+  const verifyEmail = useCallback(async () => {
     try {
       await api.post("/auth/verify-email", { id, hash });
       setStatus("success");
@@ -44,7 +33,18 @@ function VerifyEmailContent() {
       setStatus("error");
       setErrorMessage(error.message || "Verification failed");
     }
-  };
+  }, [id, hash, fetchUser]);
+
+  useEffect(() => {
+    if (id && hash) {
+      verifyEmail();
+    } else if (user) {
+      setStatus("pending");
+    } else {
+      setStatus("error");
+      setErrorMessage("Invalid verification link");
+    }
+  }, [id, hash, user, verifyEmail]);
 
   const handleResendVerification = async () => {
     setIsResending(true);

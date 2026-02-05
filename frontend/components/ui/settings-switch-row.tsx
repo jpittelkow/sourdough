@@ -2,6 +2,7 @@
 
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { cn } from "@/lib/utils";
 
 export interface SettingsSwitchRowProps {
@@ -9,6 +10,8 @@ export interface SettingsSwitchRowProps {
   label: string;
   /** Optional description below the label */
   description?: string;
+  /** Optional tooltip shown next to the label */
+  tooltip?: string;
   /** Controlled checked state */
   checked: boolean;
   /** Called when the switch is toggled */
@@ -27,6 +30,7 @@ export interface SettingsSwitchRowProps {
 export function SettingsSwitchRow({
   label,
   description,
+  tooltip,
   checked,
   onCheckedChange,
   disabled = false,
@@ -40,7 +44,10 @@ export function SettingsSwitchRow({
       )}
     >
       <div>
-        <Label>{label}</Label>
+        <Label className="flex items-center gap-1.5">
+          {label}
+          {tooltip && <HelpTooltip content={tooltip} />}
+        </Label>
         {description && (
           <p className="text-sm text-muted-foreground">{description}</p>
         )}

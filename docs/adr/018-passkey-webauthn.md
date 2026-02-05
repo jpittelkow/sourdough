@@ -30,7 +30,7 @@ We will implement **passkey (WebAuthn) authentication** using the **Laragear/Web
 ### Flows
 
 **Registration (authenticated)**  
-User adds a passkey from Settings > Security: request options from `/auth/passkeys/register/options`, create credential via `navigator.credentials.create()`, submit to `/auth/passkeys/register`. Credentials stored in `webauthn_credentials` (polymorphic to User).
+User adds a passkey from User menu > Security (`/user/security`): request options from `/auth/passkeys/register/options`, create credential via `navigator.credentials.create()`, submit to `/auth/passkeys/register`. Credentials stored in `webauthn_credentials` (polymorphic to User).
 
 **Login (unauthenticated)**  
 User clicks "Sign in with Passkey" on login page: request options from `/auth/passkeys/login/options`, get credential via `navigator.credentials.get()`, submit to `/auth/passkeys/login`. Session established on success; audit event `passkey_login`.

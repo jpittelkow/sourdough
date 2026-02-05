@@ -8,7 +8,8 @@ const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const newsreader = Newsreader({ 
   subsets: ["latin"], 
   weight: ["400", "500", "600"],
-  variable: "--font-newsreader" 
+  variable: "--font-newsreader",
+  adjustFontFallback: false
 });
 
 // Metadata uses minimal title for SSR - actual app name from settings

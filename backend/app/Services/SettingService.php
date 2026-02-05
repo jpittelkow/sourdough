@@ -43,6 +43,7 @@ class SettingService
         $groupSchema = $schema[$group] ?? [];
         $keySchema = $groupSchema[$key] ?? [];
         $shouldEncrypt = !empty($keySchema['encrypted']);
+        $isPublic = !empty($keySchema['public']);
 
         $storedValue = $value;
         if ($shouldEncrypt && $value !== null && $value !== '') {
@@ -54,6 +55,7 @@ class SettingService
             [
                 'value' => $storedValue,
                 'is_encrypted' => $shouldEncrypt,
+                'is_public' => $isPublic,
                 'updated_by' => $userId,
             ]
         );

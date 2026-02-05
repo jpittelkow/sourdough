@@ -15,7 +15,8 @@ Core functionality and feature documentation:
 - Two-factor authentication (TOTP + recovery codes)
 - **Passkeys (WebAuthn/FIDO2):** Passwordless authentication using biometrics or hardware security keys. Users register passkeys in User Security (`/user/security`); login page shows "Sign in with passkey" when available and passkeys are enabled. Configurable passkey mode (disabled / optional / required) in Configuration > Security. Supported on Chrome, Edge, Safari, Firefox with WebAuthn support.
 - Password reset and email verification
-- **Configurable auth features (Configuration > Security):** Admins can set **email verification** (disabled / optional / required), **self-service password reset** (on/off), and **2FA** (disabled / optional / required). When email verification is required, unverified users get 403 on protected routes. When 2FA is required, users without 2FA are redirected to Configuration > Security to set up 2FA. When password reset is disabled, the "Forgot password?" link and forgot-password page are hidden; backend returns 503 for forgot-password requests.
+- **Admin auth settings (Configuration > Security):** Admins configure system-wide **email verification** (disabled / optional / required), **self-service password reset** (on/off), **2FA mode** (disabled / optional / required), and **passkey mode**. This page is admin-only and does not contain per-user features. When password reset is disabled, the "Forgot password?" link and forgot-password page are hidden; backend returns 503 for forgot-password requests.
+- **User security (User menu > Security, `/user/security`):** Each user manages their own password change, two-factor authentication (enable/disable, recovery codes), passkeys, and connected SSO accounts. Accessible from the user dropdown in the header. When 2FA is required by admin, users without 2FA are redirected here to set up 2FA.
 - **Auth UI:** Sign-in and register use a glassmorphism card layout, password visibility toggle, password strength indicator (register/reset), and real-time email availability check on register (`POST /auth/check-email`)
 - **Admin user management**: Configuration > Users – list users (pagination, search), create/edit/disable users, role (admin) management, send verification email on creation, resend verification email, reset password. Disabled users cannot log in.
 - **User groups & permissions:** Role-based access via user groups and a permission enum. Admin status is solely via the **admin** group (no `is_admin` column); the first registered user is assigned to the admin group. **Permission model:** Permissions (e.g. `users.view`, `settings.edit`, `backups.create`) are defined in `Permission` enum; Laravel Gates are auto-registered so routes use `can:permission.name`. Admin group users have all permissions implicitly. Auth response (`GET /auth/user`) includes computed `permissions` array for the frontend. **Backend:** `user_groups`, `user_group_members`, `group_permissions` tables; default groups (Administrators, Users); `HasGroups` trait; `GroupService`, `PermissionService` (cached checks); API for groups, members, permissions; `PUT /api/users/{user}/groups`. All admin/config routes are protected by granular permissions (users, groups, settings, backups, logs, audit). **Frontend:** `usePermission(permission)` and `<PermissionGate>` for conditional UI; Configuration layout shows nav items only when the user has the required permission; access to Configuration requires at least one config-related permission or admin. **Admin UI:** Configuration > Groups – list, create/edit/delete groups, manage members, permission matrix; Configuration > Users – groups column, group assignment (`UserGroupPicker`), filter by group; User profile shows group memberships. See [Recipe: Add a new permission](ai/recipes/add-new-permission.md), [Recipe: Create a custom group](ai/recipes/create-custom-group.md), [User Groups Roadmap](plans/user-groups-roadmap.md).
@@ -38,6 +39,26 @@ Core functionality and feature documentation:
 - **Permission-based visibility:** Use `usePermission()` to conditionally render widgets (e.g., admin-only)
 - **Simple API:** `DashboardController::stats()` returns metrics for the stats widget
 
+## In-App Help & Onboarding
+
+- [In-App Documentation & Onboarding Roadmap](plans/in-app-documentation-roadmap.md) - Getting started wizard, tooltips, help center
+
+**Getting Started Wizard:** Multi-step onboarding wizard for new users. Shows on first login; can be re-triggered via "Getting Started" in user dropdown. Steps: Welcome, Profile, Security (2FA recommendation), Notifications, Theme, Quick Tour, Completion. Progress persisted per-user in `user_onboarding` table.
+
+**Contextual Tooltips:** Field-level help throughout settings pages. `HelpTooltip` component with help circle icon; hover to see description. Centralized content in `frontend/lib/tooltip-content.ts`. Extended `FormField` and `SettingsSwitchRow` components with optional `tooltip` prop.
+
+**Help Documentation Center:** Searchable in-app help system accessible from anywhere:
+- **Access:** Click help icon in header, press `?` or `Ctrl+/`, or select "Help Center" in user dropdown
+- **Features:** Category sidebar, article content with markdown rendering, Fuse.js client-side search
+- **Content:** User categories (Getting Started, Your Account, Security, Notifications) and admin-only categories (Admin Settings, Search Administration)
+- **Contextual Links:** `HelpLink` component for "Learn more" links on settings pages
+
+**Capabilities:**
+- Wizard state tracking (completed steps, dismissed, reset) via API and database
+- Keyboard shortcuts: `?` and `Ctrl+/` to toggle help center (disabled when typing in inputs)
+- Admin-only help content shown only to admin users
+- React context providers for both wizard (`WizardProvider`) and help (`HelpProvider`)
+
 ## Notification System
 
 - [ADR-005: Notification System Architecture](adr/005-notification-system-architecture.md) - Multi-channel notification delivery system
@@ -46,7 +67,7 @@ Core functionality and feature documentation:
 
 **Web Push (PWA):** Admins configure VAPID keys in Configuration > Notifications. Users enable browser notifications in User Preferences—subscription is stored and push is delivered via the service worker. Supports Chrome, Firefox, Edge; limited on Safari/iOS.
 
-**PWA install experience:** Custom install prompt appears after 2+ visits (Chrome/Edge). Banner is dismissible with "Don't show again" (30-day cooldown). User Preferences includes an "Install App" card when install is available. Manifest includes full icon set, screenshots, shortcuts (Dashboard, Settings), and Share Target. See [PWA roadmap](plans/pwa-roadmap.md) Phase 4 and [Recipe: Add PWA Install Prompt](ai/recipes/add-pwa-install-prompt.md).
+**PWA install experience:** Custom install prompt appears after 2+ visits (Chrome/Edge). Banner is dismissible with "Don't show again" (30-day cooldown). User Preferences includes an "Install App" card when install is available. Manifest includes full icon set, shortcuts (Dashboard, Settings), and Share Target. See [PWA roadmap](plans/pwa-roadmap.md) Phase 4 and [Recipe: Add PWA Install Prompt](ai/recipes/add-pwa-install-prompt.md).
 
 **Share Target:** When the PWA is installed, users can share links or text from other apps to Sourdough; shared content is shown at `/share` with links to dashboard or sign-in. Manifest `share_target` uses GET with title, text, and url params.
 
@@ -98,9 +119,9 @@ Core functionality and feature documentation:
 ## Configuration Management
 
 - [ADR-014: Database Settings with Environment Fallback](adr/014-database-settings-env-fallback.md) - Database-stored settings with env fallback
-- System settings: Configuration > System (`/configuration/system`); core application settings including app name, URL, timezone, locale, registration policies (open/closed), session timeout, and password requirements
+- System settings: Configuration > System (`/configuration/system`); core application settings including app name, URL, timezone, locale, registration policies (open/closed), session timeout, and password requirements. The app name (`general.app_name`) is stored in the settings schema with `public: true` so it is returned by `GET /system-settings/public` and used for page titles, branding, and PWA manifest
 - Mail settings: Configuration > Email (`/configuration/email`); SMTP and provider credentials stored in DB with encryption for secrets
-- Auth settings: Configuration > Security (`/configuration/security`); **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required), passkey mode (disabled/optional/required). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
+- Auth settings: Configuration > Security (`/configuration/security`), admin-only; **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required), passkey mode (disabled/optional/required). No per-user features here—users manage password, 2FA, passkeys, and SSO at User menu > Security (`/user/security`). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
 - SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC; per-provider **enabled** toggle and **per-provider save** (global options card has its own save); setup instruction modals and copyable redirect URIs; test connection per provider
 
 **Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns.md#configuration-navigation-pattern).
@@ -258,6 +279,8 @@ User-facing pages for managing personal account settings.
 - **Account deletion:** Delete own account with email confirmation; permanently removes user and associated data
 
 ### User Security (`/user/security`)
+
+Accessible from the **user dropdown** in the header (click your name) → **Security**.
 
 - **Password change:** Update password with current password verification
 - **Two-Factor Authentication:** Enable/disable 2FA, scan QR code with authenticator app, enter verification code, view/regenerate recovery codes

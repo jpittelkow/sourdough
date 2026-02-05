@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,6 +27,7 @@ import {
   SSOSetupModal,
   type SSOSetupProviderId,
 } from "@/components/admin/sso-setup-modal";
+import { TOOLTIP_CONTENT } from "@/lib/tooltip-content";
 
 const ssoSchema = z.object({
   enabled: z.boolean(),
@@ -190,34 +191,7 @@ export default function SSOSettingsPage() {
     defaultValues,
   });
 
-  useEffect(() => {
-    void fetchSettings();
-    void fetchAppUrl();
-  }, []);
-
-  const isGlobalDirty = (): boolean => {
-    const current = getValues();
-    return GLOBAL_KEYS.some((k) => current[k] !== originalValues[k]);
-  };
-
-  const isProviderDirty = (provider: SSOSetupProviderId): boolean => {
-    const current = getValues();
-    const keys = getProviderKeys(provider);
-    return keys.some((k) => current[k] !== originalValues[k]);
-  };
-
-  const getGlobalPayload = (): Partial<SSOForm> => {
-    const current = getValues();
-    return Object.fromEntries(GLOBAL_KEYS.map((k) => [k, current[k]])) as Partial<SSOForm>;
-  };
-
-  const getProviderPayload = (provider: SSOSetupProviderId): Partial<SSOForm> => {
-    const current = getValues();
-    const keys = getProviderKeys(provider);
-    return Object.fromEntries(keys.map((k) => [k, current[k]])) as Partial<SSOForm>;
-  };
-
-  const fetchAppUrl = async () => {
+  const fetchAppUrl = useCallback(async () => {
     try {
       const response = await api.get("/system-settings");
       const data = response.data?.settings ?? {};
@@ -226,9 +200,9 @@ export default function SSOSettingsPage() {
     } catch {
       setAppUrl(typeof window !== "undefined" ? window.location.origin : "");
     }
-  };
+  }, []);
 
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/sso-settings");
@@ -276,6 +250,33 @@ export default function SSOSettingsPage() {
     } finally {
       setIsLoading(false);
     }
+  }, [reset]);
+
+  useEffect(() => {
+    void fetchSettings();
+    void fetchAppUrl();
+  }, [fetchSettings, fetchAppUrl]);
+
+  const isGlobalDirty = (): boolean => {
+    const current = getValues();
+    return GLOBAL_KEYS.some((k) => current[k] !== originalValues[k]);
+  };
+
+  const isProviderDirty = (provider: SSOSetupProviderId): boolean => {
+    const current = getValues();
+    const keys = getProviderKeys(provider);
+    return keys.some((k) => current[k] !== originalValues[k]);
+  };
+
+  const getGlobalPayload = (): Partial<SSOForm> => {
+    const current = getValues();
+    return Object.fromEntries(GLOBAL_KEYS.map((k) => [k, current[k]])) as Partial<SSOForm>;
+  };
+
+  const getProviderPayload = (provider: SSOSetupProviderId): Partial<SSOForm> => {
+    const current = getValues();
+    const keys = getProviderKeys(provider);
+    return Object.fromEntries(keys.map((k) => [k, current[k]])) as Partial<SSOForm>;
   };
 
   const saveGlobal = async () => {
@@ -372,18 +373,21 @@ export default function SSOSettingsPage() {
             <SettingsSwitchRow
               label="Allow account linking"
               description="Let users link multiple SSO providers to one account"
+              tooltip={TOOLTIP_CONTENT.sso.allow_linking}
               checked={watch("allow_linking")}
               onCheckedChange={(checked) => setValue("allow_linking", checked, { shouldDirty: true })}
             />
             <SettingsSwitchRow
               label="Auto-register"
               description="Create accounts for new SSO logins"
+              tooltip={TOOLTIP_CONTENT.sso.auto_register}
               checked={watch("auto_register")}
               onCheckedChange={(checked) => setValue("auto_register", checked, { shouldDirty: true })}
             />
             <SettingsSwitchRow
               label="Trust provider email"
               description="Treat SSO provider emails as verified"
+              tooltip={TOOLTIP_CONTENT.sso.trust_provider_email}
               checked={watch("trust_provider_email")}
               onCheckedChange={(checked) => setValue("trust_provider_email", checked, { shouldDirty: true })}
             />

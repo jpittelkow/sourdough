@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -67,11 +67,7 @@ export default function EmailSettingsPage() {
 
   const provider = watch("provider");
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/mail-settings");
@@ -98,7 +94,11 @@ export default function EmailSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reset]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const onSubmit = async (data: MailForm) => {
     setIsSaving(true);

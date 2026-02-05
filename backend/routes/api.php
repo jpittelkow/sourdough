@@ -41,6 +41,7 @@ use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Admin\SearchAdminController;
 use App\Http\Controllers\Api\GroupController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Api\OnboardingController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -164,6 +165,15 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
 
     // Dashboard (static widget data)
     Route::get('/dashboard/stats', [DashboardController::class, 'stats']);
+
+    // Onboarding (wizard status and progress)
+    Route::prefix('onboarding')->group(function () {
+        Route::get('/status', [OnboardingController::class, 'status']);
+        Route::post('/wizard/complete', [OnboardingController::class, 'completeWizard']);
+        Route::post('/wizard/dismiss', [OnboardingController::class, 'dismissWizard']);
+        Route::post('/wizard/step', [OnboardingController::class, 'completeStep']);
+        Route::post('/wizard/reset', [OnboardingController::class, 'resetWizard']);
+    });
     
     // Settings (permission: settings.view / settings.edit)
     Route::prefix('settings')->group(function () {

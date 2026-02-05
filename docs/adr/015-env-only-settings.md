@@ -48,6 +48,6 @@ All other application settings (mail, notifications, LLM, SSO, backup, etc.) are
 
 ## Key Files
 
-- `backend/config/settings-schema.php` – Defines migratable groups (mail, notifications, llm, sso, backup)
+- `backend/config/settings-schema.php` – Defines migratable groups (general, mail, notifications, llm, sso, backup)
 - `backend/app/Providers/ConfigServiceProvider.php` – Injects DB settings into config; skips when DB not ready
 - `.env.example` – Documents all env variables; bootstrap-critical ones have no DB equivalent

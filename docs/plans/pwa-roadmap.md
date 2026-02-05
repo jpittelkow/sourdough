@@ -171,14 +171,16 @@ VAPID_SUBJECT=mailto:admin@yourdomain.com
 
 ## Testing Checklist
 
-- [ ] Lighthouse PWA audit passes (90+ score)
-- [ ] Install prompt appears after criteria met
+- [ ] Lighthouse PWA audit passes (90+ score) — run manually: `npx lighthouse http://localhost:8080 --only-categories=pwa`
+- [ ] Install prompt appears after criteria met (2+ visits)
 - [ ] Push notifications work on Chrome, Firefox, Edge
 - [ ] Offline page displays when network unavailable
 - [ ] Cached pages load instantly
 - [ ] Service worker updates without breaking app
 - [ ] Works on iOS Safari (with limitations noted)
 - [ ] Works on Android Chrome
+
+**PWA Review (2026-02-05):** Code review completed. Removed missing screenshots from manifest, fixed `console.error` → `errorLogger`, added share page URL validation (http/https only). See [journal/2026-02-05-pwa-review.md](../journal/2026-02-05-pwa-review.md).
 
 ## Browser Support Notes
 

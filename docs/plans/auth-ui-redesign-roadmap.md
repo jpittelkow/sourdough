@@ -6,7 +6,7 @@ Modernize the login, registration, and related authentication pages with improve
 **Status**: Completed (Core Done)  
 **Last Updated**: 2026-01-30
 
-**Remaining Work**: Page title fixes, optional visual polish (illustrations, page transitions, cross-browser testing)
+**Remaining Work**: Optional visual polish (illustrations, page transitions, cross-browser testing)
 
 ---
 
@@ -27,9 +27,9 @@ Update the authentication pages (login, register, forgot password, reset passwor
 
 ## Known Issues
 
-- [ ] Page title not showing on login page
-- [ ] Page title not showing on register page
-- [ ] Review other auth pages for missing page titles
+- [x] Page title not showing on login page (fixed via AuthPageLayout + usePageTitle)
+- [x] Page title not showing on register page (fixed via AuthPageLayout + usePageTitle)
+- [x] Review other auth pages for missing page titles (all auth pages use usePageTitle via AuthPageLayout)
 
 ## Auth Pages
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isAdminUser } from "@/lib/auth";
@@ -179,10 +180,13 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
               <TableCell>
                 <div className="flex items-center gap-3">
                   {user.avatar ? (
-                    <img
+                    <Image
                       src={user.avatar}
                       alt={user.name}
-                      className="h-8 w-8 rounded-full"
+                      width={32}
+                      height={32}
+                      className="rounded-full"
+                      unoptimized
                     />
                   ) : (
                     <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">

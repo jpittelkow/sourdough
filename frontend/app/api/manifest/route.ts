@@ -70,10 +70,6 @@ export async function GET() {
       start_url: '/',
       orientation: 'portrait-primary',
       categories: ['productivity', 'utilities'],
-      screenshots: [
-        { src: '/screenshots/dashboard.png', sizes: '1280x720', type: 'image/png', label: 'Dashboard' },
-        { src: '/screenshots/mobile.png', sizes: '750x1334', type: 'image/png', label: 'Mobile view' },
-      ],
       shortcuts: [
         { name: 'Dashboard', short_name: 'Dashboard', url: '/dashboard', icons: [{ src: '/icons/shortcut-dashboard.png', sizes: '96x96', type: 'image/png' }] },
         { name: 'Settings', short_name: 'Settings', url: '/user/preferences', icons: [{ src: '/icons/shortcut-settings.png', sizes: '96x96', type: 'image/png' }] },
@@ -107,10 +103,6 @@ export async function GET() {
       start_url: '/',
       orientation: 'portrait-primary',
       categories: ['productivity', 'utilities'],
-      screenshots: [
-        { src: '/screenshots/dashboard.png', sizes: '1280x720', type: 'image/png', label: 'Dashboard' },
-        { src: '/screenshots/mobile.png', sizes: '750x1334', type: 'image/png', label: 'Mobile view' },
-      ],
       shortcuts: [
         { name: 'Dashboard', short_name: 'Dashboard', url: '/dashboard', icons: [{ src: '/icons/shortcut-dashboard.png', sizes: '96x96', type: 'image/png' }] },
         { name: 'Settings', short_name: 'Settings', url: '/user/preferences', icons: [{ src: '/icons/shortcut-settings.png', sizes: '96x96', type: 'image/png' }] },

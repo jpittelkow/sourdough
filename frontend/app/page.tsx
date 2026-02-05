@@ -5,10 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import Link from "next/link";
 import { useVersion } from "@/lib/version-provider";
+import { usePageTitle } from "@/lib/use-page-title";
 
 export default function Home() {
   const { user, isLoading } = useAuth();
   const { version } = useVersion();
+
+  // Set page title with app name from config
+  usePageTitle("Welcome");
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center p-8">

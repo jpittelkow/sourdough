@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -27,13 +28,13 @@ export function BrandingPreview({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               {logoUrl ? (
-                <img
+                <Image
                   src={logoUrl}
                   alt="Logo preview"
-                  className="h-6 w-auto object-contain"
-                  onError={(e) => {
-                    (e.target as HTMLImageElement).style.display = 'none';
-                  }}
+                  width={48}
+                  height={24}
+                  className="object-contain"
+                  unoptimized
                 />
               ) : (
                 <div className="h-6 w-6 rounded-md bg-primary text-primary-foreground flex items-center justify-center text-xs font-bold">

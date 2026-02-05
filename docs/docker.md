@@ -56,6 +56,16 @@ docker volume rm sourdough_frontend_next_cache
 docker-compose up -d
 ```
 
+### SWC Binary Issues (Next.js 16+)
+
+If Next.js fails with `Failed to load SWC binary` errors, the SWC compiler binary for Linux wasn't installed. This can happen after clearing the node_modules volume:
+
+```bash
+docker-compose exec app npm --prefix /var/www/html/frontend install @next/swc-linux-x64-gnu
+docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/node_modules
+docker-compose restart
+```
+
 ### Permission issues after npm build
 
 If you run `npm run build` or `npm install` inside the container (e.g. `docker-compose exec app npm --prefix /var/www/html/frontend run build`), those commands run as root and create root-owned files. The Next.js process runs as `www-data`, so you may see **EACCES** on `.next/server/*` and 500 errors. Fix ownership:
@@ -91,7 +101,8 @@ These variables are set automatically by `docker-compose.prod.yml` but **must be
 | `APP_ENV` | `production` | Environment mode |
 | `APP_URL` | `http://your-nas-ip:port` | Your access URL |
 | `FRONTEND_URL` | `http://your-nas-ip:port` | Same as APP_URL |
-| `MEILI_MASTER_KEY` | (random string) | Search engine API key |
+| `MEILI_MASTER_KEY` | (random string) | Search engine API key; **required** in production (container will exit if unset) |
+| `SANCTUM_STATEFUL_DOMAINS` | (e.g. `your-nas.local:8080`) | Comma-separated domains for cookie-based auth; set to your app URL for login to work |
 
 ### Required Volume Mappings
 
@@ -124,6 +135,7 @@ FRONTEND_URL=http://192.168.1.100:8080
 DB_CONNECTION=sqlite
 DB_DATABASE=/var/www/html/data/database.sqlite
 MEILI_MASTER_KEY=YourRandomSecretKey
+SANCTUM_STATEFUL_DOMAINS=192.168.1.100:8080
 PUID=99
 PGID=100
 ```
@@ -154,10 +166,11 @@ Nginx is configured with security headers in `docker/nginx.conf`:
 |--------|-------|---------|
 | `X-Frame-Options` | `SAMEORIGIN` | Prevents clickjacking |
 | `X-Content-Type-Options` | `nosniff` | Prevents MIME sniffing |
-| `X-XSS-Protection` | `1; mode=block` | Legacy XSS filter |
 | `Referrer-Policy` | `strict-origin-when-cross-origin` | Controls referrer information |
 | `Permissions-Policy` | `camera=(), microphone=(), geolocation=()` | Disables sensitive browser features |
 | `Content-Security-Policy` | See below | Controls resource loading |
+
+**Note:** `X-XSS-Protection` is not set; it was removed as deprecated and no longer supported in modern browsers.
 
 **CSP Policy:** `default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' ws: wss:; frame-ancestors 'self';`
 
@@ -169,6 +182,8 @@ Notes:
 ## Meilisearch (Search Engine)
 
 Meilisearch runs inside the main app container, managed by Supervisor alongside Nginx, PHP-FPM, and Next.js. It listens on `127.0.0.1:7700` and persists data to the `meilisearch_data` volume at `/var/lib/meilisearch`. The Docker image uses Debian (not Alpine) because Meilisearch binaries require glibc.
+
+**Version pinning:** The Dockerfile installs a specific Meilisearch version via a build argument (`MEILISEARCH_VERSION`, default `1.34.2`) instead of the install script, for reproducible and auditable builds. To use a different version, pass `--build-arg MEILISEARCH_VERSION=x.y.z` when building the image.
 
 **Verification commands:**
 

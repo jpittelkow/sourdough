@@ -40,9 +40,10 @@ return [
     [
         'id' => 'user-security',
         'title' => 'User Security',
+        'subtitle' => 'Password, 2FA, passkeys, connected accounts',
         'url' => '/user/security',
         'admin_only' => false,
-        'content' => 'password 2fa two-factor security',
+        'content' => 'password 2fa two-factor mfa passkeys sso connected accounts security',
     ],
     // Configuration pages (admin only)
     [

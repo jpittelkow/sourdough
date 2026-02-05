@@ -64,7 +64,11 @@ export async function registerServiceWorker(
       },
     };
   } catch (error) {
-    console.error('Service worker registration failed:', error);
+    const { errorLogger } = await import('@/lib/error-logger');
+    errorLogger.report(
+      error instanceof Error ? error : new Error(String(error)),
+      { component: 'ServiceWorkerRegistration' }
+    );
     return undefined;
   }
 }

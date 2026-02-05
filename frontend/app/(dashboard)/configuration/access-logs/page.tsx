@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
@@ -83,15 +83,7 @@ export default function AccessLogsPage() {
   });
   const [isExporting, setIsExporting] = useState(false);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [currentPage, filters]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
       const response = await api.get<{
@@ -105,9 +97,9 @@ export default function AccessLogsPage() {
     } finally {
       setUsersLoading(false);
     }
-  };
+  }, []);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -133,7 +125,15 @@ export default function AccessLogsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, filters]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleExport = async () => {
     setIsExporting(true);

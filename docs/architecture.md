@@ -86,7 +86,7 @@ Application logging (operational and diagnostic events) is separate from audit l
 
 System-wide configurable settings are stored in `system_settings` with environment fallback:
 
-- **SettingService**: `get()`, `getGroup()`, `set()`, `reset()`, `all()` with file-based caching and env fallback per `backend/config/settings-schema.php`
+- **SettingService**: `get()`, `getGroup()`, `set()`, `reset()`, `all()` with file-based caching and env fallback per `backend/config/settings-schema.php`. The schema defines a `public` flag per key; when saving, `SettingService::set()` sets `is_public` on the database record so public settings (e.g. `general.app_name`) are returned by `SystemSetting::getPublic()`
 - **ConfigServiceProvider**: Injects database settings into Laravel config at boot (skips when DB not ready)
 - **Encryption**: Sensitive values stored with `is_encrypted`; model decrypts on read
 

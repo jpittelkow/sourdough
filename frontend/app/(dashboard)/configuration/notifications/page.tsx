@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -154,11 +154,7 @@ export default function NotificationsPage() {
     defaultValues: credentialDefaultValues,
   });
 
-  useEffect(() => {
-    fetchConfig();
-  }, []);
-
-  const fetchConfig = async () => {
+  const fetchConfig = useCallback(async () => {
     try {
       setIsLoading(true);
       const [channelsRes, settingsRes] = await Promise.all([
@@ -189,7 +185,11 @@ export default function NotificationsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reset]);
+
+  useEffect(() => {
+    fetchConfig();
+  }, [fetchConfig]);
 
   const onCredentialsSubmit = async (data: CredentialForm) => {
     setIsSavingCredentials(true);

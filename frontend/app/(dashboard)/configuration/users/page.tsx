@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -59,11 +59,7 @@ export default function UsersPage() {
   const [selectedGroup, setSelectedGroup] = useState<string>("");
   const { groups } = useGroups();
 
-  useEffect(() => {
-    fetchUsers();
-  }, [currentPage, search, selectedGroup]);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -87,7 +83,11 @@ export default function UsersPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, search, selectedGroup]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleSearch = (value: string) => {
     setSearch(value);

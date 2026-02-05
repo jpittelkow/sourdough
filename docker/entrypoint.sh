@@ -34,6 +34,12 @@ else
     echo "No PUID/PGID set, using default www-data (UID=$(id -u www-data) GID=$(id -g www-data))"
 fi
 
+# Require MEILI_MASTER_KEY in production
+if [ "${APP_ENV}" = "production" ] && [ -z "${MEILI_MASTER_KEY}" ]; then
+    echo "ERROR: MEILI_MASTER_KEY must be set in production"
+    exit 1
+fi
+
 # Directory paths
 BACKEND_DIR="/var/www/html/backend"
 FRONTEND_DIR="/var/www/html/frontend"
@@ -126,9 +132,9 @@ if [ -z "${APP_KEY}" ]; then
     fi
 fi
 
-# Run database migrations
+# Run database migrations with Scout disabled (Meilisearch not started yet)
 echo "Running database migrations..."
-php artisan migrate --force
+SCOUT_DRIVER=null php artisan migrate --force
 
 # Clear and cache config in production
 if [ "${APP_ENV}" = "production" ]; then

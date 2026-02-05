@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -76,27 +77,7 @@ export default function BrandingSettingsPage() {
   const logoUrl = watch("logo_url");
   const faviconUrl = watch("favicon_url");
 
-  useEffect(() => {
-    fetchSettings();
-  }, []);
-
-  useEffect(() => {
-    if (logoUrl) {
-      setLogoPreview(logoUrl);
-    } else {
-      setLogoPreview(null);
-    }
-  }, [logoUrl]);
-
-  useEffect(() => {
-    if (faviconUrl) {
-      setFaviconPreview(faviconUrl);
-    } else {
-      setFaviconPreview(null);
-    }
-  }, [faviconUrl]);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/branding");
@@ -125,7 +106,27 @@ export default function BrandingSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [reset]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  useEffect(() => {
+    if (logoUrl) {
+      setLogoPreview(logoUrl);
+    } else {
+      setLogoPreview(null);
+    }
+  }, [logoUrl]);
+
+  useEffect(() => {
+    if (faviconUrl) {
+      setFaviconPreview(faviconUrl);
+    } else {
+      setFaviconPreview(null);
+    }
+  }, [faviconUrl]);
 
   const onSubmit = async (data: BrandingForm) => {
     setIsSaving(true);
@@ -285,11 +286,15 @@ export default function BrandingSettingsPage() {
                 <div className="flex items-center gap-4">
                   {logoPreview && (
                     <div className="relative group">
-                      <img
-                        src={logoPreview}
-                        alt="Logo preview"
-                        className="h-20 w-auto object-contain border rounded"
-                      />
+                      <div className="relative h-20 w-20">
+                        <Image
+                          src={logoPreview}
+                          alt="Logo preview"
+                          fill
+                          className="object-contain border rounded"
+                          unoptimized
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="destructive"
@@ -342,11 +347,15 @@ export default function BrandingSettingsPage() {
                 <div className="flex items-center gap-4">
                   {faviconPreview && (
                     <div className="relative group">
-                      <img
-                        src={faviconPreview}
-                        alt="Favicon preview"
-                        className="h-16 w-16 object-contain border rounded"
-                      />
+                      <div className="relative h-16 w-16">
+                        <Image
+                          src={faviconPreview}
+                          alt="Favicon preview"
+                          fill
+                          className="object-contain border rounded"
+                          unoptimized
+                        />
+                      </div>
                       <Button
                         type="button"
                         variant="destructive"

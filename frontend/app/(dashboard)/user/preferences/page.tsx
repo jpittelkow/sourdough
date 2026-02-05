@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
@@ -83,19 +83,7 @@ export default function PreferencesPage() {
   const { isOffline } = useOnline();
   const { canPrompt, isInstalled, promptInstall } = useInstallPrompt();
 
-  useEffect(() => {
-    fetchPreferences();
-  }, []);
-
-  useEffect(() => {
-    fetchChannels();
-  }, []);
-
-  useEffect(() => {
-    setWebpushPermission(getPermissionStatus());
-  }, []);
-
-  const fetchChannels = async () => {
+  const fetchChannels = useCallback(async () => {
     try {
       const response = await api.get("/user/notification-settings");
       const raw = response.data?.channels ?? [];
@@ -127,7 +115,64 @@ export default function PreferencesPage() {
     } finally {
       setChannelsLoading(false);
     }
-  };
+  }, []);
+
+  const fetchPreferences = useCallback(async () => {
+    try {
+      const response = await api.get("/user/settings");
+      const data = response.data;
+      
+      // Validate and normalize theme value
+      const validThemes = ["light", "dark", "system"] as const;
+      const themeValue = validThemes.includes(data.theme) 
+        ? data.theme 
+        : (theme || "system");
+      
+      // Validate and normalize LLM mode value
+      const validModes = ["single", "aggregation", "council"] as const;
+      const llmModeValue = validModes.includes(data.default_llm_mode)
+        ? data.default_llm_mode
+        : "single";
+      
+      setPreferences({
+        theme: themeValue,
+        default_llm_mode: llmModeValue,
+        notification_channels: Array.isArray(data.notification_channels) 
+          ? data.notification_channels 
+          : [],
+      });
+      
+      // Sync theme if it's different
+      if (themeValue && themeValue !== theme) {
+        setTheme(themeValue);
+      }
+    } catch (error: unknown) {
+      // If endpoint doesn't exist yet, use defaults
+      errorLogger.captureMessage("Failed to fetch preferences", "warning", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      const currentTheme = theme || "system";
+      setPreferences({
+        theme: currentTheme,
+        default_llm_mode: "single",
+        notification_channels: [],
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [theme, setTheme]);
+
+  useEffect(() => {
+    fetchPreferences();
+  }, [fetchPreferences]);
+
+  useEffect(() => {
+    fetchChannels();
+  }, [fetchChannels]);
+
+  useEffect(() => {
+    setWebpushPermission(getPermissionStatus());
+  }, []);
 
   const toggleChannel = async (channelId: string, enabled: boolean) => {
     const name = channels.find((c) => c.id === channelId)?.name ?? channelId;
@@ -259,51 +304,6 @@ export default function PreferencesPage() {
       toast.error(msg ?? "Failed to disable browser notifications");
     } finally {
       setWebpushLoading(false);
-    }
-  };
-
-  const fetchPreferences = async () => {
-    try {
-      const response = await api.get("/user/settings");
-      const data = response.data;
-      
-      // Validate and normalize theme value
-      const validThemes = ["light", "dark", "system"] as const;
-      const themeValue = validThemes.includes(data.theme) 
-        ? data.theme 
-        : (theme || "system");
-      
-      // Validate and normalize LLM mode value
-      const validModes = ["single", "aggregation", "council"] as const;
-      const llmModeValue = validModes.includes(data.default_llm_mode)
-        ? data.default_llm_mode
-        : "single";
-      
-      setPreferences({
-        theme: themeValue,
-        default_llm_mode: llmModeValue,
-        notification_channels: Array.isArray(data.notification_channels) 
-          ? data.notification_channels 
-          : [],
-      });
-      
-      // Sync theme if it's different
-      if (themeValue && themeValue !== theme) {
-        setTheme(themeValue);
-      }
-    } catch (error: unknown) {
-      // If endpoint doesn't exist yet, use defaults
-      errorLogger.captureMessage("Failed to fetch preferences", "warning", {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      const currentTheme = theme || "system";
-      setPreferences({
-        theme: currentTheme,
-        default_llm_mode: "single",
-        notification_channels: [],
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 

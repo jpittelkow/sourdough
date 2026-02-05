@@ -1,5 +1,8 @@
+"use client";
+
 import { cn } from "@/lib/utils";
 import { Logo } from "@/components/logo";
+import { usePageTitle } from "@/lib/use-page-title";
 
 interface AuthPageLayoutProps {
   title: string;
@@ -14,6 +17,9 @@ export function AuthPageLayout({
   children,
   className,
 }: AuthPageLayoutProps) {
+  // Set page title with app name from config
+  usePageTitle(title);
+
   return (
     <div
       className={cn(

@@ -158,6 +158,47 @@ Schema::create('examples', function (Blueprint $table) {
 });
 ```
 
+### Don't: Use Service Classes in Migrations
+
+Migrations run during application bootstrap when the service container may not be fully initialized. Using services or Eloquent models in migrations can fail silently or throw cryptic errors.
+
+```php
+// BAD - service container may not be ready, dependencies may fail
+public function up(): void
+{
+    app(GroupService::class)->ensureDefaultGroupsExist();  // Can fail!
+    
+    // Or using Eloquent models with complex boot methods
+    UserGroup::create(['name' => 'Admins', 'slug' => 'admin']);
+}
+
+// GOOD - self-contained with direct SQL
+public function up(): void
+{
+    // Check if already exists (idempotent)
+    if (DB::table('user_groups')->where('slug', 'admin')->exists()) {
+        return;
+    }
+    
+    $now = now();
+    DB::table('user_groups')->insert([
+        'name' => 'Administrators',
+        'slug' => 'admin',
+        'is_system' => true,
+        'created_at' => $now,
+        'updated_at' => $now,
+    ]);
+}
+```
+
+**Why this matters:**
+- Service constructors may have unresolvable dependencies during migrations
+- Eloquent model boot methods may fail if tables don't exist yet
+- Service providers may not have registered
+- Failures may be silent, causing subsequent code to fail with confusing errors
+
+**Best practice:** Keep migrations self-contained using `DB::table()` queries. If you need business logic, inline it in the migration or create a private method within the migration class.
+
 ### Don't: Create Providers/Channels Without Implementing Interface
 
 ```php

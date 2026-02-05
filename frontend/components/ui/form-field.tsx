@@ -2,6 +2,7 @@ import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
 import { ExternalLink, HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { HelpTooltip } from "@/components/ui/help-tooltip";
 
 export interface FormFieldHelpLink {
   label: string;
@@ -13,6 +14,7 @@ interface FormFieldProps {
   id: string;
   label: string | React.ReactNode;
   description?: string;
+  tooltip?: string;
   helpLink?: FormFieldHelpLink;
   error?: string;
   children: React.ReactNode;
@@ -23,6 +25,7 @@ export function FormField({
   id,
   label,
   description,
+  tooltip,
   helpLink,
   error,
   children,
@@ -32,11 +35,15 @@ export function FormField({
     <div className={cn("space-y-2", className)}>
       <div className="flex items-center gap-2">
         {typeof label === "string" ? (
-          <Label htmlFor={id} className="flex-1">
+          <Label htmlFor={id} className="flex items-center gap-1.5">
             {label}
+            {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
           </Label>
         ) : (
-          <span className="flex-1">{label}</span>
+          <span className="flex items-center gap-1.5">
+            {label}
+            {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
+          </span>
         )}
         {helpLink && (
           helpLink.url ? (

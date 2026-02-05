@@ -129,12 +129,34 @@ docker-compose up -d
 
 ### Frontend Build Issues
 
+**Symptom:** Next.js fails to start with errors like `ENOENT: fallback-build-manifest.json`, `Cannot find module 'react'`, or `Failed to load SWC binary`.
+
+**Quick fix - clear volumes and rebuild:**
+
 ```bash
-# Clear frontend volumes and rebuild
 docker-compose down
 docker volume rm sourdough_frontend_node_modules sourdough_frontend_next_cache 2>/dev/null || true
 docker-compose up -d --build
 ```
+
+**If Next.js still fails after clearing volumes** (especially with SWC errors):
+
+```bash
+# 1. Start container
+docker-compose up -d
+
+# 2. Wait for startup, then run clean npm install
+docker-compose exec app npm --prefix /var/www/html/frontend ci --legacy-peer-deps
+
+# 3. Install SWC binary for Linux (required for Next.js 16+ Turbopack)
+docker-compose exec app npm --prefix /var/www/html/frontend install @next/swc-linux-x64-gnu
+
+# 4. Fix permissions and restart
+docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/node_modules
+docker-compose restart
+```
+
+**Why this happens:** The `npm ci --legacy-peer-deps` command may skip installing optional dependencies like the SWC binary. Next.js 16+ uses Turbopack which requires SWC for compilation. The container runs Debian (glibc), so it needs `@next/swc-linux-x64-gnu` specifically.
 
 ### Permission Issues
 

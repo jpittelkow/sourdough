@@ -19,22 +19,35 @@ const routeTitles: Record<string, string> = {
   // Dashboard
   "/dashboard": "Dashboard",
 
+  // Notifications
+  "/notifications": "Notifications",
+
+  // Share
+  "/share": "Shared Content",
+
   // Configuration
+  "/configuration": "Configuration",
   "/configuration/system": "System Settings",
   "/configuration/branding": "Theme & Branding",
   "/configuration/notifications": "Notifications",
   "/configuration/ai": "AI Settings",
   "/configuration/backup": "Backup & Restore",
   "/configuration/email": "Email Settings",
+  "/configuration/email-templates": "Email Templates",
   "/configuration/storage": "Storage",
+  "/configuration/storage/files": "File Browser",
   "/configuration/api": "API Keys",
   "/configuration/jobs": "Background Jobs",
   "/configuration/audit": "Audit Log",
   "/configuration/logs": "Application Logs",
+  "/configuration/log-retention": "Log Retention",
   "/configuration/access-logs": "Access Logs (HIPAA)",
   "/configuration/users": "User Management",
   "/configuration/groups": "User Groups",
   "/configuration/security": "Security",
+  "/configuration/sso": "Single Sign-On",
+  "/configuration/search": "Search Settings",
+  "/configuration/notification-templates": "Notification Templates",
   "/configuration/profile": "Profile",
 
   // User pages

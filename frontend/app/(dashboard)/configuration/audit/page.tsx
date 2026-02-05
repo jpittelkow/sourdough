@@ -139,21 +139,14 @@ export default function AuditLogPage() {
   const { status: streamStatus } = useAuditStream(liveEnabled, handleNewLog);
 
   useEffect(() => {
+    const timeouts = highlightTimeoutsRef.current;
     return () => {
-      highlightTimeoutsRef.current.forEach((t) => clearTimeout(t));
-      highlightTimeoutsRef.current.clear();
+      timeouts.forEach((t) => clearTimeout(t));
+      timeouts.clear();
     };
   }, []);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [currentPage, filters]);
-
-  useEffect(() => {
-    fetchUsers();
-  }, []);
-
-  const fetchUsers = async () => {
+  const fetchUsers = useCallback(async () => {
     setUsersLoading(true);
     try {
       const response = await api.get<{
@@ -167,9 +160,9 @@ export default function AuditLogPage() {
     } finally {
       setUsersLoading(false);
     }
-  };
+  }, []);
 
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
@@ -196,7 +189,15 @@ export default function AuditLogPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [currentPage, filters]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const handleExport = async () => {
     setIsExporting(true);

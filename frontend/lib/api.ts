@@ -60,7 +60,7 @@ api.interceptors.response.use(
         }
       }
 
-      // Handle 403 with requires_2fa_setup - redirect to security page to set up 2FA
+      // Handle 403 with requires_2fa_setup - redirect to user security page to set up 2FA
       if (
         error.response.status === 403 &&
         error.response.data?.requires_2fa_setup === true
@@ -68,10 +68,10 @@ api.interceptors.response.use(
         if (
           typeof window !== "undefined" &&
           !isRedirecting &&
-          !window.location.pathname.includes("/configuration/security")
+          !window.location.pathname.includes("/user/security")
         ) {
           isRedirecting = true;
-          window.location.replace("/configuration/security");
+          window.location.replace("/user/security");
         }
       }
 

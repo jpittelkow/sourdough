@@ -10,6 +10,11 @@
  * - public: Whether visible to unauthenticated users
  */
 return [
+    'general' => [
+        'app_name' => ['env' => 'APP_NAME', 'default' => 'Sourdough', 'public' => true],
+        'app_url' => ['env' => 'APP_URL', 'default' => null, 'public' => true],
+    ],
+
     'mail' => [
         'mailer' => ['env' => 'MAIL_MAILER', 'default' => 'log'],
         'smtp_host' => ['env' => 'MAIL_HOST', 'default' => '127.0.0.1'],

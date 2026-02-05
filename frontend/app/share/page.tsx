@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from "next/link";
 import { Share2 } from "lucide-react";
+import { usePageTitle } from "@/lib/use-page-title";
 
 /**
  * Share Target page: receives shared content when the PWA is chosen as a share target.
@@ -16,10 +17,16 @@ import { Share2 } from "lucide-react";
 function SharePageContent() {
   const searchParams = useSearchParams();
   const { user, isLoading } = useAuth();
+
+  // Set page title with app name from config
+  usePageTitle("Shared Content");
   const title = searchParams.get("title") ?? "";
   const text = searchParams.get("text") ?? "";
-  const url = searchParams.get("url") ?? "";
-  const hasContent = Boolean(title || text || url);
+  const rawUrl = searchParams.get("url") ?? "";
+  // Only allow http/https in link href to prevent javascript: or data: XSS
+  const safeUrl =
+    rawUrl.startsWith("http://") || rawUrl.startsWith("https://") ? rawUrl : "";
+  const hasContent = Boolean(title || text || rawUrl);
 
   return (
     <main className="min-h-screen flex flex-col items-center p-6">
@@ -53,17 +60,21 @@ function SharePageContent() {
                     <p className="mt-1 whitespace-pre-wrap break-words">{text}</p>
                   </div>
                 )}
-                {url && (
+                {rawUrl && (
                   <div>
                     <span className="font-medium text-muted-foreground">URL: </span>
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline break-all"
-                    >
-                      {url}
-                    </a>
+                    {safeUrl ? (
+                      <a
+                        href={safeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline break-all"
+                      >
+                        {rawUrl}
+                      </a>
+                    ) : (
+                      <span className="break-all">{rawUrl}</span>
+                    )}
                   </div>
                 )}
               </div>

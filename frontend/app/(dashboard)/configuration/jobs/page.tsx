@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
@@ -83,11 +83,7 @@ export default function JobsPage() {
     duration_ms: number;
   } | null>(null);
 
-  useEffect(() => {
-    fetchAll();
-  }, []);
-
-  const fetchAll = async () => {
+  const fetchAll = useCallback(async () => {
     setIsLoading(true);
     await Promise.all([
       fetchScheduled(),
@@ -95,7 +91,11 @@ export default function JobsPage() {
       fetchFailedJobs(),
     ]);
     setIsLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAll();
+  }, [fetchAll]);
 
   const fetchScheduled = async () => {
     setIsLoadingScheduled(true);

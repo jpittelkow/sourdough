@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Toaster } from "sonner";
 import { ThemeProvider } from "@/components/theme-provider";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { useAuth } from "@/lib/auth";
 import { AppConfigProvider } from "@/lib/app-config";
 import { VersionProvider } from "@/lib/version-provider";
@@ -44,12 +45,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <AppConfigProvider>
           <VersionProvider>
             <ThemeProvider defaultTheme="system" storageKey="sourdough-theme">
-              <ErrorHandlerSetup />
-              <ServiceWorkerSetup />
-              <AuthInitializer>
-                <NotificationProvider>{children}</NotificationProvider>
-              </AuthInitializer>
-              <Toaster richColors position="top-right" />
+              <TooltipProvider delayDuration={300}>
+                <ErrorHandlerSetup />
+                <ServiceWorkerSetup />
+                <AuthInitializer>
+                  <NotificationProvider>{children}</NotificationProvider>
+                </AuthInitializer>
+                <Toaster richColors position="top-right" />
+              </TooltipProvider>
             </ThemeProvider>
           </VersionProvider>
         </AppConfigProvider>

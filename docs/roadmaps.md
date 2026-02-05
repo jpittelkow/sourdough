@@ -12,11 +12,7 @@ _No items. Documentation Audit complete._
 
 Ready to start. These are unblocked and can begin immediately.
 
-| Task | Priority | Description |
-|------|----------|-------------|
-| PWA Review | HIGH | Review PWA functionality, manifest, install experience, offline behavior |
-| Login Testing & Review | HIGH | Test and review login flows, error handling, edge cases, session management |
-| Page Title Fixing | MEDIUM | Audit and fix page titles across all routes for consistency and SEO |
+_No items._
 
 ## Planned Features
 
@@ -24,9 +20,7 @@ Requires foundation work or longer-term planning.
 
 | Roadmap | Priority | Status |
 |---------|----------|--------|
-| [Docker Container Audit](plans/docker-audit-roadmap.md) | MEDIUM | None |
-| [Security Compliance Review](plans/security-compliance-roadmap.md) | MEDIUM | ✅ Phase 1 Security Hardening, ✅ Phase 2 SAST Automation |
-| [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | None |
+| [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | ✅ Phases 1-3 complete (Wizard, Tooltips, Help Center) |
 | [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
 
 ## Pre-Release Checklist
@@ -79,6 +73,11 @@ All tasks complete.
 | [Configuration Navigation Redesign](plans/config-navigation-redesign-roadmap.md) | 2026-01-29 |
 | [Collapsible Settings UI](plans/collapsible-settings-ui-roadmap.md) | 2026-01-29 |
 | [Branded Iconography](plans/branded-iconography-roadmap.md) | 2026-01-29 |
+| [Docker Container Audit](plans/docker-audit-roadmap.md) | 2026-02-05 |
+| [Security Compliance Review](plans/security-compliance-roadmap.md) | 2026-02-05 |
+| Page Title Fixing | 2026-02-04 |
+| PWA Review | 2026-02-05 |
+| Login Testing & Review | 2026-02-05 |
 
 ## Roadmap Maintenance
 
@@ -104,6 +103,15 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-05 | [Page Titles App Name Fix](journal/2026-02-05-page-titles-app-name-fix.md) |
+| 2026-02-05 | [Docker Build Optimization & Security Updates](journal/2026-02-05-docker-optimization-and-security-updates.md) |
+| 2026-02-05 | [In-App Documentation & Onboarding (Phases 1-3)](journal/2026-02-05-in-app-documentation-phases-1-3.md) |
+| 2026-02-05 | [Security Compliance Documentation Completion](journal/2026-02-05-security-compliance-documentation-completion.md) |
+| 2026-02-05 | [Compliance Templates](journal/2026-02-05-compliance-templates.md) |
+| 2026-02-05 | [Docker Container Audit](journal/2026-02-05-docker-container-audit.md) |
+| 2026-02-05 | [Login Testing & Review](journal/2026-02-05-login-testing-review.md) |
+| 2026-02-05 | [PWA Review and Code Audit](journal/2026-02-05-pwa-review.md) |
+| 2026-02-04 | [Security Page Architecture Cleanup](journal/2026-02-04-security-page-cleanup.md) |
 | 2026-02-02 | [Security SAST Automation](journal/2026-02-02-security-sast-automation.md) |
 | 2026-02-02 | [Security Review Phase 1: Security Headers & CORS Hardening](journal/2026-02-02-security-review-phase-1.md) |
 | 2026-01-31 | [Documentation Audit Phase 8: Cross-Reference & Completeness](journal/2026-01-31-documentation-audit-phase-8.md) |

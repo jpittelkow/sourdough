@@ -171,7 +171,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       return;
     }
     fetchNotifications();
-  }, [user?.id, fetchNotifications]);
+  }, [user, fetchNotifications]);
 
   useEffect(() => {
     if (!user?.id || typeof window === "undefined") return;

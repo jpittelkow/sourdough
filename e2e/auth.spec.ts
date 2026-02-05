@@ -130,4 +130,42 @@ test.describe('Authentication', () => {
       await expect(page).toHaveURL(/\/login/);
     });
   });
+
+  test.describe('Successful Auth Flows', () => {
+    const password = 'Password123!';
+
+    test('successful registration redirects to dashboard', async ({ page }) => {
+      const uniqueEmail = `test-reg-${Date.now()}@example.com`;
+      await page.goto('/register');
+
+      await page.getByLabel(/name/i).fill('E2E Test User');
+      await page.getByLabel(/email/i).fill(uniqueEmail);
+      await page.getByLabel(/^password$/i).fill(password);
+      await page.getByLabel(/confirm password/i).fill(password);
+
+      await page.getByRole('button', { name: /sign up|register|create account/i }).click();
+
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    });
+
+    test('successful login redirects to dashboard', async ({ page }) => {
+      const uniqueEmail = `test-login-${Date.now()}@example.com`;
+      await page.goto('/register');
+      await page.getByLabel(/name/i).fill('Login Test User');
+      await page.getByLabel(/email/i).fill(uniqueEmail);
+      await page.getByLabel(/^password$/i).fill(password);
+      await page.getByLabel(/confirm password/i).fill(password);
+      await page.getByRole('button', { name: /sign up|register|create account/i }).click();
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+
+      await page.getByRole('button', { name: /login test user/i }).first().click();
+      await page.getByRole('menuitem', { name: /sign out/i }).click();
+      await expect(page).toHaveURL(/\/login/, { timeout: 5000 });
+
+      await page.getByLabel(/email/i).fill(uniqueEmail);
+      await page.getByLabel(/password/i).fill(password);
+      await page.getByRole('button', { name: /sign in/i }).click();
+      await expect(page).toHaveURL(/\/dashboard/, { timeout: 15000 });
+    });
+  });
 });

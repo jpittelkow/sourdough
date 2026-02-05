@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Services\AuditService;
 use App\Services\Auth\SSOService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
@@ -12,7 +13,8 @@ use Illuminate\Support\Facades\Auth;
 class SSOController extends Controller
 {
     public function __construct(
-        private SSOService $ssoService
+        private SSOService $ssoService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -67,6 +69,8 @@ class SSOController extends Controller
 
         // Login the user
         Auth::login($result['user'], true);
+
+        $this->auditService->logAuth('sso_login', $result['user'], ['provider' => $provider]);
 
         $params = 'success=true';
         if ($result['action'] === 'linked') {

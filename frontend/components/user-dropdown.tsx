@@ -13,8 +13,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { User, Settings, LogOut, ChevronDown, Info } from "lucide-react";
+import { User, Settings, Shield, LogOut, ChevronDown, Info, Sparkles, HelpCircle } from "lucide-react";
 import { AboutDialog } from "@/components/about-dialog";
+import { useWizard } from "@/components/onboarding/wizard-provider";
+import { useHelp } from "@/components/help/help-provider";
 
 function getInitials(name: string) {
   return name
@@ -29,6 +31,8 @@ export function UserDropdown() {
   const { user, logout } = useAuth();
   const router = useRouter();
   const [aboutOpen, setAboutOpen] = useState(false);
+  const { resetWizard } = useWizard();
+  const { setIsOpen: setHelpOpen } = useHelp();
 
   if (!user) {
     return null;
@@ -37,6 +41,10 @@ export function UserDropdown() {
   const handleLogout = async () => {
     await logout();
     router.push("/login");
+  };
+
+  const handleShowWizard = async () => {
+    await resetWizard();
   };
 
   return (
@@ -84,7 +92,19 @@ export function UserDropdown() {
           <Settings className="mr-2 h-4 w-4" />
           Preferences
         </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => router.push("/user/security")}>
+          <Shield className="mr-2 h-4 w-4" />
+          Security
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={handleShowWizard}>
+          <Sparkles className="mr-2 h-4 w-4" />
+          Getting Started
+        </DropdownMenuItem>
+        <DropdownMenuItem onClick={() => setHelpOpen(true)}>
+          <HelpCircle className="mr-2 h-4 w-4" />
+          Help Center
+        </DropdownMenuItem>
         <DropdownMenuItem onClick={() => setAboutOpen(true)}>
           <Info className="mr-2 h-4 w-4" />
           About

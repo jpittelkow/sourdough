@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import Image from "next/image";
 import {
   Dialog,
   DialogContent,
@@ -36,6 +37,34 @@ export function FilePreview({ item, open, onOpenChange, onDownload }: FilePrevie
   const isPdf = ext === "pdf";
   const isText = ext && TEXT_EXTENSIONS.includes(ext);
 
+  const loadPreview = useCallback(async () => {
+    try {
+      const res = await fileManagerApi.getFile(item.path);
+      const data = res.data as FileManagerItem & { previewUrl?: string | null };
+      if (data.previewUrl) {
+        setPreviewUrl(data.previewUrl);
+        setLoading(false);
+        return;
+      }
+      if (isImage || isPdf) {
+        const blobRes = await fileManagerApi.downloadFile(item.path);
+        const blob = blobRes.data as unknown as Blob;
+        const url = URL.createObjectURL(blob);
+        blobUrlRef.current = url;
+        setPreviewUrl(url);
+      } else if (isText) {
+        const blobRes = await fileManagerApi.downloadFile(item.path);
+        const blob = blobRes.data as unknown as Blob;
+        const text = await blob.text();
+        setTextContent(text);
+      }
+    } catch {
+      setError("Could not load preview.");
+    } finally {
+      setLoading(false);
+    }
+  }, [item.path, isImage, isPdf, isText]);
+
   useEffect(() => {
     if (!open || !item) return;
     setLoading(true);
@@ -47,34 +76,6 @@ export function FilePreview({ item, open, onOpenChange, onDownload }: FilePrevie
       blobUrlRef.current = null;
     }
 
-    const loadPreview = async () => {
-      try {
-        const res = await fileManagerApi.getFile(item.path);
-        const data = res.data as FileManagerItem & { previewUrl?: string | null };
-        if (data.previewUrl) {
-          setPreviewUrl(data.previewUrl);
-          setLoading(false);
-          return;
-        }
-        if (isImage || isPdf) {
-          const blobRes = await fileManagerApi.downloadFile(item.path);
-          const blob = blobRes.data as unknown as Blob;
-          const url = URL.createObjectURL(blob);
-          blobUrlRef.current = url;
-          setPreviewUrl(url);
-        } else if (isText) {
-          const blobRes = await fileManagerApi.downloadFile(item.path);
-          const blob = blobRes.data as unknown as Blob;
-          const text = await blob.text();
-          setTextContent(text);
-        }
-      } catch {
-        setError("Could not load preview.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadPreview();
     return () => {
       if (blobUrlRef.current) {
@@ -82,7 +83,7 @@ export function FilePreview({ item, open, onOpenChange, onDownload }: FilePrevie
         blobUrlRef.current = null;
       }
     };
-  }, [open, item.path, isImage, isPdf, isText]);
+  }, [open, item, loadPreview]);
 
   const handleClose = () => {
     setPreviewUrl(null);
@@ -113,11 +114,15 @@ export function FilePreview({ item, open, onOpenChange, onDownload }: FilePrevie
             </div>
           )}
           {!loading && !error && previewUrl && isImage && (
-            <img
-              src={previewUrl}
-              alt={item.name}
-              className="max-w-full h-auto object-contain"
-            />
+            <div className="relative w-full min-h-[200px]">
+              <Image
+                src={previewUrl}
+                alt={item.name}
+                fill
+                className="object-contain"
+                unoptimized
+              />
+            </div>
           )}
           {!loading && !error && previewUrl && isPdf && (
             <iframe

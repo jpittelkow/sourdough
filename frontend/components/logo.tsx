@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { useAppConfig } from "@/lib/app-config";
 import { cn } from "@/lib/utils";
 
@@ -64,11 +65,14 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
     // If favicon exists, show it
     if (faviconUrl && !faviconError) {
       return (
-        <img
+        <Image
           src={faviconUrl}
           alt={appName || ''}
-          className={cn(sizes.icon, "object-contain", className)}
+          width={size === "sm" ? 24 : size === "md" ? 32 : 40}
+          height={size === "sm" ? 24 : size === "md" ? 32 : 40}
+          className={cn("object-contain", className)}
           onError={() => setFaviconError(true)}
+          unoptimized
         />
       );
     }
@@ -99,12 +103,17 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   // If logo exists, show only the logo (replaces app name)
   if (hasLogo) {
     return (
-      <img
-        src={currentLogo}
-        alt={appName || ''}
-        className={cn(sizes.full, "w-auto max-w-[200px] object-contain flex-shrink-0", className)}
-        onError={() => setLogoError(true)}
-      />
+      <div className={cn("relative flex-shrink-0", sizes.full, "w-auto max-w-[200px]", className)}>
+        <Image
+          src={currentLogo}
+          alt={appName || ''}
+          width={200}
+          height={size === "sm" ? 24 : size === "md" ? 32 : 40}
+          className="object-contain"
+          onError={() => setLogoError(true)}
+          unoptimized
+        />
+      </div>
     );
   }
 

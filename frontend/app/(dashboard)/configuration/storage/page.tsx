@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -265,16 +265,7 @@ export default function StorageSettingsPage() {
 
   const driver = watch("driver");
 
-  useEffect(() => {
-    fetchSettings();
-    fetchStats();
-    fetchPaths();
-    fetchHealth();
-    fetchAnalytics();
-    fetchCleanupSuggestions();
-  }, []);
-
-  const fetchSettings = async () => {
+  const fetchSettings = useCallback(async () => {
     setIsLoading(true);
     try {
       const response = await api.get("/storage-settings");
@@ -308,9 +299,9 @@ export default function StorageSettingsPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [setValue]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoadingStats(true);
     try {
       const response = await api.get("/storage-settings/stats");
@@ -320,27 +311,27 @@ export default function StorageSettingsPage() {
     } finally {
       setIsLoadingStats(false);
     }
-  };
+  }, []);
 
-  const fetchPaths = async () => {
+  const fetchPaths = useCallback(async () => {
     try {
       const response = await api.get("/storage-settings/paths");
       setPaths(response.data.paths ?? []);
     } catch (error: any) {
       // Paths might not be available
     }
-  };
+  }, []);
 
-  const fetchHealth = async () => {
+  const fetchHealth = useCallback(async () => {
     try {
       const response = await api.get("/storage-settings/health");
       setHealth(response.data);
     } catch (error: any) {
       // Health might not be available
     }
-  };
+  }, []);
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = useCallback(async () => {
     setIsLoadingAnalytics(true);
     try {
       const response = await api.get("/storage-settings/analytics");
@@ -350,9 +341,9 @@ export default function StorageSettingsPage() {
     } finally {
       setIsLoadingAnalytics(false);
     }
-  };
+  }, []);
 
-  const fetchCleanupSuggestions = async () => {
+  const fetchCleanupSuggestions = useCallback(async () => {
     setIsLoadingCleanup(true);
     try {
       const response = await api.get("/storage-settings/cleanup-suggestions");
@@ -362,7 +353,16 @@ export default function StorageSettingsPage() {
     } finally {
       setIsLoadingCleanup(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSettings();
+    fetchStats();
+    fetchPaths();
+    fetchHealth();
+    fetchAnalytics();
+    fetchCleanupSuggestions();
+  }, [fetchSettings, fetchStats, fetchPaths, fetchHealth, fetchAnalytics, fetchCleanupSuggestions]);
 
   const onCleanup = async (type: string) => {
     setCleanupSubmitting(true);
