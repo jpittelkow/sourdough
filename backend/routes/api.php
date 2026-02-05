@@ -103,7 +103,7 @@ Route::prefix('auth')->group(function () {
     
     // Authenticated routes
     Route::middleware('auth:sanctum')->group(function () {
-        Route::get('/user', [AuthController::class, 'user']);
+        Route::get('/user', [AuthController::class, 'user'])->middleware('2fa.setup');
         Route::post('/logout', [AuthController::class, 'logout']);
         
         // 2FA Routes
