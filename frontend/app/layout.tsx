@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-import { Toaster } from "sonner";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 const newsreader = Newsreader({ 
@@ -40,7 +39,6 @@ export default function RootLayout({
       <body className={`${inter.variable} ${newsreader.variable} ${inter.className}`}>
         <Providers>
           {children}
-          <Toaster position="top-right" richColors />
         </Providers>
       </body>
     </html>
