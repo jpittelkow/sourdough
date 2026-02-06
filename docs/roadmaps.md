@@ -12,7 +12,7 @@ _No items. Documentation Audit complete._
 
 Ready to start. These are unblocked and can begin immediately.
 
-_No items._
+- [ ] **Changelog Page** - Frontend page for users to view application changelog (version history, new features, bug fixes). Accessible from the dashboard or sidebar. Related: [Versioning System Roadmap](plans/versioning-system-roadmap.md) (see [changelog-roadmap](plans/changelog-roadmap.md))
 
 ## Planned Features
 
