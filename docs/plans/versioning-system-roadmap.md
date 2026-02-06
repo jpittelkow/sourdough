@@ -25,6 +25,7 @@ Implement a versioning system that displays the application version in the setti
 - [x] Create VERSION file in project root
 - [x] Create script to update version across codebase ([scripts/bump-version.sh](../../scripts/bump-version.sh))
 - [x] Update package.json version (frontend)
+- [x] Auto-sync version files from tag push (tag is single source of truth)
 - [ ] Update composer.json version (backend) — skipped (not standard for Laravel)
 - [ ] Generate CHANGELOG entries — manual for now
 
@@ -141,11 +142,11 @@ The release workflow supports two trigger methods:
 
 **Method 2: Tag push** (push a `v*` tag to trigger automatically)
 - Push a version tag (e.g. `git tag v1.2.3 && git push --tags`) to trigger the release.
-- Skips the bump-and-release job (version already set). Extracts version from the tag name.
-- **create-release** job: Creates a GitHub Release with auto-generated notes.
+- **sync-and-release** job: Extracts the version from the tag name, runs `scripts/bump-version.sh` to update `VERSION` and `frontend/package.json` on master, commits the changes, and creates a GitHub Release with auto-generated notes.
 - **release** job: Builds the Docker image and pushes to GHCR.
+- No need to manually update version files -- the tag is the single source of truth and all files are synced automatically.
 
-Both methods produce the same output: a GitHub Release with auto-generated notes and a Docker image pushed to GHCR with semver tags (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
+Both methods produce the same output: a GitHub Release with auto-generated notes, version files synced on master, and a Docker image pushed to GHCR with semver tags (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
 
 ---
 

@@ -24,6 +24,8 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  # === WORKFLOW DISPATCH PATH ===
+  # Bumps version files, commits, tags, creates release
   bump-and-release:
     name: Bump version and create release
     if: github.event_name == 'workflow_dispatch'
@@ -74,14 +76,65 @@ jobs:
           tag_name: "v${{ steps.bump.outputs.version }}"
           generate_release_notes: true
 
-  # Resolve version and tag info for the Docker build job.
-  # When triggered by workflow_dispatch, reads from bump-and-release outputs.
-  # When triggered by tag push, extracts version from the git tag.
+  # === TAG PUSH PATH ===
+  # Syncs VERSION + package.json to match the pushed tag, then creates release
+  sync-and-release:
+    name: Sync version files and create release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    outputs:
+      version: ${{ steps.extract.outputs.version }}
+      tag: ${{ steps.extract.outputs.tag }}
+      sha: ${{ steps.sync.outputs.sha }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: master
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract version from tag
+        id: extract
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Update version files
+        run: bash scripts/bump-version.sh "${{ steps.extract.outputs.version }}"
+
+      - name: Commit and push version sync
+        id: sync
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION frontend/package.json
+          if git diff --cached --quiet; then
+            echo "Version files already up to date"
+            echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          else
+            git commit -m "Release v${{ steps.extract.outputs.version }}"
+            git push origin master
+            echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          tag_name: ${{ steps.extract.outputs.tag }}
+          generate_release_notes: true
+
+  # === SHARED: Resolve version info for Docker build ===
   resolve-version:
     name: Resolve version info
     runs-on: ubuntu-latest
     if: always()
-    needs: [bump-and-release]
+    needs: [bump-and-release, sync-and-release]
     timeout-minutes: 5
 
     outputs:
@@ -98,32 +151,12 @@ jobs:
             echo "tag=${{ needs.bump-and-release.outputs.tag }}" >> $GITHUB_OUTPUT
             echo "sha=${{ needs.bump-and-release.outputs.sha }}" >> $GITHUB_OUTPUT
           else
-            # Tag push: extract version from tag ref (refs/tags/v1.2.3 -> 1.2.3)
-            TAG="${GITHUB_REF#refs/tags/}"
-            VERSION="${TAG#v}"
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-            echo "tag=$TAG" >> $GITHUB_OUTPUT
-            echo "sha=$GITHUB_SHA" >> $GITHUB_OUTPUT
+            echo "version=${{ needs.sync-and-release.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ needs.sync-and-release.outputs.tag }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ needs.sync-and-release.outputs.sha }}" >> $GITHUB_OUTPUT
           fi
 
-  # Create a GitHub Release for tag pushes (bump-and-release already does this for workflow_dispatch)
-  create-release:
-    name: Create GitHub Release (tag push)
-    if: github.event_name == 'push'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    permissions:
-      contents: write
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
-        with:
-          tag_name: ${{ github.ref_name }}
-          generate_release_notes: true
-
+  # === SHARED: Build and push Docker image ===
   release:
     name: Build and Push
     needs: [resolve-version]
@@ -136,7 +169,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.resolve-version.outputs.tag }}
+          ref: ${{ needs.resolve-version.outputs.sha }}
 
       - name: Set build time
         id: build-time
@@ -158,9 +191,9 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=${{ needs.resolve-version.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.resolve-version.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.resolve-version.outputs.tag }}
             type=sha,prefix=
 
       - name: Build and push
