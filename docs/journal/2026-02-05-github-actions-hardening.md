@@ -32,11 +32,14 @@ Hardened both CI and Release GitHub Actions workflows per the GitHub Actions aud
 
 ## Observations
 
-- The release workflow now runs as a single execution: bump-and-release commits, tags, and pushes; the release job then checks out that tag, builds, and pushes the Docker image. No second workflow run is needed.
+- The release workflow supports two trigger methods: manual dispatch (Actions > Release > Run workflow) and tag push (`v*` tags). Both produce the same result.
+- Manual dispatch path: bump-and-release commits, tags, and pushes; the release job then checks out that tag, builds, and pushes the Docker image.
+- Tag push path: sync-and-release extracts the version from the tag, runs bump-version.sh to sync `VERSION` and `frontend/package.json` on master, then creates a GitHub Release. The release job builds and pushes the Docker image.
 - Explicit permission blocks improve least-privilege posture.
 - SHA-pinning third-party actions reduces supply chain risk from compromised tags.
 
 ## Testing Notes
 
 - CI workflow: push or open a PR to master; verify all four jobs run and pass.
-- Release workflow: trigger via Actions > Release > Run workflow; verify version bump, tag creation, GitHub Release, and Docker image push to GHCR.
+- Release workflow (manual): trigger via Actions > Release > Run workflow; verify version bump, tag creation, GitHub Release, and Docker image push to GHCR.
+- Release workflow (tag push): run `git tag v0.2.0 && git push --tags`; verify sync-and-release updates version files on master, GitHub Release is created, and Docker image is pushed to GHCR.

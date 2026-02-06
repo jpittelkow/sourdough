@@ -170,4 +170,4 @@ Security scanning runs automatically on push/PR to master:
 - ESLint with security plugin (frontend)
 - Semgrep (OWASP, PHP-Laravel, TypeScript rules)
 
-See [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) for the full CI configuration. The [Release workflow](../.github/workflows/release.yml) is manual-trigger only: Actions > Release > Run workflow.
+See [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) for the full CI configuration. The [Release workflow](../.github/workflows/release.yml) can be triggered two ways: manually via Actions > Release > Run workflow (select version bump type), or automatically by pushing a `v*` tag (e.g. `git tag v1.3.0 && git push --tags`). Both paths sync version files, create a GitHub Release, and push the Docker image to GHCR.
