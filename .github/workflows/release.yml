@@ -160,6 +160,9 @@ jobs:
   release:
     name: Build and Push
     needs: [resolve-version]
+    # Explicit condition required: the default success() skips this job when
+    # resolve-version used if:always() and a transitive dependency was skipped.
+    if: ${{ !cancelled() && needs.resolve-version.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
