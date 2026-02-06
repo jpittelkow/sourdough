@@ -195,6 +195,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}},value=${{ needs.resolve-version.outputs.tag }}
             type=semver,pattern={{major}},value=${{ needs.resolve-version.outputs.tag }}
             type=sha,prefix=
+            type=raw,value=latest
 
       - name: Build and push
         uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25

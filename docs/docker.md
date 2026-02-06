@@ -24,7 +24,7 @@ See [Key Commands](#key-commands) below for complete commands and troubleshootin
 
 ## Production Images (GHCR)
 
-Release builds are published to GitHub Container Registry when the [Release workflow](../.github/workflows/release.yml) runs. The workflow can be triggered via Actions > Release > Run workflow (manual dispatch) or by pushing a `v*` tag (e.g. `git tag v1.3.0 && git push --tags`). Both methods sync version files and produce the same result. Images are tagged with semver (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and commit SHA. Pull with `docker pull ghcr.io/owner/repo:1.2.3` or `:latest` for the newest release.
+Release builds are published to GitHub Container Registry when the [Release workflow](../.github/workflows/release.yml) runs. The workflow can be triggered via Actions > Release > Run workflow (manual dispatch) or by pushing a `v*` tag (e.g. `git tag v1.3.0 && git push --tags`). Both methods sync version files and produce the same result. Images are tagged with semver (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), commit SHA, and `latest`. Pull with `docker pull ghcr.io/owner/repo:latest` for the newest release, or a specific version like `docker pull ghcr.io/owner/repo:1.2.3`.
 
 ## Resource Requirements
 

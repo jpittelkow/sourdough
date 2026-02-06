@@ -146,7 +146,7 @@ The release workflow supports two trigger methods:
 - **release** job: Builds the Docker image and pushes to GHCR.
 - No need to manually update version files -- the tag is the single source of truth and all files are synced automatically.
 
-Both methods produce the same output: a GitHub Release with auto-generated notes, version files synced on master, and a Docker image pushed to GHCR with semver tags (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
+Both methods produce the same output: a GitHub Release with auto-generated notes, version files synced on master, and a Docker image pushed to GHCR with semver tags (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), SHA, and `latest`.
 
 ---
 
