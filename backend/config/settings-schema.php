@@ -12,7 +12,7 @@
 return [
     'general' => [
         'app_name' => ['env' => 'APP_NAME', 'default' => 'Sourdough', 'public' => true],
-        'app_url' => ['env' => 'APP_URL', 'default' => null, 'public' => true],
+        // app_url removed -- controlled exclusively by APP_URL env var (see config('app.url'))
     ],
 
     'mail' => [

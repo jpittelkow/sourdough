@@ -6,6 +6,7 @@ use App\Models\AIProvider;
 use App\Models\ApiToken;
 use App\Models\EmailTemplate;
 use App\Models\Notification;
+use App\Models\NotificationTemplate;
 use App\Models\User;
 use App\Models\UserGroup;
 use App\Models\Webhook;
@@ -44,7 +45,7 @@ class SearchReindexCommand extends Command
             $modelArg = strtolower($modelArg);
 
             if ($modelArg === 'pages') {
-                return $this->reindexPages();
+                return $this->reindexPages(fatal: true);
             }
 
             if (! isset(static::$searchableModels[$modelArg])) {
@@ -55,7 +56,10 @@ class SearchReindexCommand extends Command
             }
             $models = [$modelArg => static::$searchableModels[$modelArg]];
         } else {
-            $this->reindexPages();
+            // Pages sync is non-fatal when reindexing all models so that
+            // model reindexing can still proceed even if the API key is
+            // misconfigured for direct Meilisearch operations.
+            $this->reindexPages(fatal: false);
             $models = static::$searchableModels;
         }
 
@@ -80,7 +84,14 @@ class SearchReindexCommand extends Command
         return self::SUCCESS;
     }
 
-    protected function reindexPages(): int
+    /**
+     * Sync the static pages index to Meilisearch.
+     *
+     * @param  bool  $fatal  When true, return FAILURE on error (used when
+     *                       pages is the explicit target). When false, warn
+     *                       and continue (used during full reindex).
+     */
+    protected function reindexPages(bool $fatal = true): int
     {
         $this->info('Syncing pages index...');
 
@@ -91,9 +102,21 @@ class SearchReindexCommand extends Command
 
             return self::SUCCESS;
         } catch (\Throwable $e) {
-            $this->error('Pages sync failed: ' . $e->getMessage());
+            $message = $e->getMessage();
+            $isKeyError = stripos($message, 'api key') !== false || str_contains($message, 'invalid_api_key');
+            $hint = $isKeyError
+                ? ' Check the API key in Configuration > Search or the MEILI_MASTER_KEY env var.'
+                : '';
 
-            return self::FAILURE;
+            if ($fatal) {
+                $this->error('Pages sync failed: ' . $message . $hint);
+
+                return self::FAILURE;
+            }
+
+            $this->warn('Pages sync failed (non-fatal): ' . $message . $hint);
+
+            return self::SUCCESS;
         }
     }
 }

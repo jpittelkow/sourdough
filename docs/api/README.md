@@ -158,7 +158,7 @@ Requires `manage-settings` ability. Authentication feature toggles are stored in
 | GET | `/auth-settings` | Get auth settings (`email_verification_mode`, `password_reset_enabled`, `two_factor_mode`) |
 | PUT | `/auth-settings` | Update auth settings. Body: `email_verification_mode` (disabled\|optional\|required), `password_reset_enabled` (boolean), `two_factor_mode` (disabled\|optional\|required). |
 
-**Public features:** `GET /system-settings/public` (no auth) returns `settings` (e.g. `settings.general.app_name`, `settings.general.app_url`) and a `features` object: `email_configured`, `password_reset_available` (email configured and password reset enabled), `email_verification_mode`, `two_factor_mode`. The app name is used for page titles, branding, and PWA manifest. Login and forgot-password pages use features to show/hide the "Forgot password?" link and enforce 2FA setup when required.
+**Public features:** `GET /system-settings/public` (no auth) returns `settings` (e.g. `settings.general.app_name`, `settings.general.app_url`) and a `features` object: `email_configured`, `password_reset_available` (email configured and password reset enabled), `email_verification_mode`, `two_factor_mode`. The app name is used for page titles, branding, and PWA manifest. Login and forgot-password pages use features to show/hide the "Forgot password?" link and enforce 2FA setup when required. Note: `app_url` is sourced from the `APP_URL` environment variable (not stored in the database).
 
 ### Email Templates (Admin)
 

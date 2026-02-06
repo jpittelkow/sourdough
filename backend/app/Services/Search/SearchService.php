@@ -456,24 +456,47 @@ class SearchService
      */
     public function syncPagesToIndex(): array
     {
-        $client = app(\Meilisearch\Client::class);
-        $index = $client->index(static::$pagesIndexName);
+        try {
+            $client = app(\Meilisearch\Client::class);
+        } catch (\Throwable $e) {
+            Log::error('Failed to resolve Meilisearch client for pages sync', [
+                'error' => $e->getMessage(),
+                'host' => config('scout.meilisearch.host'),
+                'key_set' => ! empty(config('scout.meilisearch.key')),
+            ]);
+            throw $e;
+        }
 
-        $index->updateSettings([
-            'searchableAttributes' => ['title', 'subtitle', 'content'],
-            'filterableAttributes' => ['admin_only'],
-            'displayedAttributes' => ['id', 'title', 'subtitle', 'url', 'admin_only', 'content'],
-            'rankingRules' => [
-                'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
-            ],
-        ]);
+        try {
+            $index = $client->index(static::$pagesIndexName);
 
-        $pages = config('search-pages');
-        $index->addDocuments($pages, 'id');
+            $index->updateSettings([
+                'searchableAttributes' => ['title', 'subtitle', 'content'],
+                'filterableAttributes' => ['admin_only'],
+                'displayedAttributes' => ['id', 'title', 'subtitle', 'url', 'admin_only', 'content'],
+                'rankingRules' => [
+                    'words', 'typo', 'proximity', 'attribute', 'sort', 'exactness',
+                ],
+            ]);
 
-        Log::info('Pages index synced', ['count' => count($pages)]);
+            $pages = config('search-pages');
+            $index->addDocuments($pages, 'id');
 
-        return ['success' => true, 'count' => count($pages)];
+            Log::info('Pages index synced', ['count' => count($pages)]);
+
+            return ['success' => true, 'count' => count($pages)];
+        } catch (\Throwable $e) {
+            $isKeyError = stripos($e->getMessage(), 'api key') !== false || str_contains($e->getMessage(), 'invalid_api_key');
+
+            Log::error('Pages sync failed', [
+                'error' => $e->getMessage(),
+                'host' => config('scout.meilisearch.host'),
+                'key_set' => ! empty(config('scout.meilisearch.key')),
+                'key_source' => $isKeyError ? 'Check Configuration > Search API key or MEILI_MASTER_KEY env var' : null,
+            ]);
+
+            throw $e;
+        }
     }
 
     /**

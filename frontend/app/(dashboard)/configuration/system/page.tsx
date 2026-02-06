@@ -95,7 +95,6 @@ const LOCALES = [
 const systemSchema = z.object({
   general: z.object({
     app_name: z.string().min(1, "App name is required"),
-    app_url: z.union([z.string().url("Invalid URL"), z.literal("")]).optional(),
     default_timezone: z.string().min(1, "Timezone is required"),
     default_locale: z.string().min(1, "Locale is required"),
   }),
@@ -123,6 +122,7 @@ export default function SystemSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [settings, setSettings] = useState<SystemForm | null>(null);
+  const [appUrl, setAppUrl] = useState("");
   const queryClient = useQueryClient();
   const emailConfigured = features?.emailConfigured ?? false;
 
@@ -131,7 +131,6 @@ export default function SystemSettingsPage() {
     defaultValues: {
       general: {
         app_name: "",
-        app_url: "",
         default_timezone: "UTC",
         default_locale: "en",
       },
@@ -159,10 +158,12 @@ export default function SystemSettingsPage() {
       const response = await api.get("/system-settings");
       const data = response.data.settings;
 
+      // app_url is env-controlled (read-only), store separately from form
+      setAppUrl(data.general?.app_url || "");
+
       const formData: SystemForm = {
         general: {
           app_name: data.general?.app_name || "",
-          app_url: data.general?.app_url || "",
           default_timezone: data.general?.default_timezone || "UTC",
           default_locale: data.general?.default_locale || "en",
         },
@@ -206,15 +207,13 @@ export default function SystemSettingsPage() {
     try {
       const settingsArray: Array<{ group: string; key: string; value: unknown; is_public: boolean }> = [];
       
-      // General settings
+      // General settings (app_url is env-controlled, not submitted)
       Object.entries(data.general).forEach(([key, value]) => {
-        // Convert empty strings to null for optional fields
-        const finalValue = (key === "app_url" && (!value || value.trim() === "")) ? null : value;
         settingsArray.push({
           group: "general",
           key,
-          value: finalValue,
-          is_public: key === "app_name" || key === "app_url",
+          value,
+          is_public: key === "app_name",
         });
       });
 
@@ -325,21 +324,17 @@ export default function SystemSettingsPage() {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="app_url" className="flex items-center gap-1.5">
+                  <Label className="flex items-center gap-1.5">
                     Application URL
                     <HelpTooltip content={TOOLTIP_CONTENT.system.app_url} />
                   </Label>
-                  <Input
-                    id="app_url"
-                    type="url"
-                    {...register("general.app_url")}
-                    placeholder="https://example.com"
-                  />
-                  {errors.general?.app_url && (
-                    <p className="text-sm text-destructive">
-                      {errors.general.app_url.message}
-                    </p>
-                  )}
+                  <div className="rounded-md border bg-muted/50 px-3 py-2 font-mono text-sm">
+                    {appUrl || "Not set"}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Controlled by the <code className="rounded bg-muted px-1 py-0.5">APP_URL</code> environment variable.
+                    Change it in your <code className="rounded bg-muted px-1 py-0.5">.env</code> file or Docker configuration.
+                  </p>
                 </div>
 
                 <div className="space-y-2">

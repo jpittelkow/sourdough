@@ -13,6 +13,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
+        // Trust proxies (Cloudflare Tunnel, Nginx, Traefik, etc.)
+        // Set TRUSTED_PROXIES=* to trust all proxies (safe when container is only reachable via proxy)
+        $middleware->trustProxies(
+            at: in_array(trim(env('TRUSTED_PROXIES', '')), ['*', '**'], true)
+                ? '*'
+                : array_filter(array_map('trim', explode(',', env('TRUSTED_PROXIES', '')))),
+        );
+
         $middleware->api(prepend: [
             \App\Http\Middleware\AddCorrelationId::class,
             \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,

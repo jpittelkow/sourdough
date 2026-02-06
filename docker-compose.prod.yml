@@ -17,6 +17,9 @@ services:
       - APP_DEBUG=false
       - APP_URL=${APP_URL:-http://localhost}
       - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
+      # Reverse proxy support (Cloudflare Tunnel, Traefik, Nginx, etc.)
+      # Set to * to trust all proxies, or comma-separated IPs
+      - TRUSTED_PROXIES=${TRUSTED_PROXIES:-}
       - APP_KEY=${APP_KEY}
       - DB_CONNECTION=sqlite
       - DB_DATABASE=/var/www/html/data/database.sqlite

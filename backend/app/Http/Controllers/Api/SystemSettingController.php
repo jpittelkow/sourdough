@@ -27,6 +27,11 @@ class SystemSettingController extends Controller
             ->groupBy('group')
             ->map(fn ($group) => $group->pluck('value', 'key'));
 
+        // Inject app_url from env (not stored in DB -- controlled by APP_URL env var)
+        $general = $settings->get('general', collect())->toArray();
+        $general['app_url'] = config('app.url');
+        $settings['general'] = $general;
+
         return response()->json([
             'settings' => $settings,
         ]);
@@ -40,6 +45,12 @@ class SystemSettingController extends Controller
         $settings = Cache::remember('system_settings_public', 3600, function () {
             return SystemSetting::getPublic();
         });
+
+        // Inject app_url from env (not stored in DB -- controlled by APP_URL env var)
+        if (!isset($settings['general'])) {
+            $settings['general'] = [];
+        }
+        $settings['general']['app_url'] = config('app.url');
 
         $emailConfigured = $emailConfigService->isConfigured();
         $passwordResetEnabled = $this->settingService->get('auth', 'password_reset_enabled', true);
@@ -72,7 +83,13 @@ class SystemSettingController extends Controller
     {
         $settings = SystemSetting::where('group', $group)
             ->get()
-            ->pluck('value', 'key');
+            ->pluck('value', 'key')
+            ->toArray();
+
+        // Inject app_url from env for the general group
+        if ($group === 'general') {
+            $settings['app_url'] = config('app.url');
+        }
 
         return response()->json([
             'group' => $group,
@@ -96,6 +113,11 @@ class SystemSettingController extends Controller
         $user = $request->user();
 
         foreach ($validated['settings'] as $setting) {
+            // app_url is controlled by APP_URL env var, not stored in DB
+            if ($setting['group'] === 'general' && $setting['key'] === 'app_url') {
+                continue;
+            }
+
             $this->settingService->set(
                 $setting['group'],
                 $setting['key'],

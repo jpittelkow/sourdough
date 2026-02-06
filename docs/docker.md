@@ -99,7 +99,9 @@ Edit `.env` to configure:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `APP_PORT` | `8080` | Host port |
+| `APP_URL` | `http://localhost` | Public URL (set to your domain when behind a reverse proxy) |
 | `CONTAINER_NAME` | `sourdough-dev` | Container name |
+| `TRUSTED_PROXIES` | *(empty)* | Proxy IPs or `*` for all (Cloudflare Tunnel, Traefik) |
 
 ## NAS Deployment (Unraid, Synology, TrueNAS)
 
@@ -115,8 +117,9 @@ These variables are set automatically by `docker-compose.prod.yml` but **must be
 | `DB_CONNECTION` | `sqlite` | Database driver |
 | `APP_KEY` | `base64:...` | Generate with `php artisan key:generate --show` |
 | `APP_ENV` | `production` | Environment mode |
-| `APP_URL` | `http://your-nas-ip:port` | Your access URL |
+| `APP_URL` | `http://your-nas-ip:port` | Your access URL (use `https://yourdomain.com` if behind a reverse proxy/tunnel) |
 | `FRONTEND_URL` | `http://your-nas-ip:port` | Same as APP_URL |
+| `TRUSTED_PROXIES` | *(empty)* | Set to `*` if using a reverse proxy or Cloudflare Tunnel |
 | `MEILI_MASTER_KEY` | (random string) | Search engine API key; **required** in production (container will exit if unset) |
 | `SANCTUM_STATEFUL_DOMAINS` | (e.g. `your-nas.local:8080`) | Comma-separated domains for cookie-based auth; set to your app URL for login to work |
 
@@ -183,6 +186,43 @@ PGID=100
   docker exec sourdough chmod -R 775 /var/www/html/backend/storage/framework/cache
   ```
   (Replace `99:100` with your PUID:PGID values)
+
+## Reverse Proxy / Cloudflare Tunnel
+
+When running behind a reverse proxy (Cloudflare Tunnel, Traefik, Nginx proxy, Caddy, etc.), you must configure two things:
+
+### 1. Set APP_URL to your public domain
+
+```env
+APP_URL=https://yourdomain.com
+FRONTEND_URL=https://yourdomain.com
+SANCTUM_STATEFUL_DOMAINS=yourdomain.com
+```
+
+**This is critical for OAuth/SSO.** The OAuth callback URL is built from `APP_URL`. If `APP_URL` is set to a private IP (e.g. `http://192.168.1.4:8080`), Google and other OAuth providers will reject the redirect URI with errors like "device_id and device_name are required for private IP".
+
+### 2. Trust proxy headers
+
+Set `TRUSTED_PROXIES` so Laravel correctly reads `X-Forwarded-For`, `X-Forwarded-Proto`, etc.:
+
+```env
+# Trust all proxies (simplest, works with Cloudflare Tunnel)
+TRUSTED_PROXIES=*
+
+# Or specify proxy IPs (more restrictive)
+TRUSTED_PROXIES=172.16.0.0/12,192.168.0.0/16
+```
+
+Without trusted proxies, Laravel may generate HTTP URLs instead of HTTPS, break signed URLs, and report incorrect client IPs.
+
+### Example: Cloudflare Tunnel
+
+```env
+APP_URL=https://myapp.example.com
+FRONTEND_URL=https://myapp.example.com
+SANCTUM_STATEFUL_DOMAINS=myapp.example.com
+TRUSTED_PROXIES=*
+```
 
 ## Security Headers
 

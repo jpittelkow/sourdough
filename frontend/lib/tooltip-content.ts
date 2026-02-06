@@ -57,7 +57,7 @@ export const TOOLTIP_CONTENT = {
     app_name:
       "The name displayed throughout the application, in emails, and in browser tabs.",
     app_url:
-      "The public URL of your application. Used for generating links in emails and notifications.",
+      "The public URL of your application, set via the APP_URL environment variable. Used for OAuth callbacks, email links, and URL generation.",
     registration_enabled:
       "Allow new users to create accounts. Disable to restrict access to invited users only.",
     maintenance_mode:
