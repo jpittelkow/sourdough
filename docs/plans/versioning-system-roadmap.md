@@ -33,6 +33,7 @@ Implement a versioning system that displays the application version in the setti
 - [x] Support semantic versioning (major.minor.patch)
 - [x] Auto-generate release notes
 - [x] Tag releases automatically
+- [x] Trigger release on version tag push (`v*` tags)
 - [ ] Optional: Auto-update CHANGELOG.md
 
 ### Version Checking (LOW Priority)
@@ -130,13 +131,21 @@ npm --prefix frontend version "$NEW_VERSION" --no-git-tag-version
 
 **.github/workflows/release.yml** (as implemented):
 
-The release workflow runs on **manual trigger only** (Actions > Release > Run workflow). It has two jobs in sequence:
+The release workflow supports two trigger methods:
 
-1. **bump-and-release**: Uses `scripts/bump-version.sh` with version type (patch/minor/major/custom) or custom version string. Updates `VERSION` and `frontend/package.json`, commits, tags with `v{version}`, pushes to origin, and creates a GitHub Release with auto-generated notes.
+**Method 1: Manual dispatch** (Actions > Release > Run workflow)
+- **bump-and-release** job: Uses `scripts/bump-version.sh` with version type (patch/minor/major/custom) or custom version string. Updates `VERSION` and `frontend/package.json`, commits, tags with `v{version}`, pushes to origin, and creates a GitHub Release with auto-generated notes.
+- **resolve-version** job: Reads version from bump-and-release outputs.
+- **release** job: Builds the Docker image and pushes to GitHub Container Registry (ghcr.io).
+- Inputs: `version_type` (patch/minor/major/custom), `custom_version` (required when type=custom).
 
-2. **release**: Depends on bump-and-release. Checks out the new tag, builds the Docker image, and pushes to GitHub Container Registry (ghcr.io) with provenance and SBOM attestation. Tags include semver (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
+**Method 2: Tag push** (push a `v*` tag to trigger automatically)
+- Push a version tag (e.g. `git tag v1.2.3 && git push --tags`) to trigger the release.
+- Skips the bump-and-release job (version already set). Extracts version from the tag name.
+- **create-release** job: Creates a GitHub Release with auto-generated notes.
+- **release** job: Builds the Docker image and pushes to GHCR.
 
-Inputs: `version_type` (patch/minor/major/custom), `custom_version` (required when type=custom). The workflow no longer uses a tag-push trigger; both jobs run in a single workflow execution so the Docker image is always built and pushed.
+Both methods produce the same output: a GitHub Release with auto-generated notes and a Docker image pushed to GHCR with semver tags (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
 
 ---
 

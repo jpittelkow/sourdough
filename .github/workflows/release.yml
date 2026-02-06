@@ -1,6 +1,9 @@
 name: Release
 
 on:
+  push:
+    tags:
+      - "v*"
   workflow_dispatch:
     inputs:
       version_type:
@@ -23,6 +26,7 @@ env:
 jobs:
   bump-and-release:
     name: Bump version and create release
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -70,9 +74,59 @@ jobs:
           tag_name: "v${{ steps.bump.outputs.version }}"
           generate_release_notes: true
 
+  # Resolve version and tag info for the Docker build job.
+  # When triggered by workflow_dispatch, reads from bump-and-release outputs.
+  # When triggered by tag push, extracts version from the git tag.
+  resolve-version:
+    name: Resolve version info
+    runs-on: ubuntu-latest
+    if: always()
+    needs: [bump-and-release]
+    timeout-minutes: 5
+
+    outputs:
+      version: ${{ steps.resolve.outputs.version }}
+      tag: ${{ steps.resolve.outputs.tag }}
+      sha: ${{ steps.resolve.outputs.sha }}
+
+    steps:
+      - name: Resolve version from trigger
+        id: resolve
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ needs.bump-and-release.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "tag=${{ needs.bump-and-release.outputs.tag }}" >> $GITHUB_OUTPUT
+            echo "sha=${{ needs.bump-and-release.outputs.sha }}" >> $GITHUB_OUTPUT
+          else
+            # Tag push: extract version from tag ref (refs/tags/v1.2.3 -> 1.2.3)
+            TAG="${GITHUB_REF#refs/tags/}"
+            VERSION="${TAG#v}"
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+            echo "tag=$TAG" >> $GITHUB_OUTPUT
+            echo "sha=$GITHUB_SHA" >> $GITHUB_OUTPUT
+          fi
+
+  # Create a GitHub Release for tag pushes (bump-and-release already does this for workflow_dispatch)
+  create-release:
+    name: Create GitHub Release (tag push)
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+
   release:
     name: Build and Push
-    needs: [bump-and-release]
+    needs: [resolve-version]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -82,7 +136,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.bump-and-release.outputs.tag }}
+          ref: ${{ needs.resolve-version.outputs.tag }}
 
       - name: Set build time
         id: build-time
@@ -122,6 +176,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
           build-args: |
-            APP_VERSION=${{ needs.bump-and-release.outputs.version }}
-            BUILD_SHA=${{ needs.bump-and-release.outputs.sha }}
+            APP_VERSION=${{ needs.resolve-version.outputs.version }}
+            BUILD_SHA=${{ needs.resolve-version.outputs.sha }}
             BUILD_TIME=${{ steps.build-time.outputs.time }}
