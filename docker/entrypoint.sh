@@ -86,10 +86,11 @@ mkdir -p ${DATA_DIR}
 chown -R www-data:www-data ${DATA_DIR}
 chmod 775 ${DATA_DIR}
 
-# Setup Meilisearch data directory
+# Setup Meilisearch data directory (data for DB, dumps and snapshots for production operations)
 echo "Setting up Meilisearch data directory..."
-mkdir -p /var/lib/meilisearch/data
+mkdir -p /var/lib/meilisearch/data /var/lib/meilisearch/dumps /var/lib/meilisearch/snapshots
 chown -R www-data:www-data /var/lib/meilisearch
+chmod -R 755 /var/lib/meilisearch
 
 # Ensure storage directories exist with proper permissions
 echo "Setting up storage directories..."
@@ -146,6 +147,18 @@ fi
 
 # Create storage link (ignore if already exists)
 php artisan storage:link >/dev/null 2>&1 || true
+
+# Fix storage ownership after artisan commands (which run as root and may create
+# root-owned files/directories in storage, e.g. cache, views, sessions)
+echo "Fixing storage permissions after setup..."
+chown -R www-data:www-data ${BACKEND_DIR}/storage
+chmod -R 775 ${BACKEND_DIR}/storage
+chown -R www-data:www-data ${BACKEND_DIR}/bootstrap/cache
+chmod -R 775 ${BACKEND_DIR}/bootstrap/cache
+
+# Internal API URL for server-side fetches (e.g. dynamic manifest route).
+# In the single-container setup Nginx listens on port 80 and proxies to Laravel.
+export INTERNAL_API_URL="${INTERNAL_API_URL:-http://127.0.0.1:80}"
 
 echo "=== Sourdough Ready ==="
 

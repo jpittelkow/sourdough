@@ -164,7 +164,7 @@ export function UploadDialog({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="h-7 w-7 shrink-0"
+                    className="h-11 w-11 shrink-0"
                     onClick={() => removeFile(i)}
                     disabled={uploading}
                   >

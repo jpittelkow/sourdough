@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import {
   Dialog,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useWizard } from "@/components/onboarding/wizard-provider";
+import { useAppConfig } from "@/lib/app-config";
 
 // Step components
 import { WelcomeStep } from "@/components/onboarding/steps/welcome-step";
@@ -53,11 +54,29 @@ export function WizardModal() {
     completeWizard,
     dismissWizard,
   } = useWizard();
+  const { features } = useAppConfig();
 
-  const totalSteps = STEPS.length;
+  const steps = useMemo(() => {
+    const twoFactorMode = features?.twoFactorMode ?? "optional";
+    const passkeyMode = features?.passkeyMode ?? "disabled";
+    const securityDisabled =
+      twoFactorMode === "disabled" && passkeyMode === "disabled";
+    if (securityDisabled) {
+      return STEPS.filter((s) => s.id !== "security");
+    }
+    return STEPS;
+  }, [features?.twoFactorMode, features?.passkeyMode]);
+
+  useEffect(() => {
+    if (currentStep >= steps.length && steps.length > 0) {
+      setCurrentStep(steps.length - 1);
+    }
+  }, [currentStep, steps.length, setCurrentStep]);
+
+  const totalSteps = steps.length;
   const isFirstStep = currentStep === 0;
   const isLastStep = currentStep === totalSteps - 1;
-  const currentStepData = STEPS[currentStep];
+  const currentStepData = steps[currentStep];
 
   const StepComponent = currentStepData?.component;
 
@@ -106,7 +125,7 @@ export function WizardModal() {
   // Progress indicators
   const progressDots = useMemo(
     () =>
-      STEPS.map((step, index) => (
+      steps.map((step, index) => (
         <button
           key={step.id}
           onClick={() => setCurrentStep(index)}
@@ -121,7 +140,7 @@ export function WizardModal() {
           aria-label={`Go to step ${index + 1}: ${step.title}`}
         />
       )),
-    [currentStep, setCurrentStep]
+    [currentStep, setCurrentStep, steps]
   );
 
   if (!showWizard) {
@@ -130,7 +149,10 @@ export function WizardModal() {
 
   return (
     <Dialog open={showWizard} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 gap-0">
+      <DialogContent className="sm:max-w-md p-0 gap-0" hideClose>
+        <DialogDescription className="sr-only">
+          Onboarding wizard: step {currentStep + 1} of {totalSteps}
+        </DialogDescription>
         {/* Header */}
         <DialogHeader className="p-4 pb-0">
           <div className="flex items-center justify-between">
@@ -150,7 +172,7 @@ export function WizardModal() {
         </DialogHeader>
 
         {/* Step Content */}
-        <div className="p-6 pt-4 min-h-[320px] flex items-center justify-center">
+        <div className="p-6 pt-4 min-h-[280px] max-h-[400px] overflow-y-auto flex items-center justify-center">
           {StepComponent && (
             <StepComponent
               onComplete={isLastStep ? handleComplete : undefined}
@@ -165,32 +187,32 @@ export function WizardModal() {
             {progressDots}
           </div>
 
-          {/* Navigation buttons */}
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handlePrevious}
-              disabled={isFirstStep}
-              className={cn(isFirstStep && "invisible")}
-            >
-              <ChevronLeft className="h-4 w-4 mr-1" />
-              Back
-            </Button>
-
-            {isFirstStep && (
-              <Button variant="ghost" size="sm" onClick={handleSkip}>
-                Skip
+          {/* Navigation buttons - hidden on last step (completion has its own CTA) */}
+          {!isLastStep && (
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handlePrevious}
+                disabled={isFirstStep}
+                className={cn(isFirstStep && "invisible")}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back
               </Button>
-            )}
 
-            {!isLastStep && (
+              {isFirstStep && (
+                <Button variant="ghost" size="sm" onClick={handleSkip}>
+                  Skip
+                </Button>
+              )}
+
               <Button size="sm" onClick={handleNext}>
                 Next
                 <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

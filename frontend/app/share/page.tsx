@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { usePageTitle } from "@/lib/use-page-title";
+import { useAppConfig } from "@/lib/app-config";
 
 /**
  * Share Target page: receives shared content when the PWA is chosen as a share target.
@@ -17,6 +18,8 @@ import { usePageTitle } from "@/lib/use-page-title";
 function SharePageContent() {
   const searchParams = useSearchParams();
   const { user, isLoading } = useAuth();
+  const { appName } = useAppConfig();
+  const displayName = appName || "this app";
 
   // Set page title with app name from config
   usePageTitle("Shared Content");
@@ -39,7 +42,7 @@ function SharePageContent() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Share2 className="h-5 w-5" />
-              Shared with Sourdough
+              Shared with {displayName}
             </CardTitle>
             <CardDescription>
               Content shared to this app is shown below. You can open the dashboard to use it.
@@ -80,7 +83,7 @@ function SharePageContent() {
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No shared content in this request. Share a link or text from another app and choose Sourdough as the target.
+                No shared content in this request. Share a link or text from another app and choose {displayName} as the target.
               </p>
             )}
 

@@ -186,7 +186,20 @@ DELETE /api/storage/files             - Delete file
 - `frontend/components/storage/upload-dialog.tsx` - Upload dialog
 - `frontend/components/storage/file-preview.tsx` - File preview component
 
+## Notes
+
+### Why Storage Doesn't Use a Custom Provider Interface
+
+Other Sourdough subsystems (notifications, LLM, backup) use a custom interface pattern (`ChannelInterface`, `LLMProviderInterface`, `DestinationInterface`) with provider classes that implement the interface. Storage does **not** follow this pattern because Laravel's Filesystem abstraction (`Storage::disk()`) already provides the same benefits:
+
+- Unified API across all providers (put, get, delete, exists, url)
+- Provider-specific configuration via `config/filesystems.php`
+- Well-tested, maintained by the Laravel team
+- S3-compatible API covers multiple providers (AWS S3, DigitalOcean Spaces, MinIO, Backblaze B2)
+
+Instead of custom provider classes, `StorageService` uses `ConfigServiceProvider` to inject database-stored credentials into Laravel's filesystem config at boot time. Adding a new storage provider means adding a new disk configuration in `filesystems.php` and a form section in the frontend — no new PHP class needed.
+
 ## Related Decisions
 
-- [ADR-007: Backup System Design](./007-backup-system-design.md) - Backup destinations use similar providers
+- [ADR-007: Backup System Design](./007-backup-system-design.md) - Backup destinations use similar providers (custom interface)
 - [ADR-014: Database Settings with Environment Fallback](./014-database-settings-env-fallback.md) - Storage settings stored in DB

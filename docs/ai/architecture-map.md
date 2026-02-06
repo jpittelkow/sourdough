@@ -8,14 +8,17 @@ How data flows through the application and where components connect.
 Browser
    │
    ▼
-Next.js (frontend, port 3000)
+Nginx (port 80, single entry point)
    │
-   ├─► Static pages/assets (served directly)
+   ├─► /* (non-API routes)
+   │         │
+   │         ▼
+   │   Next.js (frontend, port 3000)
+   │         │
+   │         ▼
+   │   HTML / static assets
    │
    └─► /api/* requests
-          │
-          ▼
-       Nginx (reverse proxy)
           │
           ▼
        PHP-FPM (Laravel, port 9000)
@@ -26,6 +29,8 @@ Next.js (frontend, port 3000)
           ▼
        JSON Response
 ```
+
+**Note:** Nginx is always the entry point. The browser never hits Next.js or PHP-FPM directly. Nginx routes based on path: `/api/*` goes to PHP-FPM, everything else goes to Next.js.
 
 ## Frontend ↔ Backend Connection Points
 
@@ -75,8 +80,7 @@ Request (prompt, context)
         │
         ├─► Mode Selection
         │   ├── single: One provider
-        │   ├── failover: Try next on failure
-        │   ├── consensus: Multiple, compare
+        │   ├── aggregation: All respond, primary synthesizes
         │   └── council: All providers "vote"
         │
         ▼
@@ -145,16 +149,16 @@ SettingController
      │         ▼
      │   settings table (group, key, value, user_id)
      │
-     └─► System Settings (admin only)
+     └─► System Settings (admin only, via SettingService)
                │
                ▼
-         system_settings table (or settings with user_id = null)
+         system_settings table (global, no user_id)
 ```
 
 **Key Files:**
 - Controller: `backend/app/Http/Controllers/Api/SettingController.php`
 - Model: `backend/app/Models/Setting.php`
-- Frontend pages: `frontend/app/(dashboard)/settings/`
+- Frontend pages: `frontend/app/(dashboard)/configuration/`
 
 ### Backup System
 
@@ -211,9 +215,10 @@ app/
 └── (dashboard)/         # Authenticated routes (layout wraps all)
     ├── layout.tsx       # Sidebar + Header + Auth check
     ├── dashboard/       # Main dashboard
-    ├── settings/        # User/app settings
-    │   └── layout.tsx   # Settings sidebar nav
-    ├── admin/           # Admin-only pages
+    ├── configuration/   # Admin configuration (grouped nav)
+    │   └── layout.tsx   # Configuration sidebar nav
+    ├── user/            # User pages (profile, security, preferences)
+    ├── notifications/   # User notifications
     └── [feature]/       # Feature pages
 ```
 

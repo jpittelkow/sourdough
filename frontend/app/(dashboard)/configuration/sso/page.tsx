@@ -27,6 +27,7 @@ import {
   SSOSetupModal,
   type SSOSetupProviderId,
 } from "@/components/admin/sso-setup-modal";
+import { HelpLink } from "@/components/help/help-link";
 import { TOOLTIP_CONTENT } from "@/lib/tooltip-content";
 
 const ssoSchema = z.object({
@@ -330,7 +331,13 @@ export default function SSOSettingsPage() {
       const response = await api.post(`/sso-settings/test/${provider}`);
       const message = response.data?.message ?? "Connection successful";
       toast.success(message);
-      await fetchSettings();
+
+      // Update form directly instead of refetching (avoids full page reload which collapses all cards)
+      const testPassedKey = `${provider}_test_passed` as keyof SSOForm;
+      const enabledKey = `${provider}_enabled` as keyof SSOForm;
+      setValue(testPassedKey, true as never, { shouldDirty: true });
+      setValue(enabledKey, true as never, { shouldDirty: true });
+      setOriginalValues((prev) => ({ ...prev, [testPassedKey]: true }));
     } catch (err: unknown) {
       const msg =
         err && typeof err === "object" && "response" in err
@@ -351,7 +358,8 @@ export default function SSOSettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">SSO settings</h1>
         <p className="text-muted-foreground mt-1">
-          Configure single sign-on providers. Credentials are stored securely and take effect immediately.
+          Configure single sign-on providers. Credentials are stored securely and take effect immediately.{" "}
+          <HelpLink articleId="sso-configuration" />
         </p>
       </div>
 

@@ -81,9 +81,14 @@ In `backend/app/Providers/ConfigServiceProvider.php`, update `injectSSOConfig()`
 $providers = ['google', 'github', 'microsoft', 'apple', 'discord', 'gitlab', 'example'];
 ```
 
-2. The loop sets **enabled** from both credentials and the explicit `{provider}_enabled` flag: `$hasCredentials && ($settings[$provider . '_enabled'] ?? true)`. Do not set enabled from credentials alone.
+2. The loop automatically handles three things for each provider in `$providers`:
+   - Injects `client_id` and `client_secret` from DB settings into `config('services.{provider}.*')`
+   - **Sets the redirect URI** from `APP_URL`: `config('services.{provider}.redirect')` is always set to `{APP_URL}/api/auth/callback/{provider}`. This is why `{PROVIDER}_REDIRECT_URI` env vars are **optional** -- the redirect URI is auto-computed.
+   - Sets `sso.providers.{provider}.enabled` from both credentials and the explicit `{provider}_enabled` flag: `$hasCredentials && ($settings[$provider . '_enabled'] ?? true)`. Do not set enabled from credentials alone.
 
-3. If the provider has custom config (e.g. OIDC with issuer_url), add a dedicated block after the loop and set `sso.providers.{provider}.enabled` as `$hasCredentials && ($settings['oidc_enabled'] ?? true)` (or the provider's enabled key).
+3. If the provider has custom config (e.g. OIDC with issuer_url), add a dedicated block after the loop and set `sso.providers.{provider}.enabled` as `$hasCredentials && ($settings['oidc_enabled'] ?? true)` (or the provider's enabled key). **You must also set the redirect URI** in the custom block: `config(['services.{provider}.redirect' => rtrim(config('app.url'), '/') . '/api/auth/callback/{provider}'])`.
+
+> **Important:** All three Socialite config keys (`client_id`, `client_secret`, `redirect`) must be injected by `ConfigServiceProvider`. If you only inject `client_id` and `client_secret` but leave `redirect` dependent on env vars, SSO will fail with `400: invalid_request` when configured via the admin UI.
 
 ## Step 3: Add to SSO Config
 
@@ -111,11 +116,11 @@ In `backend/config/services.php`, add the provider so Socialite can read credent
 'example' => [
     'client_id' => env('EXAMPLE_CLIENT_ID'),
     'client_secret' => env('EXAMPLE_CLIENT_SECRET'),
-    'redirect' => env('EXAMPLE_REDIRECT_URI'),
+    'redirect' => env('EXAMPLE_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/example'),
 ],
 ```
 
-Redirect URI is `{APP_URL}/api/auth/callback/{provider}`. Many deployments leave it to the app to build; document this callback URL in the provider's developer console and in the SSO setup modal.
+The `redirect` key defaults to `{APP_URL}/api/auth/callback/{provider}` so it works out of the box. `ConfigServiceProvider::injectSSOConfig()` overrides this at runtime to ensure consistency. The `EXAMPLE_REDIRECT_URI` env var is **optional** and only needed if you want to override the auto-computed value. Document the callback URL in the provider's developer console and in the SSO setup modal.
 
 ## Step 5: Add Socialite Driver (if custom)
 
@@ -179,7 +184,7 @@ example: (className) =>
 
 Icons use `currentColor` for fill, so they automatically follow the theme's text color. Do not use hardcoded colors in the SVG; this ensures the icon is readable in both light and dark mode.
 
-Use the same key as `config/sso.php` (e.g. `example`). The `icon` value returned by `GET /auth/sso/providers` comes from `config/sso.php`; unknown keys fall back to the `key` icon. See [Patterns: ProviderIcon](../patterns.md#providericon-pattern) and the inline comments in `provider-icons.tsx`.
+Use the same key as `config/sso.php` (e.g. `example`). The `icon` value returned by `GET /auth/sso/providers` comes from `config/sso.php`; unknown keys fall back to the `key` icon. See [Patterns: ProviderIcon](../patterns/ui-patterns.md#providericon) and the inline comments in `provider-icons.tsx`.
 
 ## Step 8: Add SSO Setup Page Form
 
@@ -221,7 +226,7 @@ In `backend/.env.example` (and root `.env.example` if present):
 # Example SSO Provider
 EXAMPLE_CLIENT_ID=
 EXAMPLE_CLIENT_SECRET=
-EXAMPLE_REDIRECT_URI=
+# EXAMPLE_REDIRECT_URI=  # Optional: auto-computed from APP_URL as {APP_URL}/api/auth/callback/example
 ```
 
 ## Checklist
@@ -229,13 +234,13 @@ EXAMPLE_REDIRECT_URI=
 ### Backend
 
 - [ ] Settings schema: `example_enabled`, `example_test_passed`, `example_client_id`, and `example_client_secret` in `sso` group (secret `encrypted => true`)
-- [ ] ConfigServiceProvider: provider included in `injectSSOConfig()` (enabled = hasCredentials && explicit `{provider}_enabled`; plus `services.{provider}.*`)
+- [ ] ConfigServiceProvider: provider included in `injectSSOConfig()` `$providers` array (injects `client_id`, `client_secret`, **and `redirect`** from `APP_URL`; sets enabled = hasCredentials && explicit `{provider}_enabled`)
 - [ ] `config/sso.php`: provider entry with name, icon, enabled, color
-- [ ] `config/services.php`: provider entry with client_id, client_secret, redirect
+- [ ] `config/services.php`: provider entry with client_id, client_secret, redirect (with `APP_URL` default)
 - [ ] SSOSettingController: validation rules for new keys (including `example_enabled`); **do not** validate `example_test_passed` from request
 - [ ] SSOSettingController test(): provider in allowed list; **credential validation** at token endpoint (invalid_client = fail, invalid_grant/invalid_request = pass); require client_secret; set `example_test_passed = true` only on success
 - [ ] If custom driver: Socialite provider package installed and registered
-- [ ] `.env.example`: EXAMPLE_CLIENT_ID, EXAMPLE_CLIENT_SECRET (and redirect if used)
+- [ ] `.env.example`: EXAMPLE_CLIENT_ID, EXAMPLE_CLIENT_SECRET (redirect URI is optional, auto-computed from APP_URL)
 
 ### Frontend
 

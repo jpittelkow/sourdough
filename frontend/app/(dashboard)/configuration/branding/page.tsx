@@ -8,6 +8,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,6 +27,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { Loader2, Upload, RotateCcw, Trash2 } from "lucide-react";
 import { ColorPicker } from "@/components/ui/color-picker";
 import { BrandingPreview } from "@/components/branding-preview";
+import { HelpLink } from "@/components/help/help-link";
 import { useAppConfig } from "@/lib/app-config";
 
 const brandingSchema = z.object({
@@ -101,8 +103,8 @@ export default function BrandingSettingsPage() {
       if (settings.favicon_url) {
         setFaviconPreview(settings.favicon_url);
       }
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load branding settings");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load branding settings"));
     } finally {
       setIsLoading(false);
     }
@@ -146,8 +148,8 @@ export default function BrandingSettingsPage() {
       // Invalidate app-config cache so logo updates immediately
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
       await fetchSettings();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update branding settings");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update branding settings"));
     } finally {
       setIsSaving(false);
     }
@@ -183,8 +185,8 @@ export default function BrandingSettingsPage() {
       toast.success("Logo uploaded successfully");
       // Invalidate app-config cache so logo updates immediately
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to upload logo");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to upload logo"));
     } finally {
       setIsUploading(false);
     }
@@ -220,18 +222,18 @@ export default function BrandingSettingsPage() {
       toast.success("Favicon uploaded successfully");
       // Invalidate app-config cache so favicon updates immediately
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to upload favicon");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to upload favicon"));
     } finally {
       setIsUploadingFavicon(false);
     }
   };
 
   const handleResetDefaults = () => {
-    setValue("primary_color", "#3b82f6");
-    setValue("secondary_color", "#6366f1");
-    setValue("logo_url", "");
-    setValue("favicon_url", "");
+    setValue("primary_color", "#3b82f6", { shouldDirty: true });
+    setValue("secondary_color", "#6366f1", { shouldDirty: true });
+    setValue("logo_url", "", { shouldDirty: true });
+    setValue("favicon_url", "", { shouldDirty: true });
     setLogoPreview(null);
     setFaviconPreview(null);
     toast.success("Reset to default values");
@@ -266,7 +268,8 @@ export default function BrandingSettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">Theme & Branding</h1>
         <p className="text-muted-foreground mt-2">
-          Customize the appearance of your application
+          Customize the appearance of your application.{" "}
+          <HelpLink articleId="branding" />
         </p>
       </div>
 

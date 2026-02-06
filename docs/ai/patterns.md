@@ -951,7 +951,7 @@ Use shared traits for consistent controller behavior. Location: `backend/app/Htt
 
 ### AdminAuthorizationTrait
 
-Prevents modifying or deleting the last admin. "Admin" means the user is in the `admin` group; "last admin" is the last user in that group. Use `ensureNotLastAdmin(User $user, string $action)` before delete/disable/demote actions on admin users.
+Prevents modifying or deleting the last admin. "Admin" means the user is in the `admin` group; "last admin" is the last user in that group. Use `ensureNotLastAdmin(User $user, string $action)` before delete/disable/demote actions on admin users. Also use it when removing a member from the admin group (e.g. `GroupController::removeMember`) or when bulk-updating user groups (e.g. `UserController::updateGroups`) so the last admin cannot be removed.
 
 ```php
 use App\Http\Traits\AdminAuthorizationTrait;
@@ -966,7 +966,7 @@ class UserController extends Controller
             return $error;
         }
         // ... prevent self-delete, then delete
-        return $this->successResponse('User deleted successfully');
+        return $this->deleteResponse('User deleted successfully');
     }
 
     public function toggleAdmin(User $user): JsonResponse
@@ -979,18 +979,23 @@ class UserController extends Controller
 }
 ```
 
-Common action verbs: `'delete'`, `'disable'`, `'remove admin status from'`. See [Add admin-protected action](recipes/add-admin-protected-action.md).
+In `GroupController::removeMember`, when the group is the admin group, call `ensureNotLastAdmin($user, 'remove from admin group')` before removing. In `UserController::updateGroups`, before syncing group IDs, if the user is in the admin group and the new list omits the admin group, call `ensureNotLastAdmin($user, 'remove from admin group')`.
+
+Common action verbs: `'delete'`, `'disable'`, `'remove admin status from'`, `'remove from admin group'`. See [Add admin-protected action](recipes/add-admin-protected-action.md).
 
 ### ApiResponseTrait
 
-Standardized JSON response helpers:
+Standardized JSON response helpers. Convention: use `message` for success/error text, `data` for payload, `meta` for pagination when applicable.
 
 | Method | Use |
 |--------|-----|
 | `successResponse($message, $data = [], $status = 200)` | Success with message and optional data |
 | `createdResponse($message, $data = [])` | 201 created |
 | `errorResponse($message, $status = 400)` | Error with message |
+| `deleteResponse($message = 'Resource deleted successfully')` | 200 with message (use for delete operations) |
 | `dataResponse($data, $status = 200)` | Raw data (e.g. paginated list) |
+
+Delete endpoints use **200 with a message body** (not 204) for consistency. Use `deleteResponse()` for delete operations.
 
 ```php
 use App\Http\Traits\ApiResponseTrait;
@@ -1009,6 +1014,12 @@ class ExampleController extends Controller
     {
         $example = Example::create($request->validated());
         return $this->createdResponse('Example created', ['example' => $example]);
+    }
+
+    public function destroy(Example $example): JsonResponse
+    {
+        $example->delete();
+        return $this->deleteResponse('Example deleted successfully');
     }
 }
 ```
@@ -1057,7 +1068,7 @@ User::create(['password' => Hash::make($validated['password'])]);
 - `Logo` - Used on auth pages, sidebar, dashboard
 - `usePageTitle` - Sets document title consistently (format: "Page Name | App Name" from config). Used by `AuthPageLayout` for auth pages, by root and share pages directly, and by `PageTitleManager` for dashboard routes.
 - `api` - API client with auth handling
-- `formatDate` - Date formatting utility
+- `formatDate`, `formatDateTime`, `formatTimestamp`, `formatBytes`, `getErrorMessage` - in `frontend/lib/utils.ts` (date/bytes formatting and API error message extraction)
 
 See [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.mdc) for full guidelines.
 
@@ -1211,6 +1222,36 @@ import { ProviderIcon } from "@/components/provider-icons";
 
 **Key file:** `frontend/components/provider-icons.tsx`
 
+### Help System Pattern
+
+The in-app help system provides searchable documentation, contextual links, and tooltips. Use it for user-facing and admin documentation.
+
+**Article structure** (`frontend/lib/help/help-content.ts`):
+- **HelpArticle**: `id`, `title`, `content` (markdown), `tags?`
+- **HelpCategory**: `slug`, `name`, `icon?`, `articles`, `adminOnly?`
+- Categories are split into `userHelpCategories` (all users) and `adminHelpCategories` (admin only)
+
+**HelpLink component** – Opens a specific article in the help modal:
+
+```tsx
+import { HelpLink } from "@/components/help/help-link";
+
+<p className="text-muted-foreground">
+  Configure this feature. <HelpLink articleId="my-article-id" />
+</p>
+```
+
+**HelpProvider** – Wraps the app and provides `openArticle(articleId)`. The help modal is opened with `?` or `Ctrl+/`. `HelpProvider` must wrap `SearchProvider` so the search modal can open help articles.
+
+**Search integration** – Help articles are indexed in `backend/config/search-pages.php` with a `help:` URL prefix (e.g. `help:welcome`). The search modal intercepts these URLs and calls `openArticle()` instead of navigating. Add one entry per article; include `admin_only: true` for admin-only articles.
+
+**When adding help content:** See [Recipe: Add help article](recipes/add-help-article.md).
+
+**Key files:**
+- `frontend/lib/help/help-content.ts` – Article definitions
+- `frontend/components/help/` – HelpLink, HelpCenterModal, HelpProvider
+- `backend/config/search-pages.php` – Search index entries for help articles
+
 ### Configuration Navigation Pattern
 
 Configuration uses **grouped, collapsible navigation** in [frontend/app/(dashboard)/configuration/layout.tsx](frontend/app/(dashboard)/configuration/layout.tsx). Items are organized into groups (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Each group is collapsible; the group containing the current page is expanded by default.
@@ -1335,7 +1376,7 @@ export default function MyForm() {
 
 **SSO Provider Enabled Toggle pattern:** Three conditions for a provider to appear on the login page: (1) **Credentials** (client_id and client_secret; for OIDC also issuer_url), (2) **Test passed** (`{provider}_test_passed` set by successful "Test connection"), (3) **Enabled** (`{provider}_enabled` is true). The admin can turn off a provider without removing credentials; changing credentials clears `test_passed` so the provider must be re-tested before it can be enabled again.
 
-**SSO Test Connection (Credential Validation) pattern:** The backend test endpoint (`POST /api/sso-settings/test/{provider}`) **validates credentials** at the provider's token endpoint; it must not pass with incorrect credentials. Implementation: POST to the provider's token endpoint with `grant_type=authorization_code`, `code=test_connection_validation`, `client_id`, `client_secret`, and `redirect_uri`. Interpret the response: **invalid_client** or HTTP 401 → credentials invalid (do not set `test_passed`); **invalid_grant**, **invalid_request**, or **bad_verification_code** (GitHub) → credentials accepted (set `test_passed = true`). Require client_secret for the test. See `SSOSettingController::test()` and `validateCredentialsAtTokenEndpoint()` in `backend/app/Http/Controllers/Api/SSOSettingController.php`. When adding a new provider, implement token-endpoint credential validation (discovery for OIDC/Google/Microsoft; known token URL for GitHub/Discord/GitLab; or custom logic for providers like Apple).
+**SSO Test Connection (Credential Validation) pattern:** The backend test endpoint (`POST /api/sso-settings/test/{provider}`) **validates credentials** at the provider's token endpoint; it must not pass with incorrect credentials. Implementation: POST to the provider's token endpoint with `grant_type=authorization_code`, `code=test_connection_validation`, `client_id`, `client_secret`, and `redirect_uri`. Interpret the response: **invalid_client** or HTTP 401 → credentials invalid (do not set `test_passed`); **invalid_grant**, **invalid_request**, or **bad_verification_code** (GitHub) → credentials accepted (set `test_passed = true`). Require client_secret for the test. **Frontend after success:** Update the form directly (`setValue(testPassedKey, true)` and `setValue(enabledKey, true, { shouldDirty: true })`) instead of calling `fetchSettings()`. This avoids a full page reload that collapses all `CollapsibleCard` components and hides the newly-appeared toggle. See `SSOSettingController::test()` and `validateCredentialsAtTokenEndpoint()` in `backend/app/Http/Controllers/Api/SSOSettingController.php`. When adding a new provider, implement token-endpoint credential validation (discovery for OIDC/Google/Microsoft; known token URL for GitHub/Discord/GitLab; or custom logic for providers like Apple).
 
 **Key files:**
 - Icons: `frontend/components/provider-icons.tsx` (single source for SSO, LLM, backup icons)
@@ -2075,9 +2116,8 @@ export class ErrorBoundary extends Component<Props, State> {
 
 | Code | Meaning | When to Use |
 |------|---------|-------------|
-| 200 | OK | Successful GET, PUT, DELETE |
+| 200 | OK | Successful GET, PUT; DELETE (with message body via `deleteResponse()`) |
 | 201 | Created | Successful POST that creates a resource |
-| 204 | No Content | Successful DELETE with no response body |
 | 400 | Bad Request | Malformed request (invalid JSON, etc.) |
 | 401 | Unauthorized | Not authenticated (missing/invalid session) |
 | 403 | Forbidden | Authenticated but not allowed |

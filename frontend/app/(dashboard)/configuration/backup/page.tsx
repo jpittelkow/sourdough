@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { formatBytes, formatDateTime, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,6 +33,7 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { HelpLink } from "@/components/help/help-link";
 import { FormField } from "@/components/ui/form-field";
 import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
 import { SaveButton } from "@/components/ui/save-button";
@@ -195,8 +197,8 @@ export default function BackupPage() {
       await api.post("/backup/create");
       toast.success("Backup created successfully");
       fetchBackups();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create backup");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to create backup"));
     } finally {
       setIsCreating(false);
     }
@@ -216,8 +218,8 @@ export default function BackupPage() {
       link.click();
       link.parentNode?.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to download backup");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to download backup"));
     }
   };
 
@@ -234,8 +236,8 @@ export default function BackupPage() {
       toast.success("Backup restored successfully. The application will restart.");
       setRestoreTarget(null);
       setRestoreConfirmation("");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to restore backup");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to restore backup"));
     } finally {
       setIsRestoring(false);
     }
@@ -247,8 +249,8 @@ export default function BackupPage() {
       toast.success("Backup deleted");
       setBackups((prev) => prev.filter((b) => b.filename !== filename));
       setDeleteTarget(null);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete backup");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to delete backup"));
     }
   };
 
@@ -333,24 +335,13 @@ export default function BackupPage() {
     }
   };
 
-  const formatBytes = (bytes: number) => {
-    if (bytes === 0) return "0 Bytes";
-    const k = 1024;
-    const sizes = ["Bytes", "KB", "MB", "GB"];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleString();
-  };
-
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Backup & Restore</h1>
         <p className="text-muted-foreground">
-          Manage system backups and restore points.
+          Manage system backups and restore points.{" "}
+          <HelpLink articleId="backup-settings" />
         </p>
       </div>
 
@@ -409,8 +400,8 @@ export default function BackupPage() {
                       });
                       toast.success("Backup uploaded successfully");
                       fetchBackups();
-                    } catch (error: any) {
-                      toast.error(error.message || "Failed to upload backup");
+                    } catch (error: unknown) {
+                      toast.error(getErrorMessage(error, "Failed to upload backup"));
                     }
                   }}
                 />
@@ -472,7 +463,7 @@ export default function BackupPage() {
                         </span>
                         <span className="flex items-center gap-1">
                           <Clock className="h-3 w-3" />
-                          {formatDate(backup.created_at)}
+                          {formatDateTime(backup.created_at)}
                         </span>
                       </div>
                     </div>
@@ -578,7 +569,7 @@ export default function BackupPage() {
                             <strong>{backup.filename}</strong>
                           </p>
                           <p className="text-sm text-muted-foreground">
-                            {formatBytes(backup.size)} • {formatDate(backup.created_at)}
+                            {formatBytes(backup.size)} • {formatDateTime(backup.created_at)}
                           </p>
                         </div>
                         <DialogFooter>
@@ -641,7 +632,7 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable retention policy"
                     checked={watch("retention_enabled")}
-                    onCheckedChange={(v) => setValue("retention_enabled", v)}
+                    onCheckedChange={(v) => setValue("retention_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="retention_days" label="Retention (days)" error={errors.retention_days?.message}>
                     <Input type="number" {...register("retention_days")} min={1} max={365} />
@@ -668,10 +659,10 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable scheduled backups"
                     checked={watch("schedule_enabled")}
-                    onCheckedChange={(v) => setValue("schedule_enabled", v)}
+                    onCheckedChange={(v) => setValue("schedule_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="schedule_frequency" label="Frequency" error={errors.schedule_frequency?.message}>
-                    <Select value={watch("schedule_frequency")} onValueChange={(v) => setValue("schedule_frequency", v as BackupSettingsForm["schedule_frequency"])}>
+                    <Select value={watch("schedule_frequency")} onValueChange={(v) => setValue("schedule_frequency", v as BackupSettingsForm["schedule_frequency"], { shouldDirty: true })}>
                       <SelectTrigger><SelectValue /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="daily">Daily</SelectItem>
@@ -710,7 +701,7 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable S3 destination"
                     checked={watch("s3_enabled")}
-                    onCheckedChange={(v) => setValue("s3_enabled", v)}
+                    onCheckedChange={(v) => setValue("s3_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="s3_bucket" label="Bucket">
                     <Input {...register("s3_bucket")} placeholder="my-bucket" />
@@ -757,7 +748,7 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable SFTP destination"
                     checked={watch("sftp_enabled")}
-                    onCheckedChange={(v) => setValue("sftp_enabled", v)}
+                    onCheckedChange={(v) => setValue("sftp_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="sftp_host" label="Host">
                     <Input {...register("sftp_host")} placeholder="sftp.example.com" />
@@ -801,7 +792,7 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable Google Drive destination"
                     checked={watch("gdrive_enabled")}
-                    onCheckedChange={(v) => setValue("gdrive_enabled", v)}
+                    onCheckedChange={(v) => setValue("gdrive_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="gdrive_client_id" label="Client ID">
                     <Input {...register("gdrive_client_id")} />
@@ -840,7 +831,7 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Enable encryption"
                     checked={watch("encryption_enabled")}
-                    onCheckedChange={(v) => setValue("encryption_enabled", v)}
+                    onCheckedChange={(v) => setValue("encryption_enabled", v, { shouldDirty: true })}
                   />
                   <FormField id="encryption_password" label="Encryption password">
                     <Input type="password" autoComplete="off" {...register("encryption_password")} />
@@ -861,12 +852,12 @@ export default function BackupPage() {
                   <SettingsSwitchRow
                     label="Notify on success"
                     checked={watch("notify_success")}
-                    onCheckedChange={(v) => setValue("notify_success", v)}
+                    onCheckedChange={(v) => setValue("notify_success", v, { shouldDirty: true })}
                   />
                   <SettingsSwitchRow
                     label="Notify on failure"
                     checked={watch("notify_failure")}
-                    onCheckedChange={(v) => setValue("notify_failure", v)}
+                    onCheckedChange={(v) => setValue("notify_failure", v, { shouldDirty: true })}
                   />
                 </CardContent>
               </Card>

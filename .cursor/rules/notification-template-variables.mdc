@@ -33,4 +33,4 @@ When adding or changing notification template types or variables, keep the admin
 
 - [Recipe: Add Notification Template](docs/ai/recipes/add-notification-template.md) — Step 5 (variable descriptions), Step 6 (sample variables).
 - [Recipe: Keep Notification Template Variables Reference Up to Date](docs/ai/recipes/keep-notification-template-variables-up-to-date.md).
-- [Patterns: Notification Template Admin UI](docs/ai/patterns.md#notification-template-admin-ui-pattern).
+- [Patterns: Notification Template Admin UI](docs/ai/patterns/notification-template-service.md).

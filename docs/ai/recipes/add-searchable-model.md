@@ -21,7 +21,7 @@ SearchAdminController → GET /admin/search/stats, POST /admin/search/reindex
 | `backend/app/Console/Commands/SearchReindexCommand.php` | Modify | Add model to `$searchableModels` |
 | `backend/app/Services/Search/SearchService.php` | Modify | Add type handling in globalSearch(), transform method (with XSS-safe escaping), getIndexStats() |
 | `backend/config/scout.php` | Modify | Optional: Meilisearch index settings (filterable/sortable) |
-| `backend/routes/api.php` | Modify | If the new type returns user/PHI data: add `log.access:User` (or appropriate) to search/suggestions routes (see [Logging Compliance](../../../.cursor/rules/logging-compliance.mdc)) |
+| `backend/routes/api.php` | Modify | If the new type returns user/PHI data: add `log.access:User` (or appropriate) to search/suggestions routes (see [Logging Guide](../../logging.md)) |
 | `frontend/components/search/search-result-icon.tsx` | Modify | Add icon for new result type |
 | `frontend/app/(dashboard)/configuration/search/page.tsx` | Modify | No change if stats are driven by SearchService (auto) |
 
@@ -220,7 +220,7 @@ Or use **Configuration > Search** in the admin UI and click **Reindex** for the 
 ## Compliance
 
 - **XSS:** All `title` and `subtitle` (and any user-provided text in results) must be escaped with `htmlspecialchars(..., ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')` before returning from the API. Use `highlightMatch()` for highlight text (it escapes before wrapping the query in `<mark>`). The frontend renders highlights with `dangerouslySetInnerHTML`.
-- **Access logging (HIPAA):** If the new searchable type is user/PHI data, ensure `GET /api/search` and `GET /api/search/suggestions` use `log.access:User` (or the appropriate resource type) middleware. See [Logging Compliance](../../../.cursor/rules/logging-compliance.mdc) and [Recipe: Add access logging](add-access-logging.md).
+- **Access logging (HIPAA):** If the new searchable type is user/PHI data, ensure `GET /api/search` and `GET /api/search/suggestions` use `log.access:User` (or the appropriate resource type) middleware. See [Logging Guide](../../logging.md) and [Recipe: Add access logging](add-access-logging.md).
 
 ## Example: UserGroup (Admin-Only)
 
@@ -236,7 +236,7 @@ See `backend/app/Models/UserGroup.php` and `SearchService::searchUserGroups()` f
 
 ## Related Documentation
 
-- [SearchService Pattern](../patterns.md#searchservice-pattern)
+- [SearchService Pattern](../patterns/search-service.md)
 - [Add Searchable Page](add-searchable-page.md) — For static navigation pages (not Eloquent models)
 - [Meilisearch Integration Roadmap](../../plans/meilisearch-integration-roadmap.md)
 - [Laravel Scout](https://laravel.com/docs/scout)

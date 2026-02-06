@@ -14,7 +14,7 @@ Before writing any code, search the codebase:
 
 **Never duplicate logic across pages.** If functionality exists, use it. If it should exist, create it as a global component.
 
-See: [Cursor rule: global-components.mdc](../../.cursor/rules/global-components.mdc)
+See: [Global Components Pattern](patterns/components.md)
 
 ## Frontend UI Work
 
@@ -338,6 +338,7 @@ frontend/app/(dashboard)/configuration/storage/page.tsx        # Storage setting
 **Also useful:**
 ```
 backend/app/Providers/AppServiceProvider.php  # GCS/Azure Storage::extend() when packages installed
+backend/app/Console/Commands/StorageAlertCommand.php  # storage:check-alerts (uses SettingService for storage alert settings)
 frontend/components/provider-icons.tsx        # Storage provider icons (s3, gdrive, azure, do_spaces, minio, b2)
 docs/plans/storage-settings-roadmap.md       # Phases 1–2 done; Phases 3–4 (file manager, analytics) planned
 ```
@@ -367,11 +368,33 @@ frontend/app/(dashboard)/configuration/search/page.tsx
 frontend/components/search/search-result-icon.tsx
 ```
 
-**Compliance:** Search and suggestions endpoints return user data; they use `log.access:User` middleware. Transform methods must escape title/subtitle (XSS). See [Patterns: SearchService](patterns.md#searchservice-pattern) and [Recipe: Add searchable model](recipes/add-searchable-model.md).
+**Compliance:** Search and suggestions endpoints return user data; they use `log.access:User` middleware. Transform methods must escape title/subtitle (XSS). See [Patterns: SearchService](patterns/search-service.md) and [Recipe: Add searchable model](recipes/add-searchable-model.md).
 
 **Recipes:**
 - [Add searchable model](recipes/add-searchable-model.md)
 - [Add searchable page](recipes/add-searchable-page.md)
+
+## Help / Documentation Work
+
+**Read first:**
+```
+frontend/lib/help/help-content.ts          # Article definitions (categories, articles)
+frontend/components/help/                  # HelpLink, HelpCenterModal, HelpProvider
+frontend/lib/tooltip-content.ts            # Field-level tooltip content
+backend/config/search-pages.php            # Search index (help: URL entries)
+```
+
+**Also useful:**
+```
+frontend/components/ui/help-tooltip.tsx    # HelpTooltip for FormField
+frontend/components/search/search-modal.tsx  # Intercepts help: URLs
+frontend/components/app-shell.tsx          # HelpProvider nesting (must wrap SearchProvider)
+```
+
+**Recipe:**
+- [Add help article](recipes/add-help-article.md)
+
+**Pattern:** [Help System](patterns/ui-patterns.md#help-system)
 
 ## Dashboard/Widget Work
 
@@ -399,7 +422,7 @@ frontend/lib/use-permission.ts                            # Permission-based vis
 
 **Read first:**
 ```
-docs/ai/patterns.md                    # AuditService Pattern section
+docs/ai/patterns/audit-service.md      # AuditService Pattern
 backend/app/Services/AuditService.php  # Core audit service
 backend/app/Http/Traits/AuditLogging.php
 backend/app/Models/AuditLog.php
@@ -587,14 +610,17 @@ frontend/lib/request-queue.ts                      # Offline request queue and b
 ```
 frontend/lib/service-worker.ts                    # SW registration
 frontend/lib/web-push.ts                          # Push subscription
-frontend/components/service-worker-setup.tsx      # SW registration in app
+frontend/components/service-worker-setup.tsx      # SW registration + NAVIGATE listener
 frontend/components/app-shell.tsx                 # InstallPrompt integration
+frontend/components/offline-indicator.tsx         # Offline banner (safe-area-top)
 frontend/app/(dashboard)/user/preferences/page.tsx  # Install App section
 frontend/app/share/page.tsx                       # Share Target handler
-scripts/generate-pwa-icons.mjs                    # Icon generation
+frontend/app/globals.css                          # PWA standalone mode, safe-area CSS
+frontend/public/workbox/                          # Local Workbox 7.3.0 modules
+scripts/generate-pwa-icons.mjs                    # Icon generation (icons, apple-icon, favicon)
 ```
 
-**Pattern:** [PWA Install Prompt](patterns.md#pwa-install-prompt-pattern)
+**Pattern:** [PWA Install Prompt](patterns/ui-patterns.md#pwa-install-prompt)
 
 **Recipes:**
 - [Add PWA install prompt](recipes/add-pwa-install-prompt.md)
@@ -618,7 +644,7 @@ frontend/tailwind.config.ts             # Tailwind breakpoint configuration
 frontend/app/globals.css                # Global responsive styles
 ```
 
-**Cursor rule:** `.cursor/rules/responsive-mobile-first.mdc`
+**Pattern:** [Responsive Design](patterns/responsive.md)
 **Recipe:** `docs/ai/recipes/make-component-responsive.md`
 
 ## Webhooks Work
@@ -633,11 +659,11 @@ backend/routes/api.php                    # webhooks routes (can:settings.view/e
 
 **Also useful:**
 ```
-frontend/app/(dashboard)/configuration/webhooks/page.tsx  # Webhook management UI (if exists)
-backend/app/Services/WebhookService.php   # Webhook delivery service (if exists)
+frontend/app/(dashboard)/configuration/api/page.tsx  # Webhooks managed in API & Webhooks page
+backend/app/Services/WebhookService.php              # Webhook delivery service (if exists)
 ```
 
-Webhooks allow external systems to receive notifications when events occur. Endpoints: list, create, update, delete, test, view deliveries.
+Webhooks allow external systems to receive notifications when events occur. Webhooks are managed in **Configuration > API** alongside API tokens. Endpoints: list, create, update, delete, test, view deliveries.
 
 ## API Tokens Work
 
@@ -649,10 +675,10 @@ backend/routes/api.php                    # api-tokens routes (authenticated)
 
 **Also useful:**
 ```
-frontend/app/(dashboard)/user/profile/page.tsx  # API tokens section in profile
+frontend/app/(dashboard)/configuration/api/page.tsx  # API tokens + webhooks page (Configuration > API)
 ```
 
-API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in `PersonalAccessToken` model). Users can create, list, and revoke their own tokens.
+API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in `PersonalAccessToken` model). Users can create, list, and revoke their own tokens. Tokens are managed on the **Configuration > API** page (not user profile). This page has mixed permissions: the tokens section is visible to all authenticated users; the webhooks section is admin-only.
 
 ## Adding a New Feature (Full Stack)
 
@@ -662,5 +688,5 @@ API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in
 3. Relevant ADR file - Understand design decisions
 4. `backend/routes/api.php` - See route patterns
 5. Similar existing feature - Copy patterns
-6. `docs/ai/patterns.md` - Code style reference
+6. `docs/ai/patterns/README.md` - Code style reference
 7. Relevant recipe in `docs/ai/recipes/` - Step-by-step guide

@@ -19,10 +19,15 @@ trait HasGroups
 
     /**
      * Check if user is in a group (by slug or UserGroup instance).
+     * Uses loaded relation when available to avoid N+1 queries.
      */
     public function inGroup(string|UserGroup $group): bool
     {
         $slug = $group instanceof UserGroup ? $group->slug : $group;
+
+        if (array_key_exists('groups', $this->relations) && $this->relationLoaded('groups')) {
+            return $this->groups->contains('slug', $slug);
+        }
 
         return $this->groups()->where('slug', $slug)->exists();
     }

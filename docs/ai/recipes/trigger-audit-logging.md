@@ -126,6 +126,6 @@ Pass as last argument: `$this->auditService->log(..., 'warning')` or use `AuditL
 
 ## Related Documentation
 
-- [AuditService Pattern](../patterns.md#auditservice-pattern)
+- [AuditService Pattern](../patterns/audit-service.md)
 - [Recipe: Add auditable action](add-auditable-action.md)
 - [Audit Logs Implementation Plan](../../plans/audit-logs-implementation-plan.md)

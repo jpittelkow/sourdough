@@ -13,7 +13,7 @@ Implement a custom install prompt for a Progressive Web App: capture `beforeinst
 Read these first:
 
 - [PWA roadmap](../../plans/pwa-roadmap.md) Phase 4
-- [Pattern: PWA Install Prompt](../patterns.md#pwa-install-prompt-pattern)
+- [Pattern: PWA Install Prompt](../patterns/ui-patterns.md)
 - `frontend/lib/use-install-prompt.ts`
 - `frontend/components/install-prompt.tsx`
 
@@ -89,5 +89,5 @@ return <p>Install is available in supported browsers via the browser menu.</p>;
 ## References
 
 - [PWA roadmap Phase 4](../../plans/pwa-roadmap.md#phase-4-install-experience--complete)
-- [Pattern: PWA Install Prompt](../patterns.md#pwa-install-prompt-pattern)
+- [Pattern: PWA Install Prompt](../patterns/ui-patterns.md)
 - [Context loading: PWA Work](../context-loading.md#pwa-work)

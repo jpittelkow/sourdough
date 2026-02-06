@@ -126,23 +126,27 @@ In-app documentation accessible from anywhere in the application.
 - [x] **Profile & Account** - Managing your profile and account settings
 - [x] **Security** - Password, 2FA, and account security
 - [x] **Notifications** - Understanding and configuring notifications
-- [ ] **Theme & Appearance** - Customizing the look and feel
+- [x] **Theme & Appearance** - Customizing the look and feel
 
 ### Task 3.4: Admin Documentation Articles
 - [x] **System Settings** - Configuring application-wide settings (admin overview)
-- [ ] **Branding** - Customizing logo, colors, and branding
-- [ ] **Email Configuration** - Setting up email delivery
-- [ ] **Email Templates** - Customizing email templates
-- [ ] **SSO Configuration** - Setting up single sign-on providers
-- [ ] **AI/LLM Settings** - Configuring AI providers
+- [x] **Branding** - Customizing logo, colors, and branding
+- [x] **Email Configuration** - Setting up email delivery
+- [x] **Email Templates** - Customizing email templates
+- [x] **SSO Configuration** - Setting up single sign-on providers
+- [x] **AI/LLM Settings** - Configuring AI providers
 - [x] **User Management** - Managing users, roles, and permissions
 - [x] **Backup & Restore** - Data backup and recovery
 - [x] **Search Configuration** - Managing search indexes
 
 ### Task 3.5: Contextual Help Links
 - [x] Add "Learn more" links on each settings page to relevant help article
-- [ ] Add help links in error messages where appropriate
-- [ ] Add help links in empty states
+- [ ] Add help links in error messages where appropriate (optional)
+- [ ] Add help links in empty states (optional)
+
+### Task 3.6: Help in Global Search
+- [x] Add help articles to Cmd+K search (search-pages.php with help: URL prefix)
+- [x] Intercept help: URLs in search modal to open help center
 
 ---
 

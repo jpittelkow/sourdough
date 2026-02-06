@@ -323,7 +323,7 @@ POST   /api/email-templates/{key}/test Send test email (body: to?)
 POST   /api/email-templates/{key}/reset Reset to default (system templates only)
 ```
 
-See [ADR-016](adr/016-email-template-system.md), [Patterns](ai/patterns.md#emailtemplateservice-pattern).
+See [ADR-016](adr/016-email-template-system.md), [Patterns](ai/patterns/email-template-service.md).
 
 ### Notification Templates (can:settings.view/edit)
 
@@ -335,7 +335,7 @@ POST   /api/notification-templates/{id}/preview Preview rendered (body: variable
 POST   /api/notification-templates/{id}/reset Reset to default (system templates only)
 ```
 
-See [ADR-017](adr/017-notification-template-system.md), [Patterns](ai/patterns.md#notificationtemplateservice-pattern).
+See [ADR-017](adr/017-notification-template-system.md), [Patterns](ai/patterns/notification-template-service.md).
 
 ---
 

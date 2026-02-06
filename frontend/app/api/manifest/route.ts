@@ -1,19 +1,40 @@
 import { NextResponse } from 'next/server';
+import { headers } from 'next/headers';
 
 /**
  * Dynamic manifest.json endpoint that uses branding settings from the backend.
  * This allows PWA icons to use uploaded favicon/logo instead of static files.
  * 
  * Route is at /api/manifest - Next.js API routes take precedence over rewrites.
+ * 
+ * Server-side fetch() requires absolute URLs. We reconstruct the origin from
+ * the incoming request headers, falling back to INTERNAL_API_URL (defaults to
+ * http://127.0.0.1:80 in the single-container Docker setup).
  */
+
+function getApiBase(h: Headers): string {
+  // 1. Try NEXT_PUBLIC_API_URL (set at build time or runtime)
+  const publicUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (publicUrl) return `${publicUrl}/api`;
+
+  // 2. Reconstruct from request headers (works in both dev and prod)
+  const host = h.get('host');
+  if (host) {
+    const proto = (h.get('x-forwarded-proto') || 'http').split(',')[0].trim();
+    return `${proto}://${host}/api`;
+  }
+
+  // 3. Fallback: runtime env var for internal container communication
+  const internalUrl = process.env.INTERNAL_API_URL || 'http://127.0.0.1:80';
+  return `${internalUrl}/api`;
+}
+
 export async function GET() {
   try {
+    const h = await headers();
+    const apiPath = getApiBase(h);
+
     // Fetch branding settings from backend
-    // In development, API is proxied via next.config.js rewrites
-    // In production, use NEXT_PUBLIC_API_URL if set, otherwise relative path
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || '';
-    const apiPath = baseUrl ? `${baseUrl}/api` : '/api';
-    
     const brandingResponse = await fetch(`${apiPath}/branding`, {
       cache: 'no-store', // Always fetch fresh branding settings
     });
@@ -22,13 +43,12 @@ export async function GET() {
     let appName = 'Sourdough';
     let shortName = 'SD';
     let themeColor = '#3b82f6';
-    let backgroundColor = '#ffffff';
+    const backgroundColor = '#ffffff'; // Always white for PWA splash screen
 
     if (brandingResponse.ok) {
       const branding = await brandingResponse.json();
       faviconUrl = branding.settings?.favicon_url || null;
       themeColor = branding.settings?.primary_color || themeColor;
-      backgroundColor = '#ffffff'; // Keep white background for PWA
     }
 
     // Fetch system settings for app name
@@ -44,19 +64,27 @@ export async function GET() {
     }
 
     // Build icons array - use uploaded favicon if available, otherwise full icon set from /icons/
+    // Split purpose into separate entries so browsers can choose the right variant:
+    //   "any" = standard display; "maskable" = adaptive icon (Android clips outer ~10%)
     const iconSizes = [48, 72, 96, 128, 144, 152, 192, 384, 512];
     const icons = faviconUrl
       ? [
-          { src: faviconUrl, sizes: '192x192', type: 'image/png', purpose: 'any maskable' as const },
-          { src: faviconUrl, sizes: '512x512', type: 'image/png', purpose: 'any maskable' as const },
+          { src: faviconUrl, sizes: '192x192', type: 'image/png', purpose: 'any' as const },
+          { src: faviconUrl, sizes: '192x192', type: 'image/png', purpose: 'maskable' as const },
+          { src: faviconUrl, sizes: '512x512', type: 'image/png', purpose: 'any' as const },
+          { src: faviconUrl, sizes: '512x512', type: 'image/png', purpose: 'maskable' as const },
         ]
       : [
-          ...iconSizes.map((s) => ({
-            src: `/icons/icon-${s}.png`,
-            sizes: `${s}x${s}`,
-            type: 'image/png' as const,
-            ...(s === 192 || s === 512 ? { purpose: 'any maskable' as const } : {}),
-          })),
+          ...iconSizes.flatMap((s) => {
+            const base = { src: `/icons/icon-${s}.png`, sizes: `${s}x${s}`, type: 'image/png' as const };
+            if (s === 192 || s === 512) {
+              return [
+                { ...base, purpose: 'any' as const },
+                { ...base, purpose: 'maskable' as const },
+              ];
+            }
+            return [base];
+          }),
         ];
 
     const manifest = {
@@ -94,8 +122,10 @@ export async function GET() {
       short_name: 'SD',
       description: 'Starter Application Framework for AI Development',
       icons: [
-        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any maskable' },
-        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any maskable' },
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'maskable' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
       ],
       theme_color: '#3b82f6',
       background_color: '#ffffff',

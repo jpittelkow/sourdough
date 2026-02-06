@@ -10,7 +10,7 @@ docker-compose up -d
 # Access at http://localhost:8080
 ```
 
-See [Local Docker Development Rule](../.cursor/rules/local-docker-development.mdc) for complete commands and troubleshooting.
+See [Key Commands](#key-commands) below for complete commands and troubleshooting.
 
 ## Key Commands
 
@@ -21,6 +21,22 @@ See [Local Docker Development Rule](../.cursor/rules/local-docker-development.md
 | `docker-compose up -d --build` | Rebuild and start |
 | `docker-compose logs -f` | View logs |
 | `docker-compose exec app bash` | Shell access |
+
+## Production Images (GHCR)
+
+Release builds are published to GitHub Container Registry when the [Release workflow](../.github/workflows/release.yml) runs (Actions > Release > Run workflow). Images are tagged with semver (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and commit SHA. Pull with `docker pull ghcr.io/owner/repo:1.2.3` or `:latest` for the newest release.
+
+## Resource Requirements
+
+| Resource | Minimum | Recommended | Notes |
+|----------|---------|-------------|-------|
+| RAM | 1 GB | 2 GB+ | Meilisearch + PHP-FPM + Node.js all share memory |
+| CPU | 1 core | 2+ cores | Concurrent PHP and Node.js processes |
+| Disk | 2 GB | 5 GB+ | Depends on uploaded files and backup retention |
+
+**Meilisearch memory:** Grows with index size. For small deployments (< 10k searchable items), the embedded Meilisearch within the container works well. For large datasets, consider running Meilisearch externally by setting `MEILISEARCH_HOST` to the external URL and disabling the embedded instance.
+
+**When to externalize services:** If memory usage exceeds 2 GB or you need to scale services independently, consider running Meilisearch and/or the queue worker as separate containers. Set `MEILISEARCH_HOST` to point to the external instance.
 
 ## Configuration Files
 
@@ -74,7 +90,7 @@ If you run `npm run build` or `npm install` inside the container (e.g. `docker-c
 docker-compose exec app chown -R www-data:www-data /var/www/html/frontend/.next
 ```
 
-See [Local Docker Development](../.cursor/rules/local-docker-development.mdc) for full troubleshooting.
+See the troubleshooting sections below for full troubleshooting.
 
 ## Environment Variables
 
@@ -148,8 +164,8 @@ PGID=100
 - Verify PUID/PGID match host directory ownership
 
 **Meilisearch "Permission denied" errors:**
-- This was a known issue caused by Supervisor's `user=` directive not setting HOME properly
-- Fixed in the supervisor config by using `su` to properly set up the user environment
+- **Most common cause:** Meilisearch tries to create `dumps/` and `snapshots/` directories in its working directory on startup. Without an explicit working directory, Supervisor defaults to `/`, and writing `/dumps/` as www-data is denied. Fixed by setting `directory=/var/lib/meilisearch` and explicit `--dump-dir`/`--snapshot-dir` flags in the supervisor config.
+- **Earlier fix:** Supervisor's `user=` directive doesn't set HOME properly; fixed by using `su` to set `HOME=/var/lib/meilisearch`.
 - If you're running an older image, rebuild: `docker-compose up -d --build`
 - For NAS volume permission issues: `chmod -R 775 /path/to/meilisearch && chown -R PUID:PGID /path/to/meilisearch`
 
@@ -157,6 +173,16 @@ PGID=100
 - This means `DB_DATABASE` isn't set - Laravel is using the default path
 - Add `DB_DATABASE=/var/www/html/data/database.sqlite` to environment variables
 - Restart the container
+
+**Cache "No such file or directory" errors (e.g. `file_put_contents(...cache/data/...): Failed to open stream`):**
+- This happens when the file cache directory has incorrect ownership - the entrypoint runs artisan commands as root which can create root-owned files before PHP-FPM (www-data) needs to write there
+- Fixed in v0.1.0+: the entrypoint now runs a second `chown`/`chmod` pass after all artisan commands
+- For older images, fix manually:
+  ```bash
+  docker exec sourdough chown -R 99:100 /var/www/html/backend/storage/framework/cache
+  docker exec sourdough chmod -R 775 /var/www/html/backend/storage/framework/cache
+  ```
+  (Replace `99:100` with your PUID:PGID values)
 
 ## Security Headers
 

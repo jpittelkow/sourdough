@@ -9,6 +9,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { useAppConfig } from "@/lib/app-config";
+import { getErrorMessage } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
@@ -63,8 +64,8 @@ export default function LoginPage() {
 
       toast.success("Welcome back!");
       router.push("/dashboard");
-    } catch (error: any) {
-      toast.error(error.message || "Login failed");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Login failed"));
     } finally {
       setIsLoading(false);
     }

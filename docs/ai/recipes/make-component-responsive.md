@@ -410,6 +410,6 @@ Before completing responsive work:
 ## Related Documentation
 
 - [ADR-013: Responsive Mobile-First Design](../../adr/013-responsive-mobile-first-design.md)
-- [Cursor Rule: responsive-mobile-first.mdc](../../../.cursor/rules/responsive-mobile-first.mdc)
+- [Responsive Design Pattern](../patterns/responsive.md)
 - [Mobile Responsiveness Roadmap](../../plans/mobile-responsive-roadmap.md)
 - `frontend/lib/use-mobile.ts` - Mobile detection hook

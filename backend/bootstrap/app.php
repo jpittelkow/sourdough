@@ -26,6 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
             'log.access' => \App\Http\Middleware\LogResourceAccess::class,
         ]);
 
+        // Exclude client error reporting from CSRF (rate-limited, no auth, logging only)
+        $middleware->validateCsrfTokens(except: [
+            'api/client-errors',
+        ]);
+
         // Enable stateful API authentication with session support
         $middleware->statefulApi();
         

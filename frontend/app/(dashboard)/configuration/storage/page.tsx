@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Pie, PieChart, Cell } from "recharts";
 import { api } from "@/lib/api";
 import { useAuth, isAdminUser } from "@/lib/auth";
+import { formatBytes, getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -51,6 +52,7 @@ import {
 } from "@/components/ui/dialog";
 import { Loader2, FolderOpen, Globe, Archive, Database, Users, FileText, AlertTriangle, CheckCircle2, XCircle, BarChart3, Bell, Trash2 } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icons";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 
 const DRIVERS = ["local", "s3", "gcs", "azure", "do_spaces", "minio", "b2"] as const;
 
@@ -152,17 +154,6 @@ const CHART_COLORS = [
   "hsl(27 96% 61%)",
   "hsl(199 89% 48%)",
 ];
-
-function formatBytes(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let i = 0;
-  let v = bytes;
-  while (v >= 1024 && i < units.length - 1) {
-    v /= 1024;
-    i++;
-  }
-  return `${v.toFixed(2)} ${units[i]}`;
-}
 
 function StorageByTypeChart({ byType }: { byType: Record<string, number> }) {
   const entries = Object.entries(byType)
@@ -294,8 +285,8 @@ export default function StorageSettingsPage() {
           setValue(key as any, settings[key] || "");
         }
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load storage settings");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load storage settings"));
     } finally {
       setIsLoading(false);
     }
@@ -306,7 +297,7 @@ export default function StorageSettingsPage() {
     try {
       const response = await api.get("/storage-settings/stats");
       setStats(response.data);
-    } catch (error: any) {
+    } catch {
       // Stats might not be available
     } finally {
       setIsLoadingStats(false);
@@ -317,7 +308,7 @@ export default function StorageSettingsPage() {
     try {
       const response = await api.get("/storage-settings/paths");
       setPaths(response.data.paths ?? []);
-    } catch (error: any) {
+    } catch {
       // Paths might not be available
     }
   }, []);
@@ -326,7 +317,7 @@ export default function StorageSettingsPage() {
     try {
       const response = await api.get("/storage-settings/health");
       setHealth(response.data);
-    } catch (error: any) {
+    } catch {
       // Health might not be available
     }
   }, []);
@@ -336,7 +327,7 @@ export default function StorageSettingsPage() {
     try {
       const response = await api.get("/storage-settings/analytics");
       setAnalytics(response.data);
-    } catch (error: any) {
+    } catch {
       // Analytics might not be available
     } finally {
       setIsLoadingAnalytics(false);
@@ -348,7 +339,7 @@ export default function StorageSettingsPage() {
     try {
       const response = await api.get("/storage-settings/cleanup-suggestions");
       setCleanupSuggestions(response.data);
-    } catch (error: any) {
+    } catch {
       // Cleanup might not be available
     } finally {
       setIsLoadingCleanup(false);
@@ -373,8 +364,8 @@ export default function StorageSettingsPage() {
       await fetchCleanupSuggestions();
       await fetchStats();
       await fetchAnalytics();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || error.response?.data?.error || "Cleanup failed");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Cleanup failed"));
     } finally {
       setCleanupSubmitting(false);
     }
@@ -435,9 +426,9 @@ export default function StorageSettingsPage() {
         setTestStatus("error");
         setTestError(response.data?.error ?? "Connection failed");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       setTestStatus("error");
-      const msg = error.response?.data?.error ?? error.message ?? "Connection test failed";
+      const msg = getErrorMessage(error, "Connection test failed");
       setTestError(msg);
       toast.error(msg);
     }
@@ -469,19 +460,15 @@ export default function StorageSettingsPage() {
       await fetchHealth();
       await fetchAnalytics();
       await fetchCleanupSuggestions();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update storage settings");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update storage settings"));
     } finally {
       setIsSaving(false);
     }
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -823,7 +810,7 @@ export default function StorageSettingsPage() {
               <Switch
                 id="storage_alert_enabled"
                 checked={watch("storage_alert_enabled") ?? false}
-                onCheckedChange={(checked) => setValue("storage_alert_enabled", checked)}
+                onCheckedChange={(checked) => setValue("storage_alert_enabled", checked, { shouldDirty: true })}
               />
             </div>
             {(watch("storage_alert_enabled") ?? false) && (
@@ -880,7 +867,7 @@ export default function StorageSettingsPage() {
                   <Switch
                     id="storage_alert_email"
                     checked={watch("storage_alert_email") ?? true}
-                    onCheckedChange={(checked) => setValue("storage_alert_email", checked)}
+                    onCheckedChange={(checked) => setValue("storage_alert_email", checked, { shouldDirty: true })}
                   />
                 </div>
               </>
@@ -901,7 +888,7 @@ export default function StorageSettingsPage() {
               <Select
                 value={driver}
                 onValueChange={(value) => {
-                  setValue("driver", value as StorageForm["driver"]);
+                  setValue("driver", value as StorageForm["driver"], { shouldDirty: true });
                   setTestStatus("idle");
                   setTestError(null);
                 }}
@@ -925,7 +912,7 @@ export default function StorageSettingsPage() {
             {driver === "s3" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="s3_bucket">S3 Bucket</Label>
                     <Input id="s3_bucket" {...register("s3_bucket")} placeholder="my-bucket" />
@@ -935,7 +922,7 @@ export default function StorageSettingsPage() {
                     <Input id="s3_region" {...register("s3_region")} placeholder="us-east-1" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="s3_key">Access Key ID</Label>
                     <Input id="s3_key" {...register("s3_key")} placeholder="Your AWS access key" />
@@ -951,7 +938,7 @@ export default function StorageSettingsPage() {
             {driver === "gcs" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="gcs_bucket">GCS Bucket</Label>
                     <Input id="gcs_bucket" {...register("gcs_bucket")} placeholder="my-bucket" />
@@ -998,7 +985,7 @@ export default function StorageSettingsPage() {
             {driver === "do_spaces" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="do_spaces_bucket">Spaces Bucket</Label>
                     <Input id="do_spaces_bucket" {...register("do_spaces_bucket")} placeholder="my-space" />
@@ -1016,7 +1003,7 @@ export default function StorageSettingsPage() {
                     placeholder="https://nyc3.digitaloceanspaces.com"
                   />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="do_spaces_key">Spaces Access Key</Label>
                     <Input id="do_spaces_key" {...register("do_spaces_key")} placeholder="Access Key" />
@@ -1032,7 +1019,7 @@ export default function StorageSettingsPage() {
             {driver === "minio" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="minio_bucket">MinIO Bucket</Label>
                     <Input id="minio_bucket" {...register("minio_bucket")} placeholder="my-bucket" />
@@ -1042,7 +1029,7 @@ export default function StorageSettingsPage() {
                     <Input id="minio_endpoint" {...register("minio_endpoint")} placeholder="http://localhost:9000" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="minio_key">Access Key</Label>
                     <Input id="minio_key" {...register("minio_key")} placeholder="Access Key" />
@@ -1058,7 +1045,7 @@ export default function StorageSettingsPage() {
             {driver === "b2" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="b2_bucket">B2 Bucket Name</Label>
                     <Input id="b2_bucket" {...register("b2_bucket")} placeholder="my-bucket" />
@@ -1068,7 +1055,7 @@ export default function StorageSettingsPage() {
                     <Input id="b2_region" {...register("b2_region")} placeholder="us-west-002" />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="b2_key_id">Application Key ID</Label>
                     <Input id="b2_key_id" {...register("b2_key_id")} placeholder="Key ID" />

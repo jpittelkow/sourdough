@@ -8,6 +8,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PasswordInput } from "@/components/ui/password-input";
 import { PasswordStrength } from "@/components/ui/password-strength";
@@ -74,8 +75,8 @@ function ResetPasswordContent() {
       });
       setIsSuccess(true);
       toast.success("Password reset successfully!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to reset password");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to reset password"));
     } finally {
       setIsLoading(false);
     }

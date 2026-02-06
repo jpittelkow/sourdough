@@ -119,7 +119,7 @@ sourdough/
 │   │   ├── api.php            # API routes
 │   │   └── web.php            # Web routes (minimal)
 │   └── tests/                  # PHP tests
-├── frontend/                   # Next.js 14+
+├── frontend/                   # Next.js 16+
 │   ├── app/                    # App Router pages
 │   │   ├── (auth)/            # Public auth pages
 │   │   └── (dashboard)/       # Protected pages

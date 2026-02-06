@@ -188,7 +188,7 @@ Improved visibility into storage usage and trends.
 - `frontend/app/(dashboard)/configuration/storage/page.tsx` - Storage settings UI (driver dropdown, dynamic forms, Test Connection)
 - `frontend/components/provider-icons.tsx` - Storage provider icons (s3, gdrive, azure, do_spaces, minio, b2)
 
-**Recipes:** [Add storage provider](../ai/recipes/add-storage-provider.md). **Patterns:** [Storage Settings pattern](../ai/patterns.md#storage-settings-pattern).
+**Recipes:** [Add storage provider](../ai/recipes/add-storage-provider.md). **Patterns:** [Storage Settings pattern](../ai/patterns/storage-settings.md).
 
 ### Phase 4 Implementation
 

@@ -112,6 +112,15 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   React.useEffect(() => {
     if (query.data && !query.isLoading) {
       applyThemeColors(primaryColor || undefined, secondaryColor || undefined);
+
+      // Update theme-color meta tag (styles mobile address bar / status bar)
+      let metaTheme = document.querySelector('meta[name="theme-color"]') as HTMLMetaElement | null;
+      if (!metaTheme) {
+        metaTheme = document.createElement('meta');
+        metaTheme.name = 'theme-color';
+        document.head.appendChild(metaTheme);
+      }
+      metaTheme.content = primaryColor || '#3b82f6';
     }
   }, [primaryColor, secondaryColor, query.data, query.isLoading]);
 

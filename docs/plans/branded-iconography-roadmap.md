@@ -98,7 +98,7 @@ Multiple areas of the application reference third-party providers that would ben
 - [x] Support size prop (sm, md, lg)
 - [x] Ensure icons work in both light and dark themes (currentColor / mono)
 - [x] Style prop (mono | branded); branded reserved for future official colors
-- [x] Export `ProviderIcon` lookup component. See [Patterns: ProviderIcon](../ai/patterns.md#providericon-pattern) and [Recipe: Add provider icon](../ai/recipes/add-provider-icon.md).
+- [x] Export `ProviderIcon` lookup component. See [Patterns: ProviderIcon](../ai/patterns/ui-patterns.md#providericon) and [Recipe: Add provider icon](../ai/recipes/add-provider-icon.md).
 
 ### Phase 2: Consolidate Existing Icons ✅
 

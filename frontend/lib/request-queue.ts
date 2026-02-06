@@ -120,16 +120,24 @@ export type ApiClient = {
   request: (config: { method: string; url: string; data?: unknown; baseURL?: string }) => Promise<unknown>;
 };
 
+const MAX_QUEUE_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 /**
  * Process the queue: retry each request with the given API client.
  * Uses baseURL: '' so the stored full path (e.g. /api/user/settings) is used as-is.
- * Removes each request on success; leaves failed ones for a later retry.
+ * Removes each request on success; discards stale (>24h) and non-retryable (4xx) items.
  */
 export function processRequestQueue(api: ApiClient): Promise<{ processed: number; failed: number }> {
   return getRequestQueue().then(async (items) => {
     let processed = 0;
     let failed = 0;
+    const now = Date.now();
     for (const item of items) {
+      // Discard stale items (expired sessions, CSRF tokens, etc.)
+      if (item.createdAt && now - item.createdAt > MAX_QUEUE_AGE_MS) {
+        await removeFromRequestQueue(item.id);
+        continue;
+      }
       try {
         const body = item.body ? JSON.parse(item.body) : undefined;
         await api.request({
@@ -140,7 +148,12 @@ export function processRequestQueue(api: ApiClient): Promise<{ processed: number
         });
         await removeFromRequestQueue(item.id);
         processed++;
-      } catch {
+      } catch (error: unknown) {
+        // Remove non-retryable client errors (auth expired, validation failed)
+        const status = (error as { response?: { status?: number } })?.response?.status;
+        if (status && status >= 400 && status < 500) {
+          await removeFromRequestQueue(item.id);
+        }
         failed++;
       }
     }

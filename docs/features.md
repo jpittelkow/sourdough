@@ -11,7 +11,7 @@ Core functionality and feature documentation:
 
 **Capabilities:**
 - Email/password authentication with Laravel Sanctum
-- SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab, Enterprise OIDC); **sign-in and register pages** show "Continue with {provider}" only for providers that have credentials and are **enabled** (from `GET /auth/sso/providers`); **setup** is Configuration > SSO (`/configuration/sso`) with per-provider enabled toggle, setup modals, and test connection
+- SSO via OAuth2/OIDC (Google, GitHub, Microsoft, Apple, Discord, GitLab, Enterprise OIDC); **sign-in and register pages** show "Continue with {provider}" only for providers that have credentials and are **enabled** (from `GET /auth/sso/providers`); **setup** is Configuration > SSO (`/configuration/sso`) with per-provider enabled toggle, setup modals, and test connection. A successful test auto-enables the provider toggle; the user clicks Save to persist
 - Two-factor authentication (TOTP + recovery codes)
 - **Passkeys (WebAuthn/FIDO2):** Passwordless authentication using biometrics or hardware security keys. Users register passkeys in User Security (`/user/security`); login page shows "Sign in with passkey" when available and passkeys are enabled. Configurable passkey mode (disabled / optional / required) in Configuration > Security. Supported on Chrome, Edge, Safari, Firefox with WebAuthn support.
 - Password reset and email verification
@@ -25,7 +25,7 @@ Core functionality and feature documentation:
 ## Dashboard & Widgets
 
 - [Recipe: Add Dashboard Widget](ai/recipes/add-dashboard-widget.md) - Create new static widgets for the dashboard
-- [Patterns: Dashboard Widget](ai/patterns.md#dashboard-widget-pattern) - Widget component structure and patterns
+- [Patterns: Dashboard Widget](ai/patterns/dashboard-widget.md) - Widget component structure and patterns
 
 **Static dashboard** at `/dashboard`: Developer-defined widgets in a responsive grid layout. No user configuration—widgets are added in code.
 
@@ -71,7 +71,7 @@ Core functionality and feature documentation:
 
 **Share Target:** When the PWA is installed, users can share links or text from other apps to Sourdough; shared content is shown at `/share` with links to dashboard or sign-in. Manifest `share_target` uses GET with title, text, and url params.
 
-**Offline experience:** When offline, an indicator banner appears; dashboard, user preferences, and notifications show cached data with an offline badge. Save/actions are disabled on preferences and notifications. Failed mutations (POST/PUT/PATCH/DELETE) are queued in IndexedDB and retried when back online (Background Sync in Chrome/Edge; online event elsewhere). Offline fallback page offers "Go to Dashboard" and auto-reloads when online.
+**Offline experience:** When offline, an indicator banner appears; dashboard, user preferences, and notifications show cached data with an offline badge. Save/actions are disabled on preferences and notifications. Failed mutations (POST/PUT/PATCH/DELETE) are queued in IndexedDB and retried when back online (Background Sync in Chrome/Edge; online event elsewhere). Stale queue items (>24h) and non-retryable (4xx) responses are automatically pruned. Offline fallback page offers "Go to Dashboard" and auto-reloads when online. Workbox 7.3.0 is bundled locally (no CDN dependency). iOS safe-area CSS and standalone overscroll-behavior are supported. The `theme-color` meta tag is set statically and updated dynamically from branding settings.
 
 **Capabilities:**
 - In-app notification UI: header bell with unread badge, dropdown of recent items, full `/notifications` page with filters and bulk actions
@@ -124,9 +124,9 @@ Core functionality and feature documentation:
 - Auth settings: Configuration > Security (`/configuration/security`), admin-only; **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required), passkey mode (disabled/optional/required). No per-user features here—users manage password, 2FA, passkeys, and SSO at User menu > Security (`/user/security`). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
 - SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC; per-provider **enabled** toggle and **per-provider save** (global options card has its own save); setup instruction modals and copyable redirect URIs; test connection per provider
 
-**Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns.md#configuration-navigation-pattern).
+**Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns/ui-patterns.md).
 
-**Collapsible settings sections:** Configuration pages (SSO, Notifications, AI/LLM, Backup) use the shared `CollapsibleCard` component so provider/channel sections can be expanded or collapsed. Headers show icon, name, and status badge; content (forms, toggles) is in the expandable body. See [Patterns: CollapsibleCard](ai/patterns.md#collapsiblecard-pattern) and [Recipe: Add collapsible section](ai/recipes/add-collapsible-section.md).
+**Collapsible settings sections:** Configuration pages (SSO, Notifications, AI/LLM, Backup) use the shared `CollapsibleCard` component so provider/channel sections can be expanded or collapsed. Headers show icon, name, and status badge; content (forms, toggles) is in the expandable body. See [Patterns: CollapsibleCard](ai/patterns/ui-patterns.md) and [Recipe: Add collapsible section](ai/recipes/add-collapsible-section.md).
 
 **Provider icons:** A shared `ProviderIcon` component (`frontend/components/provider-icons.tsx`) provides branded or monochrome icons for SSO providers, LLM providers, notification channels, email/backup providers. Used on sign-in buttons (branded) and in configuration CollapsibleCard headers (mono).
 
@@ -142,7 +142,7 @@ Core functionality and feature documentation:
 
 - [Meilisearch Integration Roadmap](plans/meilisearch-integration-roadmap.md) - Phases 1–6 (Docker, Scout, User searchable, API, frontend, admin)
 - [Recipe: Add searchable model](ai/recipes/add-searchable-model.md) - Add new models to search
-- [Patterns: SearchService](ai/patterns.md#searchservice-pattern) - Backend search API and indexing
+- [Patterns: SearchService](ai/patterns/search-service.md) - Backend search API and indexing
 
 **Capabilities:**
 - **Global search (Cmd+K / Ctrl+K):** Command-palette style modal from header; debounced input, results grouped by type with icons, keyboard navigation, recent searches in localStorage, highlight of matched text. Stale response handling so only the latest query’s results are shown.
@@ -223,7 +223,7 @@ Core functionality and feature documentation:
 - [API: Backup settings](api/README.md#backup-settings-admin) – Get/update settings, reset key, test destination
 - [Recipe: Add backup destination](ai/recipes/add-backup-destination.md) – Add a new storage destination
 - [Recipe: Extend backup/restore](ai/recipes/extend-backup-restore.md) – New settings, restore behavior, scheduling, notifications
-- [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) – Settings flow, destination interface, UI structure
+- [Patterns: Backup & Restore](ai/patterns/backup-restore.md) – Settings flow, destination interface, UI structure
 
 **Capabilities:**
 - ZIP-based backup format with manifest (version 2.0)
@@ -309,11 +309,11 @@ Accessible from the **user dropdown** in the header (click your name) → **Secu
 
 ## API & Webhooks
 
-**Configuration > API** (`/configuration/api`): Manage API access and webhook integrations.
+**Configuration > API** (`/configuration/api`): Manage API access and webhook integrations. This page has **mixed permissions**: the tokens section is visible to all authenticated users; the webhooks section is admin-only (`can:settings.view/edit`).
 
 **Capabilities:**
 - **Personal access tokens (all users):** Create, view, and revoke API tokens; token preview (last 4 chars) shown after creation; last used date; tokens are shown once on creation and cannot be viewed again; **tokens expire after 7 days** (configurable via `SANCTUM_TOKEN_EXPIRATION`)
-- **Outgoing webhooks (admin only):** Configure webhook endpoints for system events; available events: `user.created`, `user.updated`, `user.deleted`, `backup.completed`, `backup.failed`, `settings.updated`
+- **Outgoing webhooks (admin only):** Configure webhook endpoints for system events; available events: `user.created`, `user.updated`, `user.deleted`, `backup.completed`, `backup.failed`, `settings.updated`. Webhooks have a `user_id` column that tracks the admin who created them (for audit/ownership), not for access scoping — all admins can see and manage all webhooks.
 - **Webhook management:** Create/delete webhooks, enable/disable, set secret for signature verification
 - **Webhook signatures:** When a secret is configured, webhooks include HMAC-SHA256 signatures (`X-Webhook-Signature: sha256=...`) and timestamps (`X-Webhook-Timestamp`) for payload verification
 - **Webhook URL validation:** Webhooks cannot point to internal/private addresses (SSRF protection)
@@ -324,6 +324,7 @@ Accessible from the **user dropdown** in the header (click your name) → **Secu
 
 - [ADR-024: Security Hardening](adr/024-security-hardening.md) - SSRF protection, SQL injection fixes, OAuth security, password policy
 - [Security Compliance Roadmap](plans/security-compliance-roadmap.md) - SOC 2, ISO 27001 compliance tracking
+- [Security Patterns](ai/patterns/security.md) - SSRF protection, webhook signatures, password validation patterns
 
 **Capabilities:**
 
@@ -363,6 +364,6 @@ Accessible from the **user dropdown** in the header (click your name) → **Secu
 - **Preflight caching:** 24-hour cache for CORS preflight responses
 
 ### Rate Limiting
-- **Auth endpoints:** Login, register, password reset, 2FA verification protected via `rate.sensitive` middleware
+- **Auth endpoints:** Login, register, password reset, 2FA verification protected via `rate.sensitive` middleware. The `rate.sensitive` middleware is a custom middleware (`App\Http\Middleware\RateLimitSensitive`, registered in `bootstrap/app.php`) that applies stricter rate limits to security-sensitive endpoints. It accepts a named limiter parameter (e.g. `rate.sensitive:login`, `rate.sensitive:register`, `rate.sensitive:2fa`).
 - **Client error reporting:** Limited to 10 requests/minute
 - **Email checks:** Limited to 10 requests/minute to prevent enumeration

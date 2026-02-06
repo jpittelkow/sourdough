@@ -40,10 +40,10 @@ A complete full-stack application framework with enterprise-grade features ready
 
 Sourdough is **opinionated but modular**:
 
-- Architecture decisions are documented in `docs/adr/` (23 ADRs)
+- Architecture decisions are documented in `docs/adr/` (24 ADRs)
 - Features can be removed if you don't need them
 - Patterns and structure should remain consistent
-- Code follows established conventions (see `docs/ai/patterns.md`)
+- Code follows established conventions (see `docs/ai/patterns/`)
 
 ## For AI-Assisted Development
 
@@ -56,8 +56,8 @@ This codebase is **optimized for AI coding assistants**. The documentation struc
 | `docs/ai/README.md` | Development workflows and quick links |
 | `docs/ai/context-loading.md` | Which files to read for each task type |
 | `docs/ai/recipes/` | 32 step-by-step implementation guides |
-| `docs/ai/patterns.md` | Code patterns with copy-paste examples |
-| `docs/ai/anti-patterns.md` | Common mistakes to avoid |
+| `docs/ai/patterns/` | Code patterns with copy-paste examples |
+| `docs/ai/anti-patterns/` | Common mistakes to avoid |
 
 ### IDE-Specific Configuration
 
@@ -154,8 +154,8 @@ docs/
 ├── ai/                      # AI development guide (start here)
 │   ├── README.md            # Quick start for AI assistants
 │   ├── context-loading.md   # Which files to read per task
-│   ├── patterns.md          # Code patterns
-│   ├── anti-patterns.md     # What to avoid
+│   ├── patterns/            # Code patterns
+│   ├── anti-patterns/       # What to avoid
 │   └── recipes/             # 32 step-by-step guides
 ├── adr/                     # Architecture Decision Records
 ├── features.md              # Feature documentation

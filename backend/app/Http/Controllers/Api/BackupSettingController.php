@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponseTrait;
+use App\Services\AuditService;
 use App\Services\Backup\Destinations\S3Destination;
 use App\Services\Backup\Destinations\SFTPDestination;
 use App\Services\Backup\Destinations\GoogleDriveDestination;
@@ -24,6 +25,7 @@ class BackupSettingController extends Controller
     ];
 
     public function __construct(
+        private AuditService $auditService,
         private SettingService $settingService
     ) {}
 

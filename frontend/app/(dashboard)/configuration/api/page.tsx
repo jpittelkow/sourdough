@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -103,8 +104,8 @@ export default function APISettingsPage() {
     try {
       const response = await api.get("/api-tokens");
       setApiTokens(response.data.tokens || []);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load API tokens");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load API tokens"));
     }
   };
 
@@ -114,8 +115,8 @@ export default function APISettingsPage() {
     try {
       const response = await api.get("/webhooks");
       setWebhooks(response.data.webhooks || []);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load webhooks");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load webhooks"));
     }
   };
 
@@ -134,8 +135,8 @@ export default function APISettingsPage() {
       setNewToken(response.data.token);
       setNewTokenName("");
       await fetchApiTokens();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create API token");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to create API token"));
     } finally {
       setIsCreatingToken(false);
     }
@@ -150,8 +151,8 @@ export default function APISettingsPage() {
       await api.delete(`/api-tokens/${id}`);
       toast.success("API token deleted");
       await fetchApiTokens();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete API token");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to delete API token"));
     }
   };
 
@@ -174,8 +175,8 @@ export default function APISettingsPage() {
         active: true,
       });
       await fetchWebhooks();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to create webhook");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to create webhook"));
     } finally {
       setIsCreatingWebhook(false);
     }
@@ -190,8 +191,8 @@ export default function APISettingsPage() {
       await api.delete(`/webhooks/${id}`);
       toast.success("Webhook deleted");
       await fetchWebhooks();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete webhook");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to delete webhook"));
     }
   };
 
@@ -200,8 +201,8 @@ export default function APISettingsPage() {
       await api.post(`/webhooks/${id}/test`);
       toast.success("Webhook test sent");
       await fetchWebhooks();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to test webhook");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to test webhook"));
     }
   };
 

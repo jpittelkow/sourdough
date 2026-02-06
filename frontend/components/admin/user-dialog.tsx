@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -114,7 +115,7 @@ export function UserDialog({
     } else {
       setSelectedGroupIds((prev) => prev.filter((id) => id !== adminGroupId));
     }
-    setValue("is_admin", checked);
+    setValue("is_admin", checked, { shouldDirty: true });
   };
 
   const onSubmit = async (data: UserForm) => {
@@ -150,8 +151,8 @@ export function UserDialog({
       }
       onOpenChange(false);
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || `Failed to ${isEditing ? "update" : "create"} user`);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, `Failed to ${isEditing ? "update" : "create"} user`));
     } finally {
       setIsSaving(false);
     }
@@ -219,7 +220,7 @@ export function UserDialog({
               </div>
               <Switch
                 checked={isEditing ? adminChecked : watch("is_admin")}
-                onCheckedChange={isEditing ? onAdminSwitchChange : (checked) => setValue("is_admin", checked)}
+                onCheckedChange={isEditing ? onAdminSwitchChange : (checked) => setValue("is_admin", checked, { shouldDirty: true })}
               />
             </div>
 
@@ -248,7 +249,7 @@ export function UserDialog({
                 </div>
                 <Switch
                   checked={watch("skip_verification") ?? false}
-                  onCheckedChange={(checked) => setValue("skip_verification", checked)}
+                  onCheckedChange={(checked) => setValue("skip_verification", checked, { shouldDirty: true })}
                 />
               </div>
             )}

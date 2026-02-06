@@ -1,5 +1,7 @@
 "use client";
 
+import { useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { CheckCircle2, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAppConfig } from "@/lib/app-config";
@@ -9,7 +11,6 @@ import {
   WizardStepDescription,
   WizardStepContent,
 } from "@/components/onboarding/wizard-step";
-import Link from "next/link";
 
 interface CompletionStepProps {
   onComplete?: () => void;
@@ -17,6 +18,15 @@ interface CompletionStepProps {
 
 export function CompletionStep({ onComplete }: CompletionStepProps) {
   const { appName } = useAppConfig();
+  const router = useRouter();
+
+  const handleNavigate = useCallback(
+    (path: string) => {
+      onComplete?.();
+      router.push(path);
+    },
+    [onComplete, router]
+  );
 
   return (
     <WizardStep>
@@ -38,11 +48,19 @@ export function CompletionStep({ onComplete }: CompletionStepProps) {
           </Button>
 
           <div className="flex flex-col gap-2">
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/dashboard">Go to Dashboard</Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleNavigate("/dashboard")}
+            >
+              Go to Dashboard
             </Button>
-            <Button asChild variant="ghost" size="sm">
-              <Link href="/user/profile">Edit Profile</Link>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => handleNavigate("/user/profile")}
+            >
+              Edit Profile
             </Button>
           </div>
         </div>

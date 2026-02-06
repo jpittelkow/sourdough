@@ -99,7 +99,7 @@ return response()->json([
 ### Don't: Duplicate "Last Admin" Checks
 
 ```php
-// BAD - duplicated logic (UserController, ProfileController, etc.)
+// BAD - duplicated logic (UserController, ProfileController, GroupController, etc.)
 if ($user->inGroup('admin') && User::whereHas('groups', fn ($q) => $q->where('slug', 'admin'))->count() === 1) {
     return response()->json(['message' => 'Cannot delete the last admin account'], 400);
 }
@@ -541,6 +541,35 @@ function ExampleCard({ title, description, onClick }: ExampleCardProps) {
 }
 ```
 
+### Don't: Misuse Help System Conventions
+
+```tsx
+// BAD - Real URL for help articles in search-pages.php (help opens via modal, not navigation)
+'url' => '/help/welcome',
+
+// GOOD - Use help: prefix so the search modal opens the help center
+'url' => 'help:welcome',
+```
+
+```tsx
+// BAD - Adding a help article but forgetting the search entry (users can't find it via Cmd+K)
+// Only added to help-content.ts
+
+// GOOD - Add both: help-content.ts AND search-pages.php
+```
+
+```tsx
+// BAD - Duplicating help content between tooltip and article (maintenance burden)
+// Tooltip: "Configures SMTP settings. See Email Configuration article for full guide."
+// Article: Same paragraph repeated
+
+// GOOD - Tooltips = 1–2 sentences max. Articles = full explanation with steps.
+// Tooltip: "SMTP host for your mail server"
+// Article: Full guide with setup steps, troubleshooting, etc.
+```
+
+See [Recipe: Add help article](recipes/add-help-article.md) and [Help System Pattern](patterns.md#help-system-pattern).
+
 ## Form Validation Anti-Patterns (react-hook-form + Zod)
 
 ### Don't: Make Fields Required by Default
@@ -660,6 +689,25 @@ foreach ($examples as $example) {
 $examples = Example::where('user_id', $userId)
     ->with('user')
     ->get();
+```
+
+When checking relations that may already be loaded (e.g. in traits), use the loaded relation instead of querying again:
+
+```php
+// BAD - inGroup() always queries, even if groups already eager-loaded
+public function inGroup(string $slug): bool
+{
+    return $this->groups()->where('slug', $slug)->exists();
+}
+
+// GOOD - check relationLoaded first, then use collection or query
+public function inGroup(string $slug): bool
+{
+    if (array_key_exists('groups', $this->relations) && $this->relationLoaded('groups')) {
+        return $this->groups->contains('slug', $slug);
+    }
+    return $this->groups()->where('slug', $slug)->exists();
+}
 ```
 
 ### Don't: Assume SQLite Features Work Everywhere
@@ -969,9 +1017,7 @@ export function formatDate(date: string | Date, options?: Intl.DateTimeFormatOpt
 import { formatBytes, formatDate } from "@/lib/utils";
 ```
 
-**Currently duplicated (needs centralization):**
-- `formatBytes` - 2+ definitions (backup, storage pages)
-- `formatDate` - 4+ definitions (backup, storage, templates pages)
+**Centralized in `frontend/lib/utils.ts`:** `formatBytes`, `formatDate`, `formatDateTime`, `formatTimestamp`, `getErrorMessage`. Use these instead of defining inline.
 
 **Before adding any utility, search the codebase** to see if it already exists. If it does, use the existing one. If it doesn't exist but would be useful in multiple places, add it to `frontend/lib/utils.ts`.
 

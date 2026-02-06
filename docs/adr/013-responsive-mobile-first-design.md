@@ -121,5 +121,5 @@ Mobile (<768px):
 ## Related
 
 - [Mobile Responsiveness Roadmap](../plans/mobile-responsive-roadmap.md)
-- [Cursor Rule: responsive-mobile-first.mdc](../../.cursor/rules/responsive-mobile-first.mdc)
+- [Responsive Design Pattern](../ai/patterns/responsive.md)
 - [Recipe: Make Component Responsive](../ai/recipes/make-component-responsive.md)

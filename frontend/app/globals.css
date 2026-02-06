@@ -60,3 +60,20 @@
     font-family: var(--font-newsreader, var(--font-inter), system-ui, sans-serif);
   }
 }
+
+/* PWA standalone mode: prevent pull-to-refresh overscroll bounce */
+@media (display-mode: standalone) {
+  body {
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* iOS safe area support (notch, home indicator) */
+@supports (padding: env(safe-area-inset-top)) {
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

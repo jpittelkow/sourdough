@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -26,8 +27,8 @@ export function TwoFactorForm({ onSuccess, onCancel }: TwoFactorFormProps) {
       await verify2FA(code, false, useRecoveryCode);
       toast.success("Verified successfully!");
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || "Invalid code");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Invalid code"));
     } finally {
       setIsLoading(false);
     }

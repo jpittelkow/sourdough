@@ -9,7 +9,7 @@ Before any implementation work:
 1. Read `CLAUDE.md` -> `docs/overview.md` -> `docs/ai/README.md`
 2. Check `docs/ai/context-loading.md` for which files to read per task type
 3. Find applicable recipes in `docs/ai/recipes/` (32 step-by-step guides)
-4. Review patterns in `docs/ai/patterns.md`
+4. Review patterns in `docs/ai/patterns/README.md`
 
 ## Project Structure
 
@@ -29,7 +29,7 @@ docs/ai/           AI development guide
 ├── README.md      Start here
 ├── context-loading.md  Files to read per task
 ├── recipes/       32 step-by-step guides
-└── patterns.md    Code patterns
+└── patterns/       Code patterns
 ```
 
 ## Critical Rules
@@ -141,8 +141,8 @@ Never use `docker run` directly - always use `docker-compose`.
 |-------|----------|
 | AI Development Guide | `docs/ai/README.md` |
 | Context Loading | `docs/ai/context-loading.md` |
-| Code Patterns | `docs/ai/patterns.md` |
-| Anti-Patterns | `docs/ai/anti-patterns.md` |
+| Code Patterns | `docs/ai/patterns/README.md` |
+| Anti-Patterns | `docs/ai/anti-patterns/README.md` |
 | Recipes (32) | `docs/ai/recipes/` |
 | Architecture | `docs/architecture.md` |
 | Features | `docs/features.md` |

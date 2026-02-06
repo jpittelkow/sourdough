@@ -117,7 +117,7 @@ class SearchService
      */
     public function searchUsers(string $query, ?int $perPage = null, int $page = 1): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('search.results_per_page', config('app.pagination.default', 15)));
+        $perPage = (int) ($perPage ?? config('search.results_per_page', config('app.pagination.default', 20)));
         $page = (int) $page;
 
         if (trim($query) === '') {
@@ -150,7 +150,7 @@ class SearchService
      */
     public function searchNotifications(string $query, ?int $perPage = null, int $page = 1, ?int $scopeUserId = null): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -185,7 +185,7 @@ class SearchService
      */
     public function searchEmailTemplates(string $query, ?int $perPage = null, int $page = 1): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -210,7 +210,7 @@ class SearchService
      */
     public function searchNotificationTemplates(string $query, ?int $perPage = null, int $page = 1): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -238,7 +238,7 @@ class SearchService
      */
     public function searchApiTokens(string $query, ?int $perPage = null, int $page = 1, ?int $scopeUserId = null): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -271,7 +271,7 @@ class SearchService
      */
     public function searchAIProviders(string $query, ?int $perPage = null, int $page = 1, ?int $scopeUserId = null): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -306,7 +306,7 @@ class SearchService
      */
     public function searchWebhooks(string $query, ?int $perPage = null, int $page = 1): LengthAwarePaginator
     {
-        $perPage = (int) ($perPage ?? config('app.pagination.default', 15));
+        $perPage = (int) ($perPage ?? config('app.pagination.default', 20));
         $page = (int) $page;
         $query = trim($query);
 
@@ -334,7 +334,7 @@ class SearchService
      */
     public function globalSearch(string $query, ?string $type = null, array $filters = [], int $page = 1, ?int $perPage = null, ?int $scopeUserId = null): array
     {
-        $perPage = (int) ($perPage ?? config('search.results_per_page', config('app.pagination.default', 15)));
+        $perPage = (int) ($perPage ?? config('search.results_per_page', config('app.pagination.default', 20)));
         $page = (int) $page;
         $query = trim($query);
         $types = $type !== null ? [$type] : array_keys(static::$searchableModels);

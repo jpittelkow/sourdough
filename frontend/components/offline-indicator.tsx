@@ -14,7 +14,7 @@ export function OfflineIndicator() {
 
   return (
     <div
-      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-500/95 text-amber-950 px-4 py-2 text-sm font-medium shadow-sm"
+      className="fixed top-0 left-0 right-0 z-50 flex items-center justify-center gap-2 bg-amber-500/95 text-amber-950 px-4 py-2 text-sm font-medium shadow-sm safe-area-top"
       role="status"
       aria-live="polite"
     >

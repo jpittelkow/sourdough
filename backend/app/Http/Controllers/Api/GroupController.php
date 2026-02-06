@@ -19,6 +19,7 @@ use Illuminate\Http\Request;
 
 class GroupController extends Controller
 {
+    use \App\Http\Traits\AdminAuthorizationTrait;
     use \App\Http\Traits\ApiResponseTrait;
 
     public function __construct(
@@ -137,13 +138,19 @@ class GroupController extends Controller
      */
     public function removeMember(UserGroup $group, User $user): JsonResponse
     {
+        if ($group->slug === 'admin') {
+            if ($error = $this->ensureNotLastAdmin($user, 'remove from admin group')) {
+                return $error;
+            }
+        }
+
         $this->groupService->removeMembers($group, [$user->id]);
 
         $this->auditService->log('group.member_removed', $group, [], [
             'user_id' => $user->id,
         ]);
 
-        return response()->json(null, 204);
+        return $this->deleteResponse('Member removed');
     }
 
     /**

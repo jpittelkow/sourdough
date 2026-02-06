@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -63,19 +64,6 @@ export default function NotificationTemplatesListPage() {
       toast.error(message || "Failed to load notification templates");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return dateStr;
     }
   };
 

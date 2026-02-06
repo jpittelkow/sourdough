@@ -19,6 +19,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Auth | [ADR-002](../adr/002-authentication-architecture.md), `backend/app/Http/Controllers/Api/AuthController.php` |
 | Logging | [Logging](../logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [extend-logging](recipes/extend-logging.md), [add-access-logging](recipes/add-access-logging.md) |
 | Search | `backend/app/Services/Search/SearchService.php`, `frontend/lib/search.ts`, [add-searchable-model](recipes/add-searchable-model.md), [context-loading: Search Work](context-loading.md#search-work) |
+| Help/Documentation | `frontend/lib/help/help-content.ts`, `frontend/components/help/`, [add-help-article](recipes/add-help-article.md), [context-loading: Help/Documentation](context-loading.md#help--documentation-work) |
 | Docker | [ADR-009](../adr/009-docker-single-container.md), `docker/Dockerfile`, `docker-compose.yml` |
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
 | PWA | [PWA roadmap](../plans/pwa-roadmap.md), `frontend/public/sw.js`, `frontend/lib/use-install-prompt.ts`, [add-pwa-install-prompt](recipes/add-pwa-install-prompt.md), [context-loading: PWA Work](context-loading.md#pwa-work) |
@@ -46,13 +47,13 @@ Quick-start guide for AI assistants developing on Sourdough.
 When creating a plan for implementation:
 
 1. **Identify applicable recipes** - Check the recipes table below; name the specific recipes in your plan
-2. **Reference patterns** - Note which patterns from [patterns.md](patterns.md) apply
+2. **Reference patterns** - Note which patterns from [patterns/README.md](patterns/README.md) apply
 3. **Link to ADRs** - Include relevant architectural decisions
 4. **Include context loading** - Reference which files from [context-loading.md](context-loading.md) will be read
 
 Example plan reference:
 
-> This implementation will follow [add-config-page.md](recipes/add-config-page.md) recipe and use the SettingService pattern from patterns.md. Relevant ADR: [ADR-014](../adr/014-database-settings-env-fallback.md).
+> This implementation will follow [add-config-page.md](recipes/add-config-page.md) recipe and use the SettingService pattern from patterns/setting-service.md. Relevant ADR: [ADR-014](../adr/014-database-settings-env-fallback.md).
 
 ## Quick Links - Recipes
 
@@ -88,27 +89,28 @@ Example plan reference:
 | Add Auditable Action | [add-auditable-action.md](recipes/add-auditable-action.md) |
 | Trigger Audit Logging | [trigger-audit-logging.md](recipes/trigger-audit-logging.md) |
 | Add Searchable Page | [add-searchable-page.md](recipes/add-searchable-page.md) |
+| Add Help Article | [add-help-article.md](recipes/add-help-article.md) |
 | Add Configuration Menu Item | [add-configuration-menu-item.md](recipes/add-configuration-menu-item.md) |
 | Add PWA Install Prompt | [add-pwa-install-prompt.md](recipes/add-pwa-install-prompt.md) |
 
 ## Common Gotchas
 
-- **Global components** - NEVER duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Cursor rule](../../.cursor/rules/global-components.mdc).
+- **Global components** - NEVER duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Components Pattern](patterns/components.md).
 - **User scoping** - Most tables have `user_id`. Always filter by `$request->user()->id`
 - **User password** - The User model uses the `hashed` cast. Pass plaintext when creating/updating; do not use `Hash::make()` in controllers or you will double-hash.
 - **SQLite default** - Dev uses SQLite but code supports MySQL/PostgreSQL. Test array/JSON columns carefully.
 - **API prefix** - All backend routes are under `/api/`. Frontend calls go through Nginx proxy.
 - **Settings models** - User settings use `Setting` model; system settings use `SystemSetting` model
-- **Schema-backed settings** - For settings in `backend/config/settings-schema.php` (e.g. mail), use **SettingService** (env fallback, encryption, cache); do not use `SystemSetting::get`/`set` directly. See [ADR-014](../adr/014-database-settings-env-fallback.md) and [SettingService pattern](patterns.md#settingservice-pattern).
+- **Schema-backed settings** - For settings in `backend/config/settings-schema.php` (e.g. mail), use **SettingService** (env fallback, encryption, cache); do not use `SystemSetting::get`/`set` directly. See [ADR-014](../adr/014-database-settings-env-fallback.md) and [SettingService pattern](patterns/setting-service.md).
 - **Sanctum cookies** - Auth uses session cookies, not Bearer tokens. Include `credentials: 'include'` in fetch.
 - **shadcn/ui** - Components in `frontend/components/ui/` are CLI-managed. Use `npx shadcn@latest add <component>` from `frontend/`; config in `frontend/components.json`. See [Quick Reference](../quick-reference.md) for commands.
 - **Service layer** - Business logic goes in `Services/`, not controllers. Controllers just validate and route.
 - **Form fields optional by default** - Config pages should make fields optional unless explicitly required. Use `z.string().optional()` and `.refine()` for format validation that allows empty. See [add-config-page recipe](recipes/add-config-page.md).
-- **Mobile-first CSS** - Write base styles for mobile (no prefix), add `md:`, `lg:` for larger screens. Use `useIsMobile()` hook for conditional rendering. See [Cursor rule](../../.cursor/rules/responsive-mobile-first.mdc).
+- **Mobile-first CSS** - Write base styles for mobile (no prefix), add `md:`, `lg:` for larger screens. Use `useIsMobile()` hook for conditional rendering. See [Responsive Pattern](patterns/responsive.md).
 - **Admin is group-based** - Admin status is determined by membership in the `admin` group, not an `is_admin` column. Use `$user->isAdmin()` or `$user->inGroup('admin')` on backend; use `isAdminUser(user)` from `frontend/lib/auth.ts` on frontend. The API returns a computed `is_admin` attribute for compatibility.
 - **Audit actions** - Use `AuditService` for logging user actions (auth events, settings changes, admin operations). Use `{resource}.{action}` naming (e.g. `user.created`, `settings.updated`). Sensitive data is auto-masked.
 
-See also: [Anti-Patterns](anti-patterns.md) - Common mistakes to avoid
+See also: [Anti-Patterns](anti-patterns/README.md) - Common mistakes to avoid
 
 ## Adding Tools & Dependencies
 
@@ -132,8 +134,8 @@ When adding new external tools or dependencies:
 |-------|---------|
 | [Architecture Map](architecture-map.md) | How data flows through the application |
 | [Context Loading](context-loading.md) | Full list of files to read per task type |
-| [Patterns](patterns.md) | Code patterns with copy-paste examples |
-| [Anti-Patterns](anti-patterns.md) | Common mistakes to avoid |
+| [Patterns](patterns/README.md) | Code patterns with copy-paste examples |
+| [Anti-Patterns](anti-patterns/README.md) | Common mistakes to avoid |
 | [Recipes](recipes/) | Step-by-step guides for common tasks |
 
 ## Related Documentation

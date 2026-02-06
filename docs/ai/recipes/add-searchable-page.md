@@ -50,10 +50,20 @@ docker-compose exec app php /var/www/html/backend/artisan search:reindex pages
 - **Include synonyms**: Different terms users might search for
 - **Keep content concise**: ~50-100 words per page
 
+## Important: Dual Registration
+
+Pages must be registered in **two places** to appear correctly in search:
+
+1. **Backend** (`backend/config/search-pages.php`) — for Meilisearch-backed API search
+2. **Frontend** (`frontend/lib/search-pages.ts` or the relevant frontend search config) — for instant client-side filtering before API results load
+
+If only one is updated, search results will be inconsistent. Always update both when adding or removing a page.
+
 ## Checklist
 
 - [ ] Added page to `config/search-pages.php`
+- [ ] Added page to frontend search pages config
 - [ ] Set `admin_only` correctly
 - [ ] Added relevant content keywords
 - [ ] Ran `search:reindex pages`
-- [ ] Tested search finds the page
+- [ ] Tested search finds the page (both instant and API results)

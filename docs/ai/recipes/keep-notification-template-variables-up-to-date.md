@@ -42,5 +42,5 @@ private function variableDescriptions(): array
 ## Related
 
 - [Recipe: Add Notification Template](add-notification-template.md) — Step 5 covers variable descriptions when adding a new type.
-- [Patterns: Notification Template Admin UI](../patterns.md#notification-template-admin-ui-pattern) — Variables Reference panel behavior.
+- [Patterns: Notification Template Admin UI](../patterns/notification-template-service.md) — Variables Reference panel behavior.
 - **Rule**: [.cursor/rules/notification-template-variables.mdc](../../../.cursor/rules/notification-template-variables.mdc) — Reminder to update the reference when touching notification templates (applies when editing NotificationTemplateController, NotificationTemplateSeeder, or notification-templates frontend).

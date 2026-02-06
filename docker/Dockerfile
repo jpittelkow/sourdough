@@ -123,7 +123,7 @@ COPY --chown=www-data:www-data VERSION ./VERSION
 # Create required directories
 RUN mkdir -p /var/www/html/backend/storage/app/public \
     && mkdir -p /var/www/html/backend/storage/app/backups \
-    && mkdir -p /var/www/html/backend/storage/framework/cache \
+    && mkdir -p /var/www/html/backend/storage/framework/cache/data \
     && mkdir -p /var/www/html/backend/storage/framework/sessions \
     && mkdir -p /var/www/html/backend/storage/framework/views \
     && mkdir -p /var/www/html/backend/storage/logs \

@@ -109,7 +109,7 @@ Configuration > **Application Logs** includes an **Export** section. Admins can 
 - **ACCESS_LOG_RETENTION_DAYS**: Retention in days (default 2190 = 6 years). Do not reduce below 6 years for HIPAA.
 - Access logs are included in backups and restored with merge-by-ID.
 
-See [Recipe: Add access logging](ai/recipes/add-access-logging.md) and [Patterns: AccessLogService](ai/patterns.md#accesslogservice-pattern-hipaa-access-logging).
+See [Recipe: Add access logging](ai/recipes/add-access-logging.md) and [Patterns: AccessLogService](ai/patterns/access-log-service.md).
 
 ## Log Retention and Cleanup
 

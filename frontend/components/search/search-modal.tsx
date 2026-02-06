@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/command";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { SearchResultIcon } from "@/components/search/search-result-icon";
+import { useHelp } from "@/components/help/help-provider";
 import { getSuggestions, type SearchResult } from "@/lib/search";
 
 const RECENT_KEY = "search-recent-queries";
@@ -47,6 +48,7 @@ interface SearchModalProps {
 
 export function SearchModal({ open, onOpenChange }: SearchModalProps) {
   const router = useRouter();
+  const { openArticle } = useHelp();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -104,9 +106,13 @@ export function SearchModal({ open, onOpenChange }: SearchModalProps) {
     (result: SearchResult) => {
       addRecentQuery(query);
       onOpenChange(false);
-      router.push(result.url);
+      if (result.url.startsWith("help:")) {
+        openArticle(result.url.slice(5));
+      } else {
+        router.push(result.url);
+      }
     },
-    [query, onOpenChange, router]
+    [query, onOpenChange, router, openArticle]
   );
 
   const handleRecentSelect = useCallback(

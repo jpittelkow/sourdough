@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,9 +30,9 @@ function VerifyEmailContent() {
       setStatus("success");
       await fetchUser();
       toast.success("Email verified successfully!");
-    } catch (error: any) {
+    } catch (error: unknown) {
       setStatus("error");
-      setErrorMessage(error.message || "Verification failed");
+      setErrorMessage(getErrorMessage(error, "Verification failed"));
     }
   }, [id, hash, fetchUser]);
 
@@ -51,8 +52,8 @@ function VerifyEmailContent() {
     try {
       await api.post("/auth/resend-verification");
       toast.success("Verification email sent!");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to resend verification email");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to resend verification email"));
     } finally {
       setIsResending(false);
     }

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { getErrorMessage } from "@/lib/utils";
 import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,6 +29,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
+import { HelpLink } from "@/components/help/help-link";
 import { ProviderIcon } from "@/components/provider-icons";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -40,6 +42,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
@@ -309,8 +312,8 @@ export default function AISettingsPage() {
     try {
       await api.put("/llm/config", { mode: newMode });
       toast.success(`LLM mode set to ${newMode}`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update mode");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update mode"));
       // Revert
       fetchAIConfig();
     } finally {
@@ -356,8 +359,8 @@ export default function AISettingsPage() {
       setShowAddDialog(false);
       resetAddDialog();
       toast.success("Provider added successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to add provider");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to add provider"));
     } finally {
       setIsSaving(false);
     }
@@ -491,8 +494,8 @@ export default function AISettingsPage() {
 
     try {
       await api.put(`/llm/providers/${providerId}`, { is_enabled: enabled });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update provider");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update provider"));
       fetchAIConfig();
     }
   };
@@ -508,8 +511,8 @@ export default function AISettingsPage() {
     try {
       await api.put(`/llm/providers/${providerId}`, { is_primary: true });
       toast.success("Primary provider updated");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update provider");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update provider"));
       fetchAIConfig();
     }
   };
@@ -519,8 +522,8 @@ export default function AISettingsPage() {
       await api.delete(`/llm/providers/${providerId}`);
       setProviders((prev) => prev.filter((p) => p.id !== providerId));
       toast.success("Provider removed");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to remove provider");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to remove provider"));
     }
   };
 
@@ -534,8 +537,8 @@ export default function AISettingsPage() {
       } else {
         toast.error(response.data.error || "Connection test failed");
       }
-    } catch (error: any) {
-      toast.error(error.message || "Connection test failed");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Connection test failed"));
     } finally {
       setTestingProviders((prev) => {
         const newSet = new Set(prev);
@@ -550,11 +553,7 @@ export default function AISettingsPage() {
   );
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -562,7 +561,8 @@ export default function AISettingsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">AI / LLM Settings</h1>
         <p className="text-muted-foreground">
-          Configure AI providers and orchestration modes.
+          Configure AI providers and orchestration modes.{" "}
+          <HelpLink articleId="ai-llm-settings" />
         </p>
       </div>
 

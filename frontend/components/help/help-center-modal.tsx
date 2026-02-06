@@ -5,6 +5,7 @@ import { ArrowLeft, X } from "lucide-react";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -21,7 +22,6 @@ import {
   getSearchableArticles,
 } from "@/lib/help/help-content";
 import { initializeSearch } from "@/lib/help/help-search";
-import { cn } from "@/lib/utils";
 
 export function HelpCenterModal() {
   const { isOpen, setIsOpen, currentArticle, setCurrentArticle } = useHelp();
@@ -87,7 +87,15 @@ export function HelpCenterModal() {
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="max-w-4xl h-[600px] p-0 gap-0">
+      <DialogContent
+        className="max-w-4xl h-[80vh] max-h-[600px] p-0 gap-0"
+        hideClose
+      >
+        <DialogDescription className="sr-only">
+          {articleData
+            ? `Help article: ${articleData.article.title}`
+            : "Help Center - browse topics or search for help articles"}
+        </DialogDescription>
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -124,13 +132,8 @@ export function HelpCenterModal() {
         </DialogHeader>
 
         <div className="flex flex-1 min-h-0">
-          {/* Sidebar */}
-          <aside
-            className={cn(
-              "w-64 border-r shrink-0 overflow-hidden",
-              currentArticle && "hidden md:block"
-            )}
-          >
+          {/* Sidebar - hidden on mobile; category grid serves as nav */}
+          <aside className="hidden md:block w-64 border-r shrink-0 overflow-hidden">
             <ScrollArea className="h-full p-4">
               <HelpSidebar
                 categories={categories}

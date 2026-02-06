@@ -182,6 +182,8 @@ VAPID_SUBJECT=mailto:admin@yourdomain.com
 
 **PWA Review (2026-02-05):** Code review completed. Removed missing screenshots from manifest, fixed `console.error` → `errorLogger`, added share page URL validation (http/https only). See [journal/2026-02-05-pwa-review.md](../journal/2026-02-05-pwa-review.md).
 
+**PWA Hardening (2026-02-05):** Comprehensive hardening pass. Fixed broken server-side manifest route (headers-based URL resolution), generated missing `apple-icon.png` and `favicon.ico`, added `<meta name="theme-color">` with dynamic branding updates, split icon `purpose: "any maskable"` into separate entries, bundled Workbox 7.3.0 locally (removed CDN dependency), added 24h stale queue cleanup with 4xx removal, replaced hardcoded app name on share page, added `postMessage` NAVIGATE fallback for notification clicks, added standalone CSS and iOS safe-area support. See [journal/2026-02-05-pwa-hardening.md](../journal/2026-02-05-pwa-hardening.md).
+
 ## Browser Support Notes
 
 | Feature | Chrome | Firefox | Safari | Edge |
@@ -194,8 +196,7 @@ VAPID_SUBJECT=mailto:admin@yourdomain.com
 
 ## Dependencies
 
-- [next-pwa](https://www.npmjs.com/package/next-pwa) or manual SW setup
-- [workbox](https://developer.chrome.com/docs/workbox) for caching strategies
+- Manual SW setup with [Workbox](https://developer.chrome.com/docs/workbox) 7.3.0 (bundled locally in `frontend/public/workbox/`)
 - Existing notification system infrastructure
 
 ## References

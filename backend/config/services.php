@@ -54,37 +54,37 @@ return [
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),
-        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/google'),
     ],
 
     'github' => [
         'client_id' => env('GITHUB_CLIENT_ID'),
         'client_secret' => env('GITHUB_CLIENT_SECRET'),
-        'redirect' => env('GITHUB_REDIRECT_URI'),
+        'redirect' => env('GITHUB_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/github'),
     ],
 
     'microsoft' => [
         'client_id' => env('MICROSOFT_CLIENT_ID'),
         'client_secret' => env('MICROSOFT_CLIENT_SECRET'),
-        'redirect' => env('MICROSOFT_REDIRECT_URI'),
+        'redirect' => env('MICROSOFT_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/microsoft'),
     ],
 
     'apple' => [
         'client_id' => env('APPLE_CLIENT_ID'),
         'client_secret' => env('APPLE_CLIENT_SECRET'),
-        'redirect' => env('APPLE_REDIRECT_URI'),
+        'redirect' => env('APPLE_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/apple'),
     ],
 
     'discord' => [
         'client_id' => env('DISCORD_CLIENT_ID'),
         'client_secret' => env('DISCORD_CLIENT_SECRET'),
-        'redirect' => env('DISCORD_REDIRECT_URI'),
+        'redirect' => env('DISCORD_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/discord'),
     ],
 
     'gitlab' => [
         'client_id' => env('GITLAB_CLIENT_ID'),
         'client_secret' => env('GITLAB_CLIENT_SECRET'),
-        'redirect' => env('GITLAB_REDIRECT_URI'),
+        'redirect' => env('GITLAB_REDIRECT_URI', env('APP_URL', 'http://localhost') . '/api/auth/callback/gitlab'),
     ],
 
 ];

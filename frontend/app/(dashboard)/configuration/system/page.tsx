@@ -10,6 +10,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useAppConfig } from "@/lib/app-config";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
+import { HelpLink } from "@/components/help/help-link";
 import { TOOLTIP_CONTENT } from "@/lib/tooltip-content";
 
 const TIMEZONES = [
@@ -188,8 +190,8 @@ export default function SystemSettingsPage() {
           setValue(`${group}.${key}` as any, groupData[key]);
         });
       });
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load system settings");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load system settings"));
     } finally {
       setIsLoading(false);
     }
@@ -251,12 +253,8 @@ export default function SystemSettingsPage() {
       // Invalidate app-config cache so app name updates immediately
       queryClient.invalidateQueries({ queryKey: ["app-config"] });
       await fetchSettings();
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.message 
-        || error.response?.data?.error 
-        || error.message 
-        || "Failed to update system settings";
-      toast.error(errorMessage);
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update system settings"));
     } finally {
       setIsSaving(false);
     }
@@ -271,7 +269,8 @@ export default function SystemSettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">System Settings</h1>
         <p className="text-muted-foreground mt-2">
-          Configure application-wide settings and defaults
+          Configure application-wide settings and defaults.{" "}
+          <HelpLink articleId="admin-overview" />
         </p>
       </div>
 

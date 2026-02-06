@@ -167,9 +167,10 @@ Admin UI at Configuration > Audit provides:
 ```
 GET  /api/audit-logs              - List audit logs (paginated)
 GET  /api/audit-logs/stats        - Audit statistics
-GET  /api/audit-logs/stream       - SSE stream for real-time
 GET  /api/audit-logs/export       - Export to CSV
 ```
+
+Real-time streaming uses WebSocket via Laravel Echo/Pusher on a private `audit-logs` channel (not SSE). The frontend subscribes using `use-audit-stream.ts`.
 
 ## Consequences
 
@@ -190,7 +191,7 @@ GET  /api/audit-logs/export       - Export to CSV
 ### Neutral
 
 - Audit logs are immutable (no update/delete via API)
-- Retention policy can be configured (default: 90 days)
+- Retention policy can be configured (default: 365 days)
 - External log aggregation can consume via export
 
 ## Key Files
@@ -222,4 +223,4 @@ GET  /api/audit-logs/export       - Export to CSV
 
 ### Log Retention
 
-Configure retention via `LOG_RETENTION_DAYS` environment variable or admin settings. Logs older than retention period are automatically purged by the scheduled cleanup job.
+Configure retention via `AUDIT_LOG_RETENTION_DAYS` environment variable or admin settings (default: 365 days). Logs older than retention period are automatically purged by the scheduled cleanup job.

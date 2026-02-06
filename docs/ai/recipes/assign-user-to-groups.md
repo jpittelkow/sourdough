@@ -10,7 +10,7 @@ Step-by-step guide to add or update user group assignment in the admin UI.
 
 ## Pattern Reference
 
-See [Patterns: User Group Assignment (Frontend)](../patterns.md#user-group-assignment-frontend).
+See [Patterns: User Group Assignment (Frontend)](../patterns/permission-checking.md).
 
 ## Key Files
 

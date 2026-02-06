@@ -28,7 +28,7 @@ Critical issues that must be fixed before merge:
 - [ ] Last-admin checks use **AdminAuthorizationTrait** (not manual checks)
 - [ ] Providers/channels implement the required **interfaces**
 
-See: [patterns.md](../patterns.md), [anti-patterns.md](../anti-patterns.md)
+See: [patterns](../patterns/README.md), [anti-patterns](../anti-patterns/README.md)
 
 ### Security
 
@@ -47,7 +47,7 @@ See: [patterns.md](../patterns.md), [anti-patterns.md](../anti-patterns.md)
 ### Response Format
 
 - [ ] JSON uses consistent structure: `data`, `message`, `meta` where applicable
-- [ ] HTTP status codes: 201 for create, 204 for delete, 4xx/5xx for errors
+- [ ] HTTP status codes: 201 for create, 200 for delete (with message body; use `deleteResponse()`), 4xx/5xx for errors
 
 ## Frontend Review Checklist (React/Next.js)
 
@@ -57,7 +57,7 @@ See: [patterns.md](../patterns.md), [anti-patterns.md](../anti-patterns.md)
 - [ ] Reusable UI from `frontend/components/` (e.g. Logo, SaveButton, SettingsPageSkeleton)
 - [ ] Utilities in `frontend/lib/` (api, auth, utils)
 
-See: [.cursor/rules/global-components.mdc](../../.cursor/rules/global-components.mdc)
+See: [Global Components Pattern](../patterns/components.md)
 
 ### State and Forms
 
@@ -95,6 +95,7 @@ If any of these appear, recommend the preferred approach:
 
 | Pattern | Prefer |
 |--------|--------|
+| `response()->json(...)` with manual format | ApiResponseTrait methods (`successResponse`, `createdResponse`, `deleteResponse`, `dataResponse`, `errorResponse`) |
 | `SystemSetting::get/set` for mail (or other schema-backed group) | SettingService |
 | Inline `$request->validate()` in controller | FormRequest class |
 | Manual "last admin" check | AdminAuthorizationTrait |
@@ -103,6 +104,7 @@ If any of these appear, recommend the preferred approach:
 | `mode: "onChange"` in useForm | `mode: "onBlur"` |
 | Hardcoded pagination (e.g. `15`, `20`) | `config('app.pagination.default')` |
 | Desktop-first CSS (e.g. base = desktop, `md:` = mobile) | Mobile-first (base = mobile, `md:` = larger) |
+| `catch (error: any)` in frontend | `catch (error: unknown)` and `getErrorMessage(error, fallback)` from `@/lib/utils` |
 
 ## Debug Code Detection
 
@@ -124,7 +126,7 @@ Search for and remove (or justify) before merge:
 
 ## Final Checklist
 
-Use this combined checklist for a full pass. For detailed examples, see [anti-patterns.md – Summary Checklist](../anti-patterns.md#summary-checklist).
+Use this combined checklist for a full pass. For detailed examples, see [anti-patterns – Summary Checklist](../anti-patterns/README.md#summary-checklist).
 
 - [ ] **No duplicated logic** – Existing components/utilities used where applicable
 - [ ] **Shared components** – New reusable code in `frontend/components/` or `frontend/lib/`
@@ -145,12 +147,12 @@ Use this combined checklist for a full pass. For detailed examples, see [anti-pa
 - [ ] Mobile-first CSS; touch targets ≥ 44px; tables in `overflow-x-auto`
 - [ ] No debug code left in changes
 - [ ] No deprecated patterns (see [Deprecated Patterns to Flag](#deprecated-patterns-to-flag))
-- [ ] **Logging** – PHI access routes have `log.access`; services use `Log::` with structured context; frontend uses `errorLogger` (not `console.error`/`console.warn`). See [logging-compliance](../../../.cursor/rules/logging-compliance.mdc).
+- [ ] **Logging** – PHI access routes have `log.access`; services use `Log::` with structured context; frontend uses `errorLogger` (not `console.error`/`console.warn`). See [Logging Guide](../../logging.md).
 
 ## References
 
-- [patterns.md](../patterns.md) – Correct implementations
-- [anti-patterns.md](../anti-patterns.md) – What to flag and avoid
-- [global-components.mdc](../../.cursor/rules/global-components.mdc) – Component rules
+- [patterns](../patterns/README.md) – Correct implementations
+- [anti-patterns](../anti-patterns/README.md) – What to flag and avoid
+- [Global Components Pattern](../patterns/components.md) – Component rules
 - [architecture.md](../../architecture.md) – ADRs and key files
-- [logging-compliance.mdc](../../../.cursor/rules/logging-compliance.mdc) – Logging checklist (access, application, audit, frontend)
+- [Logging Guide](../../logging.md) – Logging checklist (access, application, audit, frontend)

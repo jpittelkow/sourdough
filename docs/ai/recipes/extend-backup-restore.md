@@ -122,4 +122,4 @@ Use this for changes that only affect the backup/restore UI (filters, bulk actio
 - [Add backup destination](add-backup-destination.md) – add a new storage destination
 - [Trigger notifications](trigger-notifications.md) – send backup success/failure notifications
 - [ADR-007: Backup System Design](../../adr/007-backup-system-design.md)
-- [Backup & Restore patterns](../patterns.md#backup--restore-patterns)
+- [Backup & Restore patterns](../patterns/backup-restore.md)

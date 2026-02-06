@@ -32,7 +32,7 @@ e2e/                            # Playwright E2E tests
 ## Key Technologies
 
 - Backend: Laravel 11, PHP 8.3+, Laravel Sanctum
-- Frontend: Next.js 14, React 18, TypeScript, Tailwind CSS, shadcn/ui
+- Frontend: Next.js 16, React 18, TypeScript, Tailwind CSS, shadcn/ui
 - Database: SQLite (default), MySQL, PostgreSQL, Supabase
 - Container: Docker with Nginx + PHP-FPM + Supervisor
 - Testing: Pest PHP, Vitest, Playwright
@@ -86,19 +86,19 @@ npx shadcn@latest add <component> --overwrite   # Replace existing component
 | Backups | `BackupService.php`, `Destinations/`, `BackupSettingController.php`, `config/settings-schema.php` (backup group) | ADR-007, [Backup hub](backup.md) |
 | Backup UI | `frontend/app/(dashboard)/configuration/backup/page.tsx` (Backups + Settings tabs) | [Backup hub](backup.md) |
 | Add backup destination | [Recipe: add-backup-destination](ai/recipes/add-backup-destination.md) | ADR-007 |
-| Extend backup/restore | [Recipe: extend-backup-restore](ai/recipes/extend-backup-restore.md), [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns) | [Backup hub](backup.md) |
+| Extend backup/restore | [Recipe: extend-backup-restore](ai/recipes/extend-backup-restore.md), [Patterns: Backup & Restore](ai/patterns/backup-restore.md) | [Backup hub](backup.md) |
 | Logging / frontend errors | [Logging](logging.md), `backend/config/logging.php`, `frontend/lib/error-logger.ts`, [Recipe: extend-logging](ai/recipes/extend-logging.md) | - |
 | Access logging (HIPAA) | `AccessLogService.php`, `LogResourceAccess` middleware, [Recipe: add-access-logging](ai/recipes/add-access-logging.md) | [Logging](logging.md#hipaa-access-logging) |
 | Log retention / app log export | Configuration > Log retention (retention days, HIPAA toggle, delete-all when disabled); `log:cleanup` (--dry-run, --archive); `GET /api/app-logs/export`; [Logging](logging.md#log-retention-and-cleanup) | - |
 | Suspicious activity | `log:check-suspicious` (scheduled); `GET /api/suspicious-activity`; dashboard banner | [Logging](logging.md#suspicious-activity-alerting) |
 | Docker config | `docker/`, `docker-compose.yml` | ADR-009 |
-| Add settings page | `frontend/app/(dashboard)/settings/` | ADR-012 |
-| Add admin page | `frontend/app/(dashboard)/admin/` | ADR-012 |
+| Add settings page | `frontend/app/(dashboard)/configuration/` | ADR-012 |
+| Add config page | `frontend/app/(dashboard)/configuration/` | ADR-012 |
 | Add shadcn component | `frontend/` then `npx shadcn@latest add <name>` | - |
 
 ## Gotchas
 
-- **Global components only** - Never duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Cursor rule: global-components.mdc](../.cursor/rules/global-components.mdc).
+- **Global components only** - Never duplicate logic across pages. Use shared components from `frontend/components/` and utilities from `frontend/lib/`. See [Anti-patterns: Frontend](ai/anti-patterns/frontend.md).
 - **SQLite is default** but code supports MySQL/PostgreSQL/Supabase (ADR-010)
 - **Single Docker container** with Supervisor, not microservices (ADR-009)
 - **Settings are user-scoped** (`user_id` column) - system settings use `SystemSetting` model
@@ -115,3 +115,5 @@ Sourdough follows [Semantic Versioning](https://semver.org/):
 - **PATCH** - Bug fixes
 
 Current version is stored in the `VERSION` file and accessible via `/api/version`.
+
+**Release workflow:** Trigger via GitHub Actions > Release > Run workflow. Select version type (patch/minor/major/custom), then confirm. The workflow bumps version, creates a tag, publishes a GitHub Release, and pushes the Docker image to GHCR.

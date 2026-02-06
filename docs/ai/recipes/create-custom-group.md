@@ -9,7 +9,7 @@ Step-by-step guide to create a custom user group and assign permissions and user
 
 ## Pattern Reference
 
-See [Patterns: Permission Checking (User Groups)](../patterns.md#permission-checking-pattern-user-groups) and [User Groups Roadmap](../../plans/user-groups-roadmap.md).
+See [Patterns: Permission Checking (User Groups)](../patterns/permission-checking.md) and [User Groups Roadmap](../../plans/user-groups-roadmap.md).
 
 ## Key Files
 

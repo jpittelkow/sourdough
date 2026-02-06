@@ -81,22 +81,19 @@ Use case: Complex questions where different models may have different insights.
 
 #### 3. Council Mode
 
-All providers independently respond, then vote or reach consensus. Final response based on:
-- Majority agreement on key points
-- Confidence scores
-- Fact-checking across responses
+All providers independently respond, then the primary provider synthesizes the results. The current implementation uses a simplified consensus approach: all providers respond in parallel, and the primary provider produces a final response that considers all inputs.
+
+> **Implementation note:** The full consensus engine described below (majority agreement, confidence scores, dissenting views) is an aspirational design. The current implementation collects all responses and has the primary provider synthesize them into a final answer. The advanced voting/confidence features may be added in a future iteration.
 
 ```
                     ┌──► Provider A ──► Response A ──┐
                     │                                │
-Request ──► Split ──┼──► Provider B ──► Response B ──┼──► Consensus Engine
+Request ──► Split ──┼──► Provider B ──► Response B ──┼──► Primary Synthesizes
                     │                                │
                     └──► Provider C ──► Response C ──┘
                                                      │
                                                      ▼
                                               Final Response
-                                              + Confidence Score
-                                              + Dissenting Views
 ```
 
 Use case: Critical decisions, fact verification, reducing hallucinations.
@@ -215,7 +212,9 @@ return [
 
 ## Notes
 
-### Council Mode Algorithm
+### Council Mode Algorithm (Aspirational Design)
+
+> **Note:** This describes the full design vision. The current implementation uses a simplified approach where all providers respond and the primary provider synthesizes the results. See the [implementation note above](#3-council-mode).
 
 1. Send identical prompt to all enabled providers
 2. Collect responses with metadata (confidence if available)

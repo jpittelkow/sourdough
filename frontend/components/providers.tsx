@@ -13,6 +13,21 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { ErrorHandlerSetup } from "@/components/error-handler-setup";
 import { ServiceWorkerSetup } from "@/components/service-worker-setup";
 
+/**
+ * Defers the Toaster mount to avoid "Cannot update a component while rendering
+ * a different component" warnings. Sonner's Toaster triggers internal state
+ * updates during its initial render which conflicts with React 18.3+ strict
+ * mode when rendered synchronously inside a deep provider tree.
+ */
+function DeferredToaster() {
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+  if (!mounted) return null;
+  return <Toaster richColors position="top-right" />;
+}
+
 function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { initialize, isInitialized } = useAuth();
 
@@ -51,7 +66,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
                 <AuthInitializer>
                   <NotificationProvider>{children}</NotificationProvider>
                 </AuthInitializer>
-                <Toaster richColors position="top-right" />
+                <DeferredToaster />
               </TooltipProvider>
             </ThemeProvider>
           </VersionProvider>

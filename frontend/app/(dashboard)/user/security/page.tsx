@@ -8,6 +8,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { getErrorMessage } from "@/lib/utils";
 import { useAppConfig } from "@/lib/app-config";
 import { usePasskeys } from "@/lib/use-passkeys";
 import { PasskeyRegisterDialog } from "@/components/auth/passkey-register-dialog";
@@ -137,8 +138,8 @@ export default function SecurityPage() {
       await api.put("/profile/password", data);
       toast.success("Password updated successfully");
       reset();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update password");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update password"));
     } finally {
       setIsLoading(false);
     }
@@ -150,8 +151,8 @@ export default function SecurityPage() {
       setQrCode(response.data.qr_code);
       setSetupSecret(response.data.secret);
       setShowSetupDialog(true);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to enable 2FA");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to enable 2FA"));
     }
   };
 
@@ -171,8 +172,8 @@ export default function SecurityPage() {
       setVerificationCode("");
       fetchSecurityStatus();
       toast.success("Two-factor authentication enabled");
-    } catch (error: any) {
-      toast.error(error.message || "Invalid verification code");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Invalid verification code"));
     }
   };
 
@@ -181,8 +182,8 @@ export default function SecurityPage() {
       await api.post("/auth/2fa/disable");
       fetchSecurityStatus();
       toast.success("Two-factor authentication disabled");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to disable 2FA");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to disable 2FA"));
     }
   };
 
@@ -191,8 +192,8 @@ export default function SecurityPage() {
       const response = await api.get("/auth/2fa/recovery-codes");
       setRecoveryCodes(response.data.recovery_codes || []);
       setShowRecoveryDialog(true);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to get recovery codes");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to get recovery codes"));
     }
   };
 
@@ -201,8 +202,8 @@ export default function SecurityPage() {
       const response = await api.post("/auth/2fa/recovery-codes/regenerate");
       setRecoveryCodes(response.data.recovery_codes || []);
       toast.success("Recovery codes regenerated");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to regenerate codes");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to regenerate codes"));
     }
   };
 
@@ -215,8 +216,8 @@ export default function SecurityPage() {
       await api.delete(`/auth/sso/${provider}/unlink`);
       fetchSecurityStatus();
       toast.success(`${provider} account unlinked`);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to unlink account");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to unlink account"));
     }
   };
 

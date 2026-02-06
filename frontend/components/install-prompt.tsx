@@ -45,7 +45,7 @@ export function InstallPrompt() {
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 z-40 flex justify-center p-4 pointer-events-none"
+      className="fixed bottom-0 left-0 right-0 z-40 flex justify-center p-4 pointer-events-none safe-area-bottom"
       role="dialog"
       aria-label={`Install ${appDisplayName} app`}
     >

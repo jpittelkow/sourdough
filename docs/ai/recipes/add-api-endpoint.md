@@ -38,6 +38,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
 ## Step 2: Create the Controller
 
+Use `ApiResponseTrait` for consistent responses and `config('app.pagination.default')` for pagination. Use `$this->authorize()` for ownership checks (requires a Policy).
+
 ```php
 <?php
 // backend/app/Http/Controllers/Api/ExampleController.php
@@ -47,12 +49,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreExampleRequest;
 use App\Http\Requests\UpdateExampleRequest;
+use App\Http\Resources\ExampleResource;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\Example;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ExampleController extends Controller
 {
+    use ApiResponseTrait;
+
     /**
      * List all examples for authenticated user.
      */
@@ -60,10 +66,10 @@ class ExampleController extends Controller
     {
         $examples = Example::where('user_id', $request->user()->id)
             ->orderBy('created_at', 'desc')
-            ->paginate(15);
+            ->paginate($request->input('per_page', config('app.pagination.default')));
 
-        return response()->json([
-            'data' => $examples->items(),
+        return $this->dataResponse([
+            'data' => ExampleResource::collection($examples),
             'meta' => [
                 'current_page' => $examples->currentPage(),
                 'last_page' => $examples->lastPage(),
@@ -82,10 +88,9 @@ class ExampleController extends Controller
             'user_id' => $request->user()->id,
         ]);
 
-        return response()->json([
-            'data' => $example,
-            'message' => 'Example created successfully.',
-        ], 201);
+        return $this->createdResponse('Example created successfully.', [
+            'data' => new ExampleResource($example),
+        ]);
     }
 
     /**
@@ -93,12 +98,11 @@ class ExampleController extends Controller
      */
     public function show(Request $request, Example $example): JsonResponse
     {
-        // Ensure user owns this example
-        if ($example->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Not found.'], 404);
-        }
+        $this->authorize('view', $example);
 
-        return response()->json(['data' => $example]);
+        return $this->dataResponse([
+            'data' => new ExampleResource($example),
+        ]);
     }
 
     /**
@@ -106,15 +110,12 @@ class ExampleController extends Controller
      */
     public function update(UpdateExampleRequest $request, Example $example): JsonResponse
     {
-        if ($example->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Not found.'], 404);
-        }
+        $this->authorize('update', $example);
 
         $example->update($request->validated());
 
-        return response()->json([
-            'data' => $example,
-            'message' => 'Example updated successfully.',
+        return $this->successResponse('Example updated successfully.', [
+            'data' => new ExampleResource($example),
         ]);
     }
 
@@ -123,13 +124,11 @@ class ExampleController extends Controller
      */
     public function destroy(Request $request, Example $example): JsonResponse
     {
-        if ($example->user_id !== $request->user()->id) {
-            return response()->json(['message' => 'Not found.'], 404);
-        }
+        $this->authorize('delete', $example);
 
         $example->delete();
 
-        return response()->json(['message' => 'Example deleted successfully.']);
+        return $this->deleteResponse('Example deleted successfully.');
     }
 }
 ```
@@ -282,43 +281,6 @@ docker-compose exec app php /var/www/html/backend/artisan route:list --path=exam
 - [ ] Auth middleware applied (`auth:sanctum`)
 - [ ] Routes verified with `route:list`
 - [ ] Tested with API client (Postman, curl, etc.)
-
-## Using Shared Traits
-
-Use `ApiResponseTrait` and `config('app.pagination.default')` for consistent responses and pagination.
-
-```php
-use App\Http\Traits\ApiResponseTrait;
-
-class ExampleController extends Controller
-{
-    use ApiResponseTrait;
-
-    public function index(Request $request): JsonResponse
-    {
-        $examples = Example::where('user_id', $request->user()->id)
-            ->orderBy('created_at', 'desc')
-            ->paginate($request->input('per_page', config('app.pagination.default')));
-
-        return $this->dataResponse($examples);
-    }
-
-    public function store(StoreExampleRequest $request): JsonResponse
-    {
-        $example = Example::create([...$request->validated(), 'user_id' => $request->user()->id]);
-        return $this->createdResponse('Example created successfully.', ['data' => $example]);
-    }
-
-    public function destroy(Request $request, Example $example): JsonResponse
-    {
-        if ($example->user_id !== $request->user()->id) {
-            return $this->errorResponse('Not found.', 404);
-        }
-        $example->delete();
-        return $this->successResponse('Example deleted successfully.');
-    }
-}
-```
 
 For admin endpoints that modify or delete users (e.g. delete user, toggle admin, disable user), use `AdminAuthorizationTrait` to prevent removing the last admin. See [Add admin-protected action](add-admin-protected-action.md).
 

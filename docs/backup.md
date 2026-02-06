@@ -82,6 +82,19 @@ Save changes with **Save Changes**. Test Connection uses the **saved** settings;
 | Settings API + Test | `backend/app/Http/Controllers/Api/BackupSettingController.php` |
 | Backup UI | `frontend/app/(dashboard)/configuration/backup/page.tsx` |
 
+### Cross-Database Restore Compatibility
+
+| Backup Source | Restore Target | Supported? | Notes |
+|--------------|---------------|------------|-------|
+| SQLite | SQLite | Yes | File copy, clean |
+| MySQL | MySQL | Yes | JSON import, clean |
+| PostgreSQL | PostgreSQL | Yes | JSON import, clean |
+| SQLite | MySQL/PostgreSQL | **No** | Different backup formats (file copy vs JSON) |
+| MySQL/PostgreSQL | SQLite | **No** | JSON import targets the same driver type |
+| MySQL | PostgreSQL (or reverse) | **Untested** | JSON format is driver-agnostic in theory, but column types/auto-increment behavior differ |
+
+**Rule:** Restore to the same database driver that created the backup. The manifest records the database driver, and restore should validate this before proceeding.
+
 ### Architecture decisions
 
 - [ADR-007: Backup System Design](adr/007-backup-system-design.md) – Format, manifest, destinations, security.
@@ -101,7 +114,7 @@ Use these so new features stay consistent and well-documented:
    Covers: new setting, new restore behavior, scheduling, notifications, new backup content, UI-only changes.
 
 3. **Follow shared patterns**  
-   → [Patterns: Backup & Restore](ai/patterns.md#backup--restore-patterns)  
+   → [Patterns: Backup & Restore](ai/patterns/backup-restore.md)  
    How settings flow (schema → config → destinations), settings API, Test Connection, and UI structure.
 
 ### API reference
@@ -121,4 +134,4 @@ When working on backup-related code, load context as in [Context loading – Bac
 |---------|-------------|
 | End users | [User Guide – Backup & Restore](user/README.md#backup--restore) |
 | Admins | **Configuration > Backup** (Backups + Settings tabs); this page for reference |
-| Developers | This page → Key files, ADRs, [Add backup destination](ai/recipes/add-backup-destination.md), [Extend backup/restore](ai/recipes/extend-backup-restore.md), [Backup patterns](ai/patterns.md#backup--restore-patterns) |
+| Developers | This page → Key files, ADRs, [Add backup destination](ai/recipes/add-backup-destination.md), [Extend backup/restore](ai/recipes/extend-backup-restore.md), [Backup patterns](ai/patterns/backup-restore.md) |

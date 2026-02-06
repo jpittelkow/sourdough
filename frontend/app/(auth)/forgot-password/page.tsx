@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
       setSubmittedEmail(data.email);
       setIsEmailSent(true);
       toast.success("Password reset link sent!");
-    } catch (error: any) {
+    } catch {
       // Don't reveal if email exists or not for security
       setSubmittedEmail(data.email);
       setIsEmailSent(true);

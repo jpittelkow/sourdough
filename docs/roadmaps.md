@@ -18,15 +18,13 @@ _No items._
 
 Requires foundation work or longer-term planning.
 
-| Roadmap | Priority | Status |
-|---------|----------|--------|
-| [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | MEDIUM | ✅ Phases 1-3 complete (Wizard, Tooltips, Help Center) |
-| [Database Options](plans/database-options-roadmap.md) | LOW | ✅ Env to Database (complete) |
+_No items._
 
 ## Pre-Release Checklist
 
 After completing Planned Features, complete these final tasks before release:
 
+- [ ] **Documentation Architecture Review** - Fix cross-document inconsistencies, add architectural clarity, improve developer experience docs (see [Documentation Architecture Review](plans/documentation-architecture-review-roadmap.md))
 - [ ] **Final Code Review** - Review all modified files for bugs, debug code, hardcoded values, and adherence to patterns (see [Code Review recipe](ai/recipes/code-review.md))
 - [ ] **Roadmap Cleanup** - Archive completed roadmaps, verify all links work, update stale entries (see Roadmap Maintenance below)
 - [ ] **User Build Verification** - Manually verify the Docker build works end-to-end (see Build Verification below)
@@ -37,6 +35,7 @@ High-priority work complete. Only optional/lower-priority items remain.
 
 | Roadmap | Completed | Remaining Work |
 |---------|-----------|----------------|
+| [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | 2026-02-05 | Optional: additional help articles, advanced onboarding flows |
 | [Progressive Web App (PWA)](plans/pwa-roadmap.md) | 2026-01-31 | Optional: periodic sync, protocol handlers, rich notifications |
 | [Storage Settings Enhancement](plans/storage-settings-roadmap.md) | 2026-01-31 | Optional: usage-over-time chart, orphaned/duplicate file detection |
 | [Web Push Notifications](plans/web-push-notifications-roadmap.md) | 2026-01-31 | Merged into PWA roadmap; core complete |
@@ -77,7 +76,10 @@ All tasks complete.
 | [Security Compliance Review](plans/security-compliance-roadmap.md) | 2026-02-05 |
 | Page Title Fixing | 2026-02-04 |
 | PWA Review | 2026-02-05 |
+| PWA Hardening | 2026-02-05 |
 | Login Testing & Review | 2026-02-05 |
+| GitHub Actions Hardening | 2026-02-05 |
+| Documentation Restructure | 2026-02-05 |
 
 ## Roadmap Maintenance
 
@@ -103,6 +105,14 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-05 | [Documentation Restructure](journal/2026-02-05-documentation-restructure.md) |
+| 2026-02-05 | [Frontend Code Review](journal/2026-02-05-frontend-code-review.md) |
+| 2026-02-05 | [Code Review Phase 2: Backend Architecture, Database, Response Format](journal/2026-02-05-code-review-phase-2.md) |
+| 2026-02-05 | [In-App Documentation Completion](journal/2026-02-05-in-app-docs-completion.md) |
+| 2026-02-05 | [Wizard and Help Center Styling Fixes](journal/2026-02-05-wizard-help-center-styling-fixes.md) |
+| 2026-02-05 | [Meilisearch Production Permission Denied Fix](journal/2026-02-05-meilisearch-production-permissions.md) |
+| 2026-02-05 | [Cache Permissions Fix](journal/2026-02-05-cache-permissions-fix.md) |
+| 2026-02-05 | [SSO Test Connection Toggle Fix](journal/2026-02-05-sso-test-toggle-fix.md) |
 | 2026-02-05 | [Phase 1: Security and Authentication Code Review](journal/2026-02-05-phase-1-security-review.md) |
 | 2026-02-05 | [Page Titles App Name Fix](journal/2026-02-05-page-titles-app-name-fix.md) |
 | 2026-02-05 | [Docker Build Optimization & Security Updates](journal/2026-02-05-docker-optimization-and-security-updates.md) |
@@ -111,7 +121,10 @@ Implementation history and development notes in `journal/`:
 | 2026-02-05 | [Compliance Templates](journal/2026-02-05-compliance-templates.md) |
 | 2026-02-05 | [Docker Container Audit](journal/2026-02-05-docker-container-audit.md) |
 | 2026-02-05 | [Login Testing & Review](journal/2026-02-05-login-testing-review.md) |
+| 2026-02-05 | [PWA Hardening](journal/2026-02-05-pwa-hardening.md) |
 | 2026-02-05 | [PWA Review and Code Audit](journal/2026-02-05-pwa-review.md) |
+| 2026-02-05 | [GitHub Actions Hardening](journal/2026-02-05-github-actions-hardening.md) |
+| 2026-02-05 | [Migration Service Container Fix](journal/2026-02-05-migration-service-container-fix.md) |
 | 2026-02-04 | [Security Page Architecture Cleanup](journal/2026-02-04-security-page-cleanup.md) |
 | 2026-02-02 | [Security SAST Automation](journal/2026-02-02-security-sast-automation.md) |
 | 2026-02-02 | [Security Review Phase 1: Security Headers & CORS Hardening](journal/2026-02-02-security-review-phase-1.md) |

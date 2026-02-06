@@ -28,7 +28,7 @@ If the config is stored in the database with environment fallback (see [ADR-014]
 4. **Reset to default**: Expose `DELETE /api/.../keys/{key}` where `{key}` is the **schema key** (e.g. `smtp_password`), not the frontend key. Validate that the key exists in `config('settings-schema.{group}')` before calling `$this->settingService->reset($group, $key)`.
 5. **Frontend**: Reset button can call `api.delete(\`/mail-settings/keys/${schemaKey}\`)`. Schema keys for mail are e.g. `mailer`, `smtp_host`, `smtp_port`, `smtp_password`, `from_address`, `from_name`.
 
-See [SettingService pattern](../patterns.md#settingservice-pattern) and `backend/app/Http/Controllers/Api/MailSettingController.php` for key mapping (schema ↔ frontend) and validation.
+See [SettingService pattern](../patterns/setting-service.md) and `backend/app/Http/Controllers/Api/MailSettingController.php` for key mapping (schema ↔ frontend) and validation.
 
 ## Step 1: Define the Zod Schema (Optional by Default)
 
@@ -231,11 +231,12 @@ const onSubmit = async (data: ConfigForm) => {
 
 ## Step 6: Save Button (Disable When Not Dirty)
 
+Use the shared `SaveButton` component instead of building save button logic inline:
+
 ```tsx
-<Button type="submit" disabled={!isDirty || isSaving}>
-  {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-  Save Changes
-</Button>
+import { SaveButton } from "@/components/ui/save-button";
+
+<SaveButton isDirty={isDirty} isSaving={isSaving} />
 ```
 
 ## Step 7: Backend Validation (Laravel)
@@ -264,12 +265,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { SaveButton } from "@/components/ui/save-button";
 
 const configSchema = z.object({
   api_key: z.string().optional(),
@@ -336,11 +337,7 @@ export default function ExampleConfigPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (
@@ -377,10 +374,7 @@ export default function ExampleConfigPage() {
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" disabled={!isDirty || isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>
       </form>
@@ -388,6 +382,17 @@ export default function ExampleConfigPage() {
   );
 }
 ```
+
+## Step 8: Register Page for Search (Dual Registration)
+
+New pages should be discoverable via global search (Cmd+K). This requires registration in **two places**:
+
+1. **Backend** (`backend/config/search-pages.php`) — for API-based search results and Meilisearch indexing
+2. **Frontend** (`frontend/lib/search-pages.ts` or equivalent) — for instant client-side filtering
+
+Both must be kept in sync. If only one is updated, search will produce inconsistent results (the page may appear via API but not instant search, or vice versa).
+
+See [Recipe: Add a Searchable Page](add-searchable-page.md) for the full registration steps.
 
 ## Checklist
 
@@ -399,6 +404,7 @@ export default function ExampleConfigPage() {
 - [ ] Submit converts empty strings to `null`
 - [ ] Save button uses `disabled={!isDirty || isSaving}`
 - [ ] Backend validation uses `nullable` for optional fields
+- [ ] Page registered in both `search-pages.php` and frontend search pages (see [dual registration](#step-8-register-page-for-search-dual-registration))
 
 ## Common Mistakes
 

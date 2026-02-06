@@ -5,6 +5,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { isAdminUser } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/utils";
 import {
   Table,
   TableBody,
@@ -89,9 +90,9 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
       setDeleteDialogOpen(false);
       setUserToDelete(null);
       onUserUpdated();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const { toast } = await import("sonner");
-      toast.error(error.response?.data?.message || "Failed to delete user");
+      toast.error(getErrorMessage(error, "Failed to delete user"));
     }
   };
 
@@ -109,9 +110,9 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
       setPasswordDialogOpen(false);
       setUserToResetPassword(null);
       setNewPassword("");
-    } catch (error: any) {
+    } catch (error: unknown) {
       const { toast } = await import("sonner");
-      toast.error(error.response?.data?.message || "Failed to reset password");
+      toast.error(getErrorMessage(error, "Failed to reset password"));
     } finally {
       setIsResetting(false);
     }
@@ -124,9 +125,9 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
       const { toast } = await import("sonner");
       toast.success("Admin status updated");
       onUserUpdated();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const { toast } = await import("sonner");
-      toast.error(error.response?.data?.message || "Failed to update admin status");
+      toast.error(getErrorMessage(error, "Failed to update admin status"));
     }
   };
 
@@ -137,9 +138,9 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
       const { toast } = await import("sonner");
       toast.success(user.disabled_at ? "User enabled successfully" : "User disabled successfully");
       onUserUpdated();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const { toast } = await import("sonner");
-      toast.error(error.response?.data?.message || "Failed to update user status");
+      toast.error(getErrorMessage(error, "Failed to update user status"));
     }
   };
 
@@ -151,10 +152,9 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
       const { toast } = await import("sonner");
       toast.success("Verification email sent successfully");
       onUserUpdated();
-    } catch (error: any) {
+    } catch (error: unknown) {
       const { toast } = await import("sonner");
-      const message = error.response?.data?.message || "Failed to send verification email";
-      toast.error(message);
+      toast.error(getErrorMessage(error, "Failed to send verification email"));
     } finally {
       setResendVerificationUserId(null);
     }

@@ -283,4 +283,4 @@ docker-compose exec app php /var/www/html/backend/artisan test
 - Check `docs/ai/recipes/` for step-by-step guides
 - Read relevant ADRs in `docs/adr/` for architecture context
 - Look at similar existing implementations as examples
-- Review `docs/ai/patterns.md` for code style guidance
+- Review `docs/ai/patterns/` for code style guidance

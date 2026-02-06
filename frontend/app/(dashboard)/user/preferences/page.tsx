@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { useTheme } from "@/components/theme-provider";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { errorLogger } from "@/lib/error-logger";
 import { useOnline } from "@/lib/use-online";
 import { OfflineBadge } from "@/components/offline-badge";
@@ -36,6 +37,7 @@ import {
   unsubscribe,
 } from "@/lib/web-push";
 import { useAppConfig } from "@/lib/app-config";
+import { HelpLink } from "@/components/help/help-link";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
 
 interface UserPreferences {
@@ -335,21 +337,19 @@ export default function PreferencesPage() {
       const newPreferences = { ...preferences, ...updates };
       setPreferences(newPreferences);
       toast.success("Preferences saved");
-    } catch (error: any) {
-      // Handle Laravel validation errors
-      if (error.response?.data?.errors) {
-        const errors = error.response.data.errors;
-        const errorMessages = Object.values(errors).flat().join(", ");
+    } catch (error: unknown) {
+      const data = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response?.data
+        : null;
+      if (data?.errors) {
+        const errorMessages = Object.values(data.errors).flat().join(", ");
         toast.error(`Validation error: ${errorMessages}`);
       } else {
-        const errorMessage = error.response?.data?.message 
-          || error.message 
-          || "Failed to save preferences";
-        toast.error(errorMessage);
+        toast.error(getErrorMessage(error, "Failed to save preferences"));
       }
       errorLogger.report(
         error instanceof Error ? error : new Error("Failed to save preferences"),
-        { response: error.response?.data, source: "preferences-page" }
+        { response: data, source: "preferences-page" }
       );
     } finally {
       setIsSaving(false);
@@ -378,6 +378,8 @@ export default function PreferencesPage() {
             {isOffline
               ? "You're offline. Settings are read-only; changes will sync when you're back online."
               : "Customize your personal settings and preferences."}
+            {!isOffline && " "}
+            {!isOffline && <HelpLink articleId="notification-settings" />}
           </p>
         </div>
         <OfflineBadge />

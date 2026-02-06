@@ -76,5 +76,5 @@ public function exportUsers(Request $request): JsonResponse
 
 ## Related
 
-- [Patterns: AccessLogService](../patterns.md#accesslogservice-pattern-hipaa-access-logging)
-- [Logging Compliance](../../../.cursor/rules/logging-compliance.mdc) rule
+- [Patterns: AccessLogService](../patterns/access-log-service.md)
+- [Logging Guide](../../logging.md)

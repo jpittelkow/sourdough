@@ -6,11 +6,12 @@
  * - Network-first: API requests - data freshness, cache fallback for offline
  * - Navigation: network-first with offline.html fallback when unavailable
  */
-importScripts('https://storage.googleapis.com/workbox-cdn/releases/6.6.0/workbox-sw.js');
+// Workbox loaded locally (no CDN dependency - works even when SW installs offline)
+importScripts('/workbox/workbox-sw.js');
 
-workbox.setConfig({ debug: false });
+workbox.setConfig({ debug: false, modulePathPrefix: '/workbox/' });
 
-const CACHE_VERSION = 'sourdough-v1';
+const CACHE_VERSION = 'sourdough-v2';
 const OFFLINE_URL = '/offline.html';
 const REQUEST_QUEUE_DB = 'sourdough-request-queue';
 const REQUEST_QUEUE_STORE = 'requests';
@@ -66,6 +67,8 @@ self.addEventListener('notificationclick', (event) => {
           if (typeof client.navigate === 'function') {
             return client.navigate(fullUrl).then((c) => (c ? c.focus() : client.focus())).catch(() => client.focus());
           }
+          // Fallback: postMessage so the page can navigate via window.location
+          client.postMessage({ type: 'NAVIGATE', url: fullUrl });
           return Promise.resolve(client.focus());
         }
       }
@@ -193,26 +196,42 @@ function deleteQueuedRequest(db, id) {
   });
 }
 
+const MAX_QUEUE_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
+
 async function processQueueInSW() {
   const db = await openQueueDB();
-  const items = await getQueuedRequests(db);
-  const base = self.location.origin;
-  for (const item of items) {
-    try {
-      const url = item.url.startsWith('http') ? item.url : base + item.url;
-      const opts = {
-        method: item.method,
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      };
-      if (item.body) opts.body = item.body;
-      const res = await fetch(url, opts);
-      if (res.ok) await deleteQueuedRequest(db, item.id);
-    } catch (_) {
-      // Leave in queue for next sync
+  try {
+    const items = await getQueuedRequests(db);
+    const base = self.location.origin;
+    const now = Date.now();
+    for (const item of items) {
+      // Discard stale items (expired sessions, CSRF tokens, etc.)
+      if (item.createdAt && now - item.createdAt > MAX_QUEUE_AGE_MS) {
+        await deleteQueuedRequest(db, item.id);
+        continue;
+      }
+      try {
+        const url = item.url.startsWith('http') ? item.url : base + item.url;
+        const opts = {
+          method: item.method,
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        };
+        if (item.body) opts.body = item.body;
+        const res = await fetch(url, opts);
+        if (res.ok) {
+          await deleteQueuedRequest(db, item.id);
+        } else if (res.status >= 400 && res.status < 500) {
+          // Non-retryable client error (auth expired, validation failed, etc.)
+          await deleteQueuedRequest(db, item.id);
+        }
+      } catch (_) {
+        // Network error - leave in queue for next sync
+      }
     }
+  } finally {
+    db.close();
   }
-  db.close();
 }
 
 self.addEventListener('sync', (event) => {

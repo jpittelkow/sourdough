@@ -5,6 +5,49 @@ All notable changes to Sourdough will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-02-05
+
+### Changed
+- Restructured AI documentation: split patterns and anti-patterns into individual files under `docs/ai/patterns/` and `docs/ai/anti-patterns/`
+- Consolidated Cursor rules: removed 9 individual rule files, replaced with single `development-workflow.mdc`
+- Hardened GitHub Actions CI/CD workflows (ci.yml, release.yml)
+- Improved Docker configuration: entrypoint, supervisord, Dockerfile optimizations
+- Updated search pages config with comprehensive page definitions
+- Improved SSO service configuration and redirect URI handling
+- Enhanced onboarding wizard modal with better styling and completion step
+- Improved dialog, form-field, and provider components
+- Mobile-first responsive updates across all configuration and user pages
+- Updated PWA manifest and service worker with Workbox integration
+
+### Added
+- In-app help center with searchable documentation (`help-center-modal`, `help-search`, `help-content`)
+- Workbox library files for advanced service worker caching strategies
+- Database migration for group and task indexes (performance)
+- AI documentation guide (`docs/ai/documentation-guide.md`)
+- Add help article recipe (`docs/ai/recipes/add-help-article.md`)
+- Documentation architecture review roadmap
+- PWA icons: `apple-icon.png`, `favicon.ico`
+- New utility functions in `frontend/lib/utils.ts`
+- App config enhancements in `frontend/lib/app-config.tsx`
+- Request queue improvements for offline support
+- Journal entries for all changes in this release
+- `ApiResponseTrait` enhancements for consistent API responses
+- `HasGroups` trait improvements
+- Storage alert command enhancements
+- Backend bootstrap and config service provider updates
+
+### Fixed
+- SSO redirect URI configuration fix
+- SSO test toggle behavior fix
+- Wizard and help center styling fixes
+- Cache permissions fix for production
+- Meilisearch production permissions fix
+- Frontend code review Phase 2 fixes across multiple components
+- Search service reliability improvements
+
+### Security
+- GitHub Actions workflow hardening (pinned versions, reduced permissions)
+
 ## [0.1.7] - 2026-02-05
 
 ### Security

@@ -7,7 +7,7 @@ Step-by-step guide to add a new storage provider (cloud or S3-compatible) so use
 - Adding a new cloud storage option (e.g. another S3-compatible or native Flysystem provider).
 - The provider requires its own disk config, validation rules, and UI form.
 
-**Existing providers:** local, s3, gcs, azure, do_spaces, minio, b2. See [Storage Settings pattern](../patterns.md#storage-settings-pattern) and [Storage Settings Enhancement Roadmap](../../plans/storage-settings-roadmap.md).
+**Existing providers:** local, s3, gcs, azure, do_spaces, minio, b2. See [Storage Settings pattern](../patterns/storage-settings.md) and [Storage Settings Enhancement Roadmap](../../plans/storage-settings-roadmap.md).
 
 ## Architecture Overview
 
@@ -136,6 +136,6 @@ If the provider should have its own icon:
 
 ## Related
 
-- [Storage Settings pattern](../patterns.md#storage-settings-pattern) – StorageService, connection test, provider config.
+- [Storage Settings pattern](../patterns/storage-settings.md) – StorageService, connection test, provider config.
 - [Storage Settings Enhancement Roadmap](../../plans/storage-settings-roadmap.md) – Phases 1–4.
 - [Context loading: Storage Settings Work](../context-loading.md#storage-settings-work) – Files to read when working on storage.

@@ -9,7 +9,7 @@ Step-by-step guide to add a new permission to the user groups system and use it 
 
 ## Pattern Reference
 
-See [Patterns: Permission Checking (User Groups)](../patterns.md#permission-checking-pattern-user-groups).
+See [Patterns: Permission Checking (User Groups)](../patterns/permission-checking.md).
 
 ## Key Files
 

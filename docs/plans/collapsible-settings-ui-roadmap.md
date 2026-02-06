@@ -41,7 +41,7 @@ Create a reusable collapsible/accordion component using shadcn/ui.
 - [x] Include expand/collapse icon indicator (chevron)
 - [x] Support custom header content (icon, title, status badge, headerActions)
 
-**Files:** `frontend/components/ui/collapsible-card.tsx`. See [Patterns: CollapsibleCard](../ai/patterns.md#collapsiblecard-pattern) and [Recipe: Add collapsible section](../ai/recipes/add-collapsible-section.md).
+**Files:** `frontend/components/ui/collapsible-card.tsx`. See [Patterns: CollapsibleCard](../ai/patterns/ui-patterns.md#collapsiblecard) and [Recipe: Add collapsible section](../ai/recipes/add-collapsible-section.md).
 
 ## Phase 2: LLM Providers Page ✅
 

@@ -152,3 +152,4 @@ class NotificationSettingController extends Controller
             config(['notifications.channels.matrix.enabled' => !empty($settings['matrix_homeserver']) && !empty($settings['matrix_access_token'])]);
         }
     }
+}

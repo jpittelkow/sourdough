@@ -237,4 +237,4 @@ interface DestinationInterface
 
 - [Extend backup and restore features](extend-backup-restore.md) – adding new backup settings, restore behavior, scheduling, notifications
 - [ADR-007: Backup System Design](../../adr/007-backup-system-design.md)
-- [SettingService pattern](../patterns.md#settingservice-pattern)
+- [SettingService pattern](../patterns/setting-service.md)

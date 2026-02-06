@@ -279,6 +279,13 @@ class UserController extends Controller
             'group_ids.*' => ['integer', 'exists:user_groups,id'],
         ]);
 
+        $adminGroup = UserGroup::where('slug', 'admin')->first();
+        if ($adminGroup && $user->inGroup('admin') && ! in_array($adminGroup->id, $validated['group_ids'], true)) {
+            if ($error = $this->ensureNotLastAdmin($user, 'remove from admin group')) {
+                return $error;
+            }
+        }
+
         $oldGroupIds = $user->groups()->pluck('id')->all();
         $user->groups()->sync($validated['group_ids']);
         $user->load('groups:id,name,slug');

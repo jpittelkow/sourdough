@@ -5,11 +5,15 @@
  * Or from frontend: npm run generate-icons
  * Requires: npm install sharp --save-dev (in frontend)
  *
- * Outputs to frontend/public/icons/ for manifest (48–512px) and shortcut icons (96px).
- * Also keeps icon-192.png and icon-512.png in public/ for backward compatibility.
+ * Outputs:
+ *   frontend/public/icons/       - PWA icon set (48–512px) and shortcut icons (96px)
+ *   frontend/public/icon-192.png - Backward compat (referenced by sw.js push)
+ *   frontend/public/icon-512.png - Backward compat
+ *   frontend/public/apple-icon.png - 180x180 Apple touch icon (iOS Add to Home Screen)
+ *   frontend/public/favicon.ico    - 32x32 PNG favicon (older browsers)
  */
 
-import { readFileSync, mkdirSync, existsSync } from 'fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'fs';
 import { dirname, join } from 'path';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
@@ -25,6 +29,32 @@ const require = createRequire(join(frontendDir, 'package.json'));
 
 const MAIN_SIZES = [48, 72, 96, 128, 144, 152, 192, 384, 512];
 const SHORTCUT_SIZE = 96;
+const APPLE_ICON_SIZE = 180;
+const FAVICON_SIZE = 32;
+
+/**
+ * Build a minimal ICO file wrapping a single PNG image.
+ * ICO format: 6-byte header + 16-byte directory entry + raw PNG data.
+ * Modern browsers accept PNG-in-ICO which avoids BMP conversion.
+ */
+function pngToIco(pngBuffer, width, height) {
+  const dir = Buffer.alloc(16);
+  dir.writeUInt8(width < 256 ? width : 0, 0);
+  dir.writeUInt8(height < 256 ? height : 0, 1);
+  dir.writeUInt8(0, 2);  // color palette
+  dir.writeUInt8(0, 3);  // reserved
+  dir.writeUInt16LE(1, 4); // color planes
+  dir.writeUInt16LE(32, 6); // bits per pixel
+  dir.writeUInt32LE(pngBuffer.length, 8); // image size
+  dir.writeUInt32LE(6 + 16, 12); // offset to image data
+
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // reserved
+  header.writeUInt16LE(1, 2); // ICO type
+  header.writeUInt16LE(1, 4); // 1 image
+
+  return Buffer.concat([header, dir, pngBuffer]);
+}
 
 async function generateIcons() {
   let sharp;
@@ -46,6 +76,7 @@ async function generateIcons() {
 
   const svg = readFileSync(svgPath);
 
+  // Main PWA icon set
   for (const size of MAIN_SIZES) {
     const outputPath = join(iconsDir, `icon-${size}.png`);
     await sharp(svg)
@@ -55,6 +86,7 @@ async function generateIcons() {
     console.log(`Generated ${outputPath}`);
   }
 
+  // Shortcut icons
   for (const name of ['shortcut-dashboard', 'shortcut-settings']) {
     const outputPath = join(iconsDir, `${name}.png`);
     await sharp(svg)
@@ -64,6 +96,7 @@ async function generateIcons() {
     console.log(`Generated ${outputPath}`);
   }
 
+  // Backward-compat root icons (referenced by sw.js push notification icon)
   await sharp(svg)
     .resize(192, 192)
     .png()
@@ -73,6 +106,24 @@ async function generateIcons() {
     .png()
     .toFile(join(publicDir, 'icon-512.png'));
   console.log('Generated public/icon-192.png and public/icon-512.png (backward compatibility)');
+
+  // Apple touch icon (180x180 for iOS Add to Home Screen)
+  const appleIconPath = join(publicDir, 'apple-icon.png');
+  await sharp(svg)
+    .resize(APPLE_ICON_SIZE, APPLE_ICON_SIZE)
+    .png()
+    .toFile(appleIconPath);
+  console.log(`Generated ${appleIconPath}`);
+
+  // favicon.ico (32x32 PNG wrapped in ICO container)
+  const faviconPng = await sharp(svg)
+    .resize(FAVICON_SIZE, FAVICON_SIZE)
+    .png()
+    .toBuffer();
+  const icoBuffer = pngToIco(faviconPng, FAVICON_SIZE, FAVICON_SIZE);
+  const faviconPath = join(publicDir, 'favicon.ico');
+  writeFileSync(faviconPath, icoBuffer);
+  console.log(`Generated ${faviconPath}`);
 
   console.log('Done.');
 }

@@ -100,6 +100,32 @@ Type your query to search across:
 
 Search results are grouped by type. Click on a result to navigate directly to that item.`,
       },
+      {
+        id: "theme-appearance",
+        title: "Theme & Appearance",
+        tags: ["theme", "dark", "light", "appearance", "customization"],
+        content: `# Theme & Appearance
+
+Customize how the application looks to match your preferences.
+
+## Theme Options
+
+You can choose from three theme modes:
+
+- **Light** - Bright interface for well-lit environments
+- **Dark** - Dark interface that's easier on the eyes
+- **System** - Automatically matches your device's theme (light or dark)
+
+## Changing Your Theme
+
+1. Click your profile picture in the top-right
+2. Select **Preferences** or use the theme toggle in the header
+3. Choose Light, Dark, or System
+
+## Theme Persistence
+
+Your theme preference is saved and will persist across sessions and devices.`,
+      },
     ],
   },
   {
@@ -447,6 +473,170 @@ To restore:
 4. Wait for the process to complete
 
 **Warning:** Restoring replaces current data!`,
+      },
+      {
+        id: "branding",
+        title: "Branding & Customization",
+        tags: ["branding", "logo", "colors", "theme", "visual"],
+        content: `# Branding & Customization
+
+Customize the application's visual identity for your organization.
+
+## Branding Options
+
+- **Application Name** - The name displayed in the header and page titles
+- **Logo** - Upload a custom logo for the sidebar and login page
+- **Theme Palette** - Choose primary accent colors for buttons and links
+- **Favicon** - Browser tab icon
+
+## Configuring Branding
+
+1. Go to **Configuration** → **Theme & Branding**
+2. Upload your logo or enter the application name
+3. Select your preferred color palette
+4. Save your changes
+
+## Logo Guidelines
+
+- Use high-resolution images for best display
+- Transparent backgrounds work well for logos
+- Recommended aspect ratio: square or landscape`,
+      },
+      {
+        id: "email-configuration",
+        title: "Email Configuration",
+        tags: ["email", "smtp", "mailgun", "sendgrid", "delivery"],
+        content: `# Email Configuration
+
+Configure how the application sends email for notifications, password resets, and verification.
+
+## Supported Drivers
+
+- **SMTP** - Standard SMTP server (Gmail, Office 365, custom)
+- **Mailgun** - Transactional email service
+- **SendGrid** - Transactional email service
+- **AWS SES** - Amazon Simple Email Service
+- **Postmark** - Transactional email service
+
+## Setup Steps
+
+1. Go to **Configuration** → **Email**
+2. Select your mail driver
+3. Enter the required credentials (host, port, username, password)
+4. Configure TLS/SSL encryption settings
+5. Set the "From" address and name
+6. Use **Test Connection** to verify
+
+## Troubleshooting
+
+- Ensure firewall allows outbound SMTP (port 25, 465, or 587)
+- For Gmail, use an App Password, not your regular password
+- Check that "From" address is verified with your provider`,
+      },
+      {
+        id: "email-templates",
+        title: "Email Templates",
+        tags: ["email", "templates", "variables", "customize"],
+        content: `# Email Templates
+
+Customize the content of system emails sent to users.
+
+## Available Templates
+
+- Password reset
+- Email verification
+- Welcome email
+- Notification digests
+
+## Editing Templates
+
+1. Go to **Configuration** → **Email Templates**
+2. Select the template to edit
+3. Modify the subject line and body
+4. Use the variable picker to insert dynamic content (e.g., user name, reset link)
+5. Preview before saving
+
+## Template Variables
+
+Each template supports variables that are replaced at send time:
+- **{{user.name}}** - User's display name
+- **{{user.email}}** - User's email address
+- **{{reset_link}}** - Password reset URL (password reset template)
+- **{{verification_link}}** - Email verification URL
+
+Available variables are shown in the variable picker for each template.`,
+      },
+      {
+        id: "sso-configuration",
+        title: "SSO Configuration",
+        tags: ["sso", "oauth", "google", "github", "single sign-on"],
+        content: `# SSO Configuration
+
+Enable Single Sign-On so users can sign in with external identity providers.
+
+## Supported Providers
+
+- **Google** - Sign in with Google
+- **GitHub** - Sign in with GitHub
+- **GitLab** - Sign in with GitLab
+- **Microsoft/Azure AD** - Sign in with Microsoft account
+- **Discord** - Sign in with Discord
+- **OIDC** - Any OpenID Connect compatible provider
+
+## Adding a Provider
+
+1. Go to **Configuration** → **SSO**
+2. Create an application in your provider's developer console
+3. Copy the Client ID and Client Secret
+4. Add the redirect URI shown in the configuration page
+5. Paste credentials into the form
+6. Use **Test Connection** to verify
+
+## Account Linking
+
+When **Allow Account Linking** is enabled, users with an existing email/password account can link their SSO provider. When disabled, SSO creates a new account for new users only.
+
+## Auto-Registration
+
+Enable **Auto-Register** to allow new users to create accounts via SSO without manual approval. Disable to require admin approval first.`,
+      },
+      {
+        id: "ai-llm-settings",
+        title: "AI / LLM Settings",
+        tags: ["ai", "llm", "openai", "anthropic", "models", "providers"],
+        content: `# AI / LLM Settings
+
+Configure AI providers and large language models for features that use AI.
+
+## Supported Providers
+
+- **OpenAI** - GPT-4, GPT-3.5
+- **Anthropic** - Claude models
+- **Google** - Gemini, Vertex AI
+- **AWS Bedrock** - Various models via Amazon
+- **Azure OpenAI** - OpenAI models via Azure
+- **Ollama** - Local models
+- **Groq** - Fast inference
+- **Mistral** - Mistral models
+
+## Adding a Provider
+
+1. Go to **Configuration** → **AI / LLM**
+2. Click **Add Provider**
+3. Select the provider type
+4. Enter your API key (stored securely)
+5. Use **Test Key** to verify
+6. Optionally use **Fetch Models** to discover available models
+
+## Orchestration Modes
+
+- **Single** - Use one primary provider
+- **Council** - Multiple providers vote on responses (for reliability)
+- **Fallback** - Try primary, fall back to secondary on failure
+
+## Model Selection
+
+Select a default model per provider. Models with "Fetch Models" can discover available models from the provider's API.`,
       },
     ],
   },

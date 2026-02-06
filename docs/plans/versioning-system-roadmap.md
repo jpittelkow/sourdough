@@ -128,63 +128,15 @@ npm --prefix frontend version "$NEW_VERSION" --no-git-tag-version
 
 ### 4. GitHub Action Workflow
 
-**.github/workflows/release.yml**:
+**.github/workflows/release.yml** (as implemented):
 
-```yaml
-name: Release
+The release workflow runs on **manual trigger only** (Actions > Release > Run workflow). It has two jobs in sequence:
 
-on:
-  workflow_dispatch:
-    inputs:
-      version_type:
-        description: 'Version bump type'
-        required: true
-        default: 'patch'
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-      custom_version:
-        description: 'Custom version (optional, overrides type)'
-        required: false
+1. **bump-and-release**: Uses `scripts/bump-version.sh` with version type (patch/minor/major/custom) or custom version string. Updates `VERSION` and `frontend/package.json`, commits, tags with `v{version}`, pushes to origin, and creates a GitHub Release with auto-generated notes.
 
-jobs:
-  release:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Calculate new version
-        id: version
-        run: |
-          CURRENT=$(cat VERSION)
-          if [ -n "${{ inputs.custom_version }}" ]; then
-            NEW_VERSION="${{ inputs.custom_version }}"
-          else
-            # Calculate based on type (patch/minor/major)
-            NEW_VERSION=$(./scripts/bump-version.sh --calculate ${{ inputs.version_type }})
-          fi
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-      
-      - name: Update version files
-        run: ./scripts/bump-version.sh ${{ steps.version.outputs.version }}
-      
-      - name: Commit and tag
-        run: |
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add .
-          git commit -m "Release v${{ steps.version.outputs.version }}"
-          git tag "v${{ steps.version.outputs.version }}"
-          git push origin main --tags
-      
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: v${{ steps.version.outputs.version }}
-          generate_release_notes: true
-```
+2. **release**: Depends on bump-and-release. Checks out the new tag, builds the Docker image, and pushes to GitHub Container Registry (ghcr.io) with provenance and SBOM attestation. Tags include semver (e.g. `1.2.3`), major.minor (`1.2`), major (`1`), and SHA.
+
+Inputs: `version_type` (patch/minor/major/custom), `custom_version` (required when type=custom). The workflow no longer uses a tag-push trigger; both jobs run in a single workflow execution so the Docker image is always built and pushed.
 
 ---
 

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { formatDate } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -21,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { HelpLink } from "@/components/help/help-link";
 import { ChevronRight } from "lucide-react";
 
 interface EmailTemplateSummary {
@@ -59,19 +61,6 @@ export default function EmailTemplatesListPage() {
     }
   };
 
-  const formatDate = (dateStr: string) => {
-    try {
-      const date = new Date(dateStr);
-      return date.toLocaleDateString(undefined, {
-        year: "numeric",
-        month: "short",
-        day: "numeric",
-      });
-    } catch {
-      return dateStr;
-    }
-  };
-
   if (isLoading) {
     return <SettingsPageSkeleton />;
   }
@@ -82,7 +71,8 @@ export default function EmailTemplatesListPage() {
         <h1 className="text-3xl font-bold">Email Templates</h1>
         <p className="text-muted-foreground mt-2">
           Customize system-generated emails such as password reset and
-          verification
+          verification.{" "}
+          <HelpLink articleId="email-templates" />
         </p>
       </div>
 

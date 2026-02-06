@@ -51,7 +51,7 @@ export function FormField({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              className="min-h-[44px] min-w-[44px] h-auto gap-1.5 px-2 text-muted-foreground hover:text-foreground"
               asChild
             >
               <a
@@ -70,7 +70,7 @@ export function FormField({
               type="button"
               variant="ghost"
               size="sm"
-              className="h-7 gap-1.5 px-2 text-muted-foreground hover:text-foreground"
+              className="min-h-[44px] min-w-[44px] h-auto gap-1.5 px-2 text-muted-foreground hover:text-foreground"
               onClick={helpLink.onClick}
               aria-label={helpLink.label}
             >

@@ -5,7 +5,7 @@ Add logging to new features or extend the application logging system.
 ## Prerequisites
 
 - Read [Logging](../../logging.md) – logging standards and configuration
-- Read [patterns.md](../patterns.md) – Logging Pattern section
+- Read [Logging Pattern](../patterns/logging.md)
 
 ## Add Logging to a Backend Service
 

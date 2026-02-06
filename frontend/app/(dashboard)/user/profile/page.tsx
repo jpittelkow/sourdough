@@ -7,6 +7,7 @@ import { z } from "zod";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -34,6 +35,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 import { SaveButton } from "@/components/ui/save-button";
 import { Badge } from "@/components/ui/badge";
 
@@ -80,8 +82,8 @@ export default function ProfilePage() {
       await api.put("/profile", data);
       await fetchUser();
       toast.success("Profile updated successfully");
-    } catch (error: any) {
-      toast.error(error.message || "Failed to update profile");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update profile"));
     } finally {
       setIsLoading(false);
     }
@@ -98,8 +100,8 @@ export default function ProfilePage() {
       await api.delete("/profile");
       toast.success("Account deleted");
       window.location.href = "/login";
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete account");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to delete account"));
     } finally {
       setIsDeleting(false);
     }
@@ -119,7 +121,8 @@ export default function ProfilePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and profile information.
+          Manage your account settings and profile information.{" "}
+          <HelpLink articleId="profile" />
         </p>
       </div>
 

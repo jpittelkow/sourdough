@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -27,6 +28,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
+import { HelpLink } from "@/components/help/help-link";
 import { Loader2, Mail } from "lucide-react";
 
 const mailSchema = z.object({
@@ -89,8 +91,8 @@ export default function EmailSettingsPage() {
         ses_region: settings.ses_region || "",
         postmark_token: settings.postmark_token || "",
       });
-    } catch (error: any) {
-      const msg = error.message ?? "Failed to load mail settings";
+    } catch (error: unknown) {
+      const msg = getErrorMessage(error, "Failed to load mail settings");
       setTimeout(() => toast.error(msg), 0);
     } finally {
       setIsLoading(false);
@@ -107,9 +109,11 @@ export default function EmailSettingsPage() {
       await api.put("/mail-settings", data);
       await fetchSettings();
       setTimeout(() => toast.success("Mail settings updated successfully"), 0);
-    } catch (error: any) {
-      const data = error.response?.data;
-      let message = data?.message ?? error.message ?? "Failed to update mail settings";
+    } catch (error: unknown) {
+      const data = error && typeof error === "object" && "response" in error
+        ? (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response?.data
+        : null;
+      let message = data?.message ?? getErrorMessage(error, "Failed to update mail settings");
       if (data?.errors && typeof data.errors === "object") {
         const first = Object.values(data.errors).flat();
         if (first.length) message = (first[0] as string) || message;
@@ -131,8 +135,8 @@ export default function EmailSettingsPage() {
       await api.post("/mail-settings/test", { to: testEmail });
       setTestEmail("");
       setTimeout(() => toast.success("Test email sent successfully"), 0);
-    } catch (error: any) {
-      const message = error.response?.data?.message ?? error.message ?? "Failed to send test email";
+    } catch (error: unknown) {
+      const message = getErrorMessage(error, "Failed to send test email");
       setTimeout(() => toast.error(message), 0);
     } finally {
       setIsTesting(false);
@@ -148,7 +152,8 @@ export default function EmailSettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">Email Configuration</h1>
         <p className="text-muted-foreground mt-2">
-          Configure email delivery settings
+          Configure email delivery settings.{" "}
+          <HelpLink articleId="email-configuration" />
         </p>
       </div>
 
@@ -165,7 +170,7 @@ export default function EmailSettingsPage() {
               <Label htmlFor="provider">Provider</Label>
               <Select
                 value={provider}
-                onValueChange={(value) => setValue("provider", value as any, { shouldDirty: true })}
+                onValueChange={(value) => setValue("provider", value as MailForm["provider"], { shouldDirty: true })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select provider" />
@@ -183,7 +188,7 @@ export default function EmailSettingsPage() {
             {provider === "smtp" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="host">SMTP Host</Label>
                     <Input
@@ -206,7 +211,7 @@ export default function EmailSettingsPage() {
                   <Label htmlFor="encryption">Encryption</Label>
                   <Select
                     value={(watch("encryption") as string) || undefined}
-                    onValueChange={(value) => setValue("encryption", value as any, { shouldDirty: true })}
+                    onValueChange={(value) => setValue("encryption", value as MailForm["encryption"], { shouldDirty: true })}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select encryption" />
@@ -217,7 +222,7 @@ export default function EmailSettingsPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="username">Username</Label>
                     <Input
@@ -242,7 +247,7 @@ export default function EmailSettingsPage() {
             {provider === "mailgun" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="mailgun_domain">Domain</Label>
                     <Input
@@ -282,7 +287,7 @@ export default function EmailSettingsPage() {
             {provider === "ses" && (
               <>
                 <Separator />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="ses_key">Access Key ID</Label>
                     <Input
@@ -329,7 +334,7 @@ export default function EmailSettingsPage() {
 
             <Separator />
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="from_address">From Email Address</Label>
                 <Input

@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -102,8 +103,8 @@ export default function JobsPage() {
     try {
       const response = await api.get("/jobs/scheduled");
       setScheduledTasks(response.data.tasks || []);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load scheduled tasks");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load scheduled tasks"));
     } finally {
       setIsLoadingScheduled(false);
     }
@@ -114,8 +115,8 @@ export default function JobsPage() {
     try {
       const response = await api.get("/jobs/queue");
       setQueueStatus(response.data);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load queue status");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load queue status"));
     } finally {
       setIsLoadingQueue(false);
     }
@@ -126,8 +127,8 @@ export default function JobsPage() {
     try {
       const response = await api.get("/jobs/failed");
       setFailedJobs(response.data.data || []);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load failed jobs");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load failed jobs"));
     } finally {
       setIsLoadingFailed(false);
     }
@@ -138,8 +139,8 @@ export default function JobsPage() {
       await api.post(`/jobs/failed/${id}/retry`);
       toast.success("Job queued for retry");
       fetchFailedJobs();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to retry job");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to retry job"));
     }
   };
 
@@ -152,8 +153,8 @@ export default function JobsPage() {
       await api.delete(`/jobs/failed/${id}`);
       toast.success("Failed job deleted");
       fetchFailedJobs();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to delete job");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to delete job"));
     }
   };
 
@@ -166,8 +167,8 @@ export default function JobsPage() {
       await api.post("/jobs/failed/retry-all");
       toast.success("All failed jobs queued for retry");
       fetchFailedJobs();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to retry jobs");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to retry jobs"));
     }
   };
 
@@ -180,8 +181,8 @@ export default function JobsPage() {
       await api.delete("/jobs/failed/clear");
       toast.success("All failed jobs cleared");
       fetchFailedJobs();
-    } catch (error: any) {
-      toast.error(error.message || "Failed to clear jobs");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to clear jobs"));
     }
   };
 

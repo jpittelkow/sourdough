@@ -2,7 +2,7 @@
 
 **Main documentation hub for AI assistants.**
 
-Sourdough is a starter application framework designed for AI as a starter to develop other applications. It provides enterprise-grade user management, multi-provider notification system, multi-LLM orchestration with council mode, and robust infrastructure - all in a single Docker container powered by Laravel 11 (PHP 8.3+) + Next.js 14 (React 18, TypeScript) with SQLite as the default database.
+Sourdough is a starter application framework designed for AI as a starter to develop other applications. It provides enterprise-grade user management, multi-provider notification system, multi-LLM orchestration with council mode, and robust infrastructure - all in a single Docker container powered by Laravel 11 (PHP 8.3+) + Next.js 16 (React 18, TypeScript) with SQLite as the default database.
 
 ## Using Sourdough as a Template
 

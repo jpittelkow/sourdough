@@ -43,13 +43,13 @@ function AppShellContent({ children }: AppShellProps) {
 export function AppShell({ children }: AppShellProps) {
   return (
     <SidebarProvider>
-      <SearchProvider>
-        <HelpProvider>
+      <HelpProvider>
+        <SearchProvider>
           <WizardProvider>
             <AppShellContent>{children}</AppShellContent>
           </WizardProvider>
-        </HelpProvider>
-      </SearchProvider>
+        </SearchProvider>
+      </HelpProvider>
     </SidebarProvider>
   );
 }

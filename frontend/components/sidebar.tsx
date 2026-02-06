@@ -137,7 +137,7 @@ export function Sidebar() {
               variant="ghost"
               size="icon"
               onClick={toggleSidebar}
-              className="h-7 w-7 flex-shrink-0"
+              className="h-11 w-11 flex-shrink-0"
               title="Collapse sidebar"
             >
               <ChevronLeft className="h-4 w-4" />

@@ -92,6 +92,6 @@ $this->auditService->log('backup.restored', null, [], ['filename' => $name], nul
 
 ## Related Documentation
 
-- [AuditService Pattern](../patterns.md#auditservice-pattern)
+- [AuditService Pattern](../patterns/audit-service.md)
 - [Recipe: Trigger audit logging](trigger-audit-logging.md)
 - [Audit Logs Implementation Plan](../../plans/audit-logs-implementation-plan.md)

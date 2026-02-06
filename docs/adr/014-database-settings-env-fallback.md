@@ -51,9 +51,23 @@ We will store configurable settings in the `system_settings` table with environm
 - Future groups (SSO, LLM, notifications, etc.) are added by extending the schema and ConfigServiceProvider injection methods
 - Artisan command `settings:import-env` copies current env values into DB for migration
 
+## Degraded Mode (When DB Is Unavailable)
+
+When `ConfigServiceProvider::databaseReady()` returns false (e.g. during migrations, fresh installs, or database failures), the provider **silently skips** config injection. The application runs in degraded mode:
+
+- **All schema-backed settings revert to env defaults** — any values stored in `system_settings` are ignored
+- **Features behave as if no admin UI changes were ever made** — mail provider, SSO credentials, LLM keys, backup destinations all use `.env` values
+- **The app is functional** — it just uses environment config instead of database overrides
+- **No errors are thrown** — the degradation is silent; check logs for `ConfigServiceProvider: database not ready, skipping` if investigating
+
+**Cache corruption:** If the SettingService file cache becomes corrupted or stale, clear it with `php artisan cache:clear`. The cache uses the file store (not DB) to avoid circular dependency.
+
+**Production safety:** `config:cache` should only be run when the DB is available, otherwise cached config will contain only env defaults. The entrypoint script guards this with `if [ "$APP_ENV" = "production" ]`.
+
 ## Related Decisions
 
 - [ADR-012: Admin-Only Settings Access](./012-admin-only-settings.md) – Settings UI and API remain admin-only
+- [ADR-015: Environment-Only Settings](./015-env-only-settings.md) – Bootstrap settings that must stay in `.env`
 
 ## Key Files
 

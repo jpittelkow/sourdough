@@ -29,7 +29,7 @@ class FileManagerController extends Controller
         }
 
         $page = max(1, (int) $request->input('page', 1));
-        $perPage = min(100, max(1, (int) $request->input('per_page', 50)));
+        $perPage = min(100, max(1, (int) $request->input('per_page', config('app.pagination.default'))));
 
         try {
             $result = $this->storageService->listFiles($path, $page, $perPage);

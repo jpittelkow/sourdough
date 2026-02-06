@@ -29,19 +29,11 @@ import {
   Folder,
 } from "lucide-react";
 import type { FileManagerItem } from "@/lib/api";
+import { formatBytes, formatTimestamp } from "@/lib/utils";
 
 function formatSize(bytes: number | null): string {
   if (bytes === null || bytes === undefined) return "—";
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(2))} ${sizes[i]}`;
-}
-
-function formatDate(ts: number | null): string {
-  if (ts === null || ts === undefined) return "—";
-  return new Date(ts * 1000).toLocaleString();
+  return formatBytes(bytes);
 }
 
 function getFileIcon(item: FileManagerItem) {
@@ -144,7 +136,7 @@ export function FileBrowser({
                 {item.isDirectory ? "Folder" : (item.mimeType ?? "—")}
               </TableCell>
               <TableCell className="hidden md:table-cell text-muted-foreground">
-                {formatDate(item.lastModified)}
+                {formatTimestamp(item.lastModified)}
               </TableCell>
               <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                 <DropdownMenu>

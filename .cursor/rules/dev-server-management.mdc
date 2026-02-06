@@ -80,4 +80,4 @@ If the server won't start or is unresponsive:
 3. Try full rebuild: `docker-compose down && docker-compose up -d --build`
 4. Check Docker is running: `docker info`
 
-See [Local Docker Development Rule](local-docker-development.mdc) for complete Docker commands and troubleshooting.
+See [Docker Configuration](../../docs/docker.md) for complete Docker commands and troubleshooting.

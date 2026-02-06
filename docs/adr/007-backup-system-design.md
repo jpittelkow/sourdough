@@ -27,7 +27,9 @@ We will implement a **ZIP-based backup system** with a manifest file for version
 backup_sourdough_2026-01-24_143052.zip
 ├── manifest.json           # Backup metadata
 ├── database/
-│   └── database.sql        # SQL dump or SQLite file
+│   └── database.sqlite     # SQLite: file copy
+│       OR
+│   └── database.json       # MySQL/PostgreSQL: JSON export with SHA-256 integrity hash
 ├── storage/
 │   └── app/                # All uploaded files
 │       ├── avatars/
@@ -36,6 +38,8 @@ backup_sourdough_2026-01-24_143052.zip
 └── config/
     └── settings.enc        # Encrypted settings export
 ```
+
+**Note:** Only one database file is present per backup. SQLite backups contain `database.sqlite` (file copy). MySQL/PostgreSQL backups contain `database.json` (JSON export with integrity hash for tamper detection; see [ADR-024](024-security-hardening.md)).
 
 ### Manifest Structure
 
@@ -138,11 +142,11 @@ Configuration options:
 
 ### Database Backup Strategy
 
-| Driver | Method | Restoration |
-|--------|--------|-------------|
-| SQLite | File copy | Replace file, migrate |
-| MySQL | mysqldump | mysql import, migrate |
-| PostgreSQL | pg_dump | psql import, migrate |
+| Driver | Method | Format | Restoration |
+|--------|--------|--------|-------------|
+| SQLite | File copy | `database.sqlite` | Replace file, migrate |
+| MySQL | JSON export | `database.json` + SHA-256 hash | `DB::table()->updateOrInsert()`, migrate |
+| PostgreSQL | JSON export | `database.json` + SHA-256 hash | `DB::table()->updateOrInsert()`, migrate |
 
 All restores run migrations after import to handle version differences.
 
@@ -216,7 +220,7 @@ Backup configuration is stored in the database with environment fallback ([ADR-0
 - **Controllers**: `BackupController.php` (operations), `BackupSettingController.php` (settings API and Test Connection).
 - **UI**: `frontend/app/(dashboard)/configuration/backup/page.tsx` – two tabs: **Backups** (list, create, download, restore, delete), **Settings** (retention, schedule, S3/SFTP/Google Drive, encryption, notifications).
 
-**Documentation:** [Backup & Restore (docs hub)](../backup.md), [Add backup destination (recipe)](../ai/recipes/add-backup-destination.md), [Extend backup/restore (recipe)](../ai/recipes/extend-backup-restore.md), [Backup patterns](../ai/patterns.md#backup--restore-patterns). Settings that must remain in `.env` only: [ADR-015](015-env-only-settings.md).
+**Documentation:** [Backup & Restore (docs hub)](../backup.md), [Add backup destination (recipe)](../ai/recipes/add-backup-destination.md), [Extend backup/restore (recipe)](../ai/recipes/extend-backup-restore.md), [Backup patterns](../ai/patterns/backup-restore.md). Settings that must remain in `.env` only: [ADR-015](015-env-only-settings.md).
 
 ## Consequences
 

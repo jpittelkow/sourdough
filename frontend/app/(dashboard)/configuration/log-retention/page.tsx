@@ -34,6 +34,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
+import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 
 interface LogRetentionSettings {
   app_retention_days: number;
@@ -196,11 +197,7 @@ export default function LogRetentionPage() {
   };
 
   if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[200px]">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   return (

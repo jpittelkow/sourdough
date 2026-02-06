@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
+import { getErrorMessage } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -78,8 +79,8 @@ export default function UsersPage() {
       setCurrentPage(response.data.current_page || 1);
       setTotalPages(response.data.last_page || 1);
       setTotal(response.data.total || 0);
-    } catch (error: any) {
-      toast.error(error.message || "Failed to load users");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to load users"));
     } finally {
       setIsLoading(false);
     }

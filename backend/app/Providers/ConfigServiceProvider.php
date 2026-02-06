@@ -313,6 +313,9 @@ class ConfigServiceProvider extends ServiceProvider
             if (array_key_exists($clientSecretKey, $settings)) {
                 config(['services.' . $provider . '.client_secret' => $settings[$clientSecretKey] ?? config('services.' . $provider . '.client_secret')]);
             }
+            // Always set redirect URI from APP_URL so Socialite has it
+            // even when providers are configured via admin UI (no env vars)
+            config(['services.' . $provider . '.redirect' => rtrim(config('app.url'), '/') . '/api/auth/callback/' . $provider]);
             $hasCredentials = !empty($settings[$clientIdKey] ?? config('services.' . $provider . '.client_id'));
             $explicitlyEnabled = $settings[$provider . '_enabled'] ?? true;
             config(['sso.providers.' . $provider . '.enabled' => $hasCredentials && $explicitlyEnabled]);
@@ -331,6 +334,8 @@ class ConfigServiceProvider extends ServiceProvider
         if (array_key_exists('oidc_client_secret', $settings)) {
             config(['services.oidc.client_secret' => $settings['oidc_client_secret'] ?? config('services.oidc.client_secret')]);
         }
+        // Always set redirect URI from APP_URL for OIDC as well
+        config(['services.oidc.redirect' => rtrim(config('app.url'), '/') . '/api/auth/callback/oidc']);
         if (array_key_exists('oidc_provider_name', $settings)) {
             config(['sso.providers.oidc.name' => $settings['oidc_provider_name'] ?? config('sso.providers.oidc.name')]);
         }

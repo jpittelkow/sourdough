@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
@@ -10,6 +10,12 @@ const newsreader = Newsreader({
   variable: "--font-newsreader",
   adjustFontFallback: false
 });
+
+// Viewport config - themeColor styles the mobile address bar / status bar.
+// Dynamic branding overrides this client-side via AppConfigProvider.
+export const viewport: Viewport = {
+  themeColor: "#3b82f6",
+};
 
 // Metadata uses minimal title for SSR - actual app name from settings
 // will be used client-side via usePageTitle hook in components

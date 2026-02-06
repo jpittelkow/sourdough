@@ -84,7 +84,7 @@ import { ProviderIcon } from "@/components/provider-icons";
 />
 ```
 
-See [Patterns: ProviderIcon](../patterns.md#providericon-pattern) and [Recipe: Add provider icon](add-provider-icon.md).
+See [Patterns: ProviderIcon](../patterns/ui-patterns.md#providericon) and [Recipe: Add provider icon](add-provider-icon.md).
 
 ### 5. Controlled Mode
 
@@ -144,7 +144,7 @@ Put a switch, button, or other control in the header (before the chevron). Use t
 
 ## Related
 
-- [Patterns: CollapsibleCard](../patterns.md#collapsiblecard-pattern) – When to use and props summary
-- [Patterns: ProviderIcon](../patterns.md#providericon-pattern) – Icons in card headers
+- [Patterns: CollapsibleCard](../patterns/ui-patterns.md#collapsiblecard) – When to use and props summary
+- [Patterns: ProviderIcon](../patterns/ui-patterns.md#providericon) – Icons in card headers
 - [Recipe: Add provider icon](add-provider-icon.md) – Adding new icons to the shared set
 - [Recipe: Add configuration menu item](add-configuration-menu-item.md) – Adding new config pages that may use collapsible sections

@@ -79,6 +79,7 @@ Sourdough is configured via environment variables. See `.env.example` for all op
 | `APP_KEY` | Encryption key (auto-generated) |
 | `APP_URL` | Backend URL |
 | `FRONTEND_URL` | Frontend URL |
+| `SANCTUM_STATEFUL_DOMAINS` | Domain(s) for Sanctum cookie auth. Must match the domain users access the app from (e.g. `localhost:8080`, `app.example.com`). If incorrect, login will silently fail with 401 on subsequent requests. Comma-separated for multiple domains. |
 
 ### Optional Features
 
@@ -164,9 +165,9 @@ semgrep scan --config=p/security-audit --config=p/php-laravel --config=p/typescr
 
 ### CI Integration
 
-Security scanning runs automatically on push/PR to main:
+Security scanning runs automatically on push/PR to master:
 - PHPStan (backend static analysis)
 - ESLint with security plugin (frontend)
 - Semgrep (OWASP, PHP-Laravel, TypeScript rules)
 
-See `.github/workflows/ci.yml` for the full configuration.
+See [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) for the full CI configuration. The [Release workflow](../.github/workflows/release.yml) is manual-trigger only: Actions > Release > Run workflow.
