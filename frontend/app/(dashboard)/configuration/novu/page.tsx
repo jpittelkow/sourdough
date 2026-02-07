@@ -173,6 +173,7 @@ export default function NovuConfigurationPage() {
             </div>
 
             <FormField
+              id="api_key"
               label="API Key"
               description="From your Novu dashboard (Settings → API Keys)."
               error={errors.api_key?.message}
@@ -185,6 +186,7 @@ export default function NovuConfigurationPage() {
             </FormField>
 
             <FormField
+              id="app_identifier"
               label="Application Identifier"
               description="Used by the frontend notification center. Find it in Novu dashboard → Application."
               error={errors.app_identifier?.message}
@@ -193,6 +195,7 @@ export default function NovuConfigurationPage() {
             </FormField>
 
             <FormField
+              id="api_url"
               label="API URL"
               description="Default: Novu Cloud. Change for self-hosted."
               error={errors.api_url?.message}
@@ -201,6 +204,7 @@ export default function NovuConfigurationPage() {
             </FormField>
 
             <FormField
+              id="socket_url"
               label="WebSocket URL"
               description="For real-time notifications. Default: Novu Cloud."
               error={errors.socket_url?.message}
