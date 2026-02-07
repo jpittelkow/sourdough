@@ -63,8 +63,10 @@ Core functionality and feature documentation:
 ## Notification System
 
 - [ADR-005: Notification System Architecture](adr/005-notification-system-architecture.md) - Multi-channel notification delivery system
+- [ADR-025: Novu Notification Integration](adr/025-novu-notification-integration.md) - Optional Novu (Cloud or self-hosted) for workflows and notification center
 - [API Notification Endpoints](api/README.md#notifications) - Notification management API
 - [Recipe: Trigger Notifications](ai/recipes/trigger-notifications.md) - Send notifications from backend code
+- [Recipe: Configure Novu](ai/recipes/configure-novu.md) - Enable and configure Novu
 
 **Web Push (PWA):** Admins configure VAPID keys in Configuration > Notifications. Users enable browser notifications in User Preferences—subscription is stored and push is delivered via the service worker. Supports Chrome, Firefox, Edge; limited on Safari/iOS.
 
@@ -74,10 +76,12 @@ Core functionality and feature documentation:
 
 **Offline experience:** When offline, an indicator banner appears; dashboard, user preferences, and notifications show cached data with an offline badge. Save/actions are disabled on preferences and notifications. Failed mutations (POST/PUT/PATCH/DELETE) are queued in IndexedDB and retried when back online (Background Sync in Chrome/Edge; online event elsewhere). Stale queue items (>24h) and non-retryable (4xx) responses are automatically pruned. Offline fallback page offers "Go to Dashboard" and auto-reloads when online. Workbox 7.3.0 is bundled locally (no CDN dependency). iOS safe-area CSS and standalone overscroll-behavior are supported. The `theme-color` meta tag is set statically and updated dynamically from branding settings.
 
+**Novu (optional):** When Novu is enabled (Configuration → Novu), notifications are sent via the Novu API and the header bell uses the Novu React Inbox. Users are synced as Novu subscribers; workflows are created in the Novu dashboard. When Novu is disabled, the built-in channel system and notification templates are used.
+
 **Capabilities:**
-- In-app notification UI: header bell with unread badge, dropdown of recent items, full `/notifications` page with filters and bulk actions
-- Real-time updates via Laravel Echo + Pusher when broadcasting is configured
-- NotificationContext provider for client-side state
+- In-app notification UI: header bell with unread badge, dropdown of recent items, full `/notifications` page with filters and bulk actions (or Novu Inbox when Novu is enabled)
+- Real-time updates via Laravel Echo + Pusher when broadcasting is configured (local mode)
+- NotificationContext provider for client-side state (local mode)
 - **Global vs per-user config:** Admins enable which channels are available in Configuration > Notifications (`/configuration/notifications`); users enable channels, add webhooks/phone, test, and accept usage in User Preferences (`/user/preferences`). Users cannot enable a channel until an admin has made it available. SMS: admin chooses preferred provider (Twilio/Vonage/SNS); users enter phone number and test.
 
 **Multi-channel notification delivery:**
@@ -302,6 +306,7 @@ Accessible from the **user dropdown** in the header (click your name) → **Secu
 
 **Capabilities:**
 - **Logo upload:** Upload custom logo (max 2MB) or enter URL; preview and delete
+- **Dark mode logo:** Upload a separate logo for dark mode (max 2MB) or enter URL; automatically shown when dark theme is active, falls back to main logo if not set. Preview shown on dark background.
 - **Favicon upload:** Upload custom favicon (max 512KB) or enter URL; preview and delete
 - **Theme colors:** Primary and secondary color customization via color picker; reset to system defaults
 - **Custom CSS:** Inject custom CSS to override default styles

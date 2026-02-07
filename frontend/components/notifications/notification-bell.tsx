@@ -3,13 +3,24 @@
 import { useState } from "react";
 import { Bell } from "lucide-react";
 import { useNotifications } from "@/lib/notifications";
+import { useAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
 import { NotificationDropdown } from "./notification-dropdown";
+import { NovuInboxBell } from "./novu-inbox";
 import { cn } from "@/lib/utils";
 
 export function NotificationBell() {
+  const { novu } = useAppConfig();
+  // All hooks must be called before any conditional returns (Rules of Hooks)
   const [open, setOpen] = useState(false);
   const { unreadCount } = useNotifications();
+
+  const useNovu = novu?.enabled && !!novu?.app_identifier;
+
+  if (useNovu) {
+    return <NovuInboxBell />;
+  }
+
   const hasUnread = unreadCount > 0;
 
   const trigger = (

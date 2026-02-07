@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import { useAppConfig } from "@/lib/app-config";
+import { useTheme } from "@/components/theme-provider";
 import { cn } from "@/lib/utils";
 
 export interface LogoProps {
@@ -44,12 +45,17 @@ const sizeConfig = {
  */
 export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   const [logoError, setLogoError] = useState(false);
+  const [logoDarkError, setLogoDarkError] = useState(false);
   const [faviconError, setFaviconError] = useState(false);
-  const { appName, logoUrl, faviconUrl } = useAppConfig();
+  const { appName, logoUrl, logoDarkUrl, faviconUrl } = useAppConfig();
+  const { resolvedTheme } = useTheme();
   const sizes = sizeConfig[size];
   
-  // Use logo from settings if present (no fallback to APP_CONFIG since logo is optional)
-  const currentLogo = logoUrl;
+  // Use dark logo in dark mode if available, fall back to regular logo
+  const isDark = resolvedTheme === "dark";
+  const currentLogo = isDark && logoDarkUrl && !logoDarkError
+    ? logoDarkUrl
+    : logoUrl;
 
   // Text-only variant
   if (variant === "text") {
@@ -110,8 +116,16 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
           width={200}
           height={size === "sm" ? 24 : size === "md" ? 32 : 40}
           className="object-contain"
-          onError={() => setLogoError(true)}
+          onError={() => {
+            // If dark logo fails, mark it as errored so we fall back to regular logo
+            if (isDark && currentLogo === logoDarkUrl) {
+              setLogoDarkError(true);
+            } else {
+              setLogoError(true);
+            }
+          }}
           unoptimized
+          key={currentLogo} // Re-render when logo URL changes (theme switch)
         />
       </div>
     );

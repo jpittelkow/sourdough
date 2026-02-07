@@ -12,7 +12,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Backend API | `backend/routes/api.php`, `backend/app/Http/Controllers/Api/` |
 | Branding/UI | `frontend/config/app.ts`, `frontend/components/logo.tsx`, [branding roadmap](../plans/branding-ui-consistency-roadmap.md) |
 | Mobile/Responsive | [ADR-013](../adr/013-responsive-mobile-first-design.md), `frontend/lib/use-mobile.ts`, [responsive recipe](recipes/make-component-responsive.md) |
-| Notifications | [ADR-005](../adr/005-notification-system-architecture.md), [ADR-017](../adr/017-notification-template-system.md), `backend/app/Services/Notifications/`, [trigger-notifications](recipes/trigger-notifications.md), [add-notification-template](recipes/add-notification-template.md) |
+| Notifications | [ADR-005](../adr/005-notification-system-architecture.md), [ADR-017](../adr/017-notification-template-system.md), [ADR-025](../adr/025-novu-notification-integration.md), `backend/app/Services/Notifications/`, `backend/app/Services/NovuService.php`, [trigger-notifications](recipes/trigger-notifications.md), [add-notification-template](recipes/add-notification-template.md), [configure-novu](recipes/configure-novu.md) |
 | LLM | [ADR-006](../adr/006-llm-orchestration-modes.md), `backend/app/Services/LLM/` |
 | Settings | [ADR-012](../adr/012-admin-only-settings.md), [ADR-014](../adr/014-database-settings-env-fallback.md), `backend/app/Services/SettingService.php`, `backend/config/settings-schema.php`, `frontend/app/(dashboard)/configuration/` |
 | Backup & Restore | [ADR-007](../adr/007-backup-system-design.md), `backend/app/Services/Backup/BackupService.php`, `backend/config/settings-schema.php` (backup group), [add-backup-destination](recipes/add-backup-destination.md), [extend-backup-restore](recipes/extend-backup-restore.md) |
@@ -70,6 +70,7 @@ Example plan reference:
 | Add Collapsible Section | [add-collapsible-section.md](recipes/add-collapsible-section.md) |
 | Add Provider Icon | [add-provider-icon.md](recipes/add-provider-icon.md) |
 | Add Notification Channel | [add-notification-channel.md](recipes/add-notification-channel.md) |
+| Configure Novu | [configure-novu.md](recipes/configure-novu.md) |
 | Trigger Notifications | [trigger-notifications.md](recipes/trigger-notifications.md) |
 | Add Dashboard Widget | [add-dashboard-widget.md](recipes/add-dashboard-widget.md) |
 | Add LLM Provider | [add-llm-provider.md](recipes/add-llm-provider.md) |

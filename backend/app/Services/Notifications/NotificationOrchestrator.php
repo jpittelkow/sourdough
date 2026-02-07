@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Notification;
 use App\Models\SystemSetting;
 use App\Services\NotificationTemplateService;
+use App\Services\NovuService;
 use App\Services\Notifications\Channels\ChannelInterface;
 use App\Services\Notifications\Channels\DatabaseChannel;
 use App\Services\Notifications\Channels\EmailChannel;
@@ -28,7 +29,8 @@ class NotificationOrchestrator
     private array $channelInstances = [];
 
     public function __construct(
-        private NotificationTemplateService $notificationTemplateService
+        private NotificationTemplateService $notificationTemplateService,
+        private NovuService $novuService
     ) {}
 
     /**
@@ -49,6 +51,7 @@ class NotificationOrchestrator
      * Send a notification by type using per-channel templates (push, inapp, chat).
      * For email, variables must include 'title' and 'message'.
      * Variables are merged with user and app_name; templates are rendered for push/inapp/chat.
+     * When Novu is enabled, delegates to Novu and returns without using local channels.
      */
     public function sendByType(
         User $user,
@@ -56,11 +59,15 @@ class NotificationOrchestrator
         array $variables = [],
         ?array $channels = null
     ): array {
-        $channels = $channels ?? $this->getDefaultChannels();
         $baseVariables = [
             'user' => ['name' => $user->name, 'email' => $user->email],
             'app_name' => config('app.name', 'Sourdough'),
         ];
+        if ($this->novuService->isEnabled()) {
+            return $this->sendViaNovu($user, $type, array_merge($baseVariables, $variables));
+        }
+
+        $channels = $channels ?? $this->getDefaultChannels();
         $variables = array_merge($baseVariables, $variables);
         $results = [];
 
@@ -124,6 +131,7 @@ class NotificationOrchestrator
 
     /**
      * Send a notification to a user via specified channels.
+     * When Novu is enabled and a workflow exists for this type, delegates to Novu.
      */
     public function send(
         User $user,
@@ -133,6 +141,20 @@ class NotificationOrchestrator
         array $data = [],
         ?array $channels = null
     ): array {
+        if ($this->novuService->isEnabled()) {
+            $workflowId = $this->novuService->getWorkflowIdForType($type);
+            if ($workflowId !== null) {
+                $payload = array_merge($data, [
+                    'title' => $title,
+                    'message' => $message,
+                    'user' => ['name' => $user->name, 'email' => $user->email],
+                    'app_name' => config('app.name', 'Sourdough'),
+                ]);
+
+                return $this->sendViaNovu($user, $type, $payload);
+            }
+        }
+
         $channels = $channels ?? $this->getDefaultChannels();
         $results = [];
 
@@ -264,6 +286,25 @@ class NotificationOrchestrator
         }
 
         return (bool) $user->getSetting('notifications', "{$channel}_enabled", false);
+    }
+
+    /**
+     * Send via Novu API when Novu is enabled.
+     *
+     * @param  array<string, mixed>  $payload  Variables/payload for the workflow
+     * @return array{novu: array{success: bool, transaction_id?: string, error?: string}}
+     */
+    private function sendViaNovu(User $user, string $type, array $payload): array
+    {
+        $workflowId = $this->novuService->getWorkflowIdForType($type);
+        if ($workflowId === null) {
+            return ['novu' => ['success' => false, 'error' => "No workflow mapped for type: {$type}"]];
+        }
+
+        $subscriberId = $this->novuService->subscriberId($user);
+        $result = $this->novuService->triggerWorkflow($workflowId, $subscriberId, $payload);
+
+        return ['novu' => $result];
     }
 
     /**

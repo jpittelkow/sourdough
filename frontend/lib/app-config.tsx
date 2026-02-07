@@ -17,14 +17,23 @@ export interface AppConfigFeatures {
   webpushVapidPublicKey?: string;
 }
 
+export interface NovuPublicConfig {
+  enabled: boolean;
+  app_identifier: string;
+  api_url: string;
+  socket_url: string;
+}
+
 interface AppConfigState {
   appName: string;
   logoUrl: string | null;
+  logoDarkUrl: string | null;
   faviconUrl: string | null;
   primaryColor: string | null;
   secondaryColor: string | null;
   customCss: string | null;
   features: AppConfigFeatures | null;
+  novu: NovuPublicConfig | null;
   isLoading: boolean;
   error: Error | null;
 }
@@ -49,15 +58,26 @@ function useAppConfigQuery() {
         const systemSettings = systemSettingsResponse?.data?.settings || {};
         const branding = brandingResponse?.data?.settings || {};
         const features = systemSettingsResponse?.data?.features;
+        const novuSettings = systemSettings.novu;
+        const novu: NovuPublicConfig | null = novuSettings && typeof novuSettings === "object"
+          ? {
+              enabled: !!novuSettings.enabled,
+              app_identifier: String(novuSettings.app_identifier ?? ""),
+              api_url: String(novuSettings.api_url ?? "https://api.novu.co"),
+              socket_url: String(novuSettings.socket_url ?? "https://ws.novu.co"),
+            }
+          : null;
 
         // Backend ensures app_name always has a default value, so it should always be present
         return {
           appName: systemSettings.general?.app_name || '',
           logoUrl: branding.logo_url || null,
+          logoDarkUrl: branding.logo_url_dark || null,
           faviconUrl: branding.favicon_url || null,
           primaryColor: branding.primary_color || null,
           secondaryColor: branding.secondary_color || null,
           customCss: branding.custom_css || null,
+          novu,
           features: features
             ? {
                 emailConfigured: !!features.email_configured,
@@ -78,10 +98,12 @@ function useAppConfigQuery() {
         return {
           appName: '',
           logoUrl: null,
+          logoDarkUrl: null,
           faviconUrl: null,
           primaryColor: null,
           secondaryColor: null,
           customCss: null,
+          novu: null,
           features: null,
         };
       }
@@ -102,11 +124,13 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   // Backend ensures app_name always has a default value, so it should always be present
   const appName = query.data?.appName || '';
   const logoUrl = query.data?.logoUrl || null;
+  const logoDarkUrl = query.data?.logoDarkUrl || null;
   const faviconUrl = query.data?.faviconUrl || null;
   const primaryColor = query.data?.primaryColor || null;
   const secondaryColor = query.data?.secondaryColor || null;
   const customCss = query.data?.customCss || null;
   const features = query.data?.features ?? null;
+  const novu = query.data?.novu ?? null;
 
   // Apply theme colors when they're loaded
   React.useEffect(() => {
@@ -174,11 +198,13 @@ export function AppConfigProvider({ children }: { children: React.ReactNode }) {
   const value: AppConfigState = {
     appName,
     logoUrl,
+    logoDarkUrl,
     faviconUrl,
     primaryColor,
     secondaryColor,
     customCss,
     features,
+    novu,
     isLoading: query.isLoading,
     error: query.error as Error | null,
   };
@@ -202,11 +228,13 @@ export function useAppConfig(): AppConfigState {
     return {
       appName: '',
       logoUrl: null,
+      logoDarkUrl: null,
       faviconUrl: null,
       primaryColor: null,
       secondaryColor: null,
       customCss: null,
       features: null,
+      novu: null,
       isLoading: false,
       error: null,
     };

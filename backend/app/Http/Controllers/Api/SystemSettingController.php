@@ -52,6 +52,14 @@ class SystemSettingController extends Controller
         }
         $settings['general']['app_url'] = config('app.url');
 
+        // Novu public keys (frontend needs these to show Novu Inbox vs local bell)
+        $settings['novu'] = [
+            'enabled' => filter_var($this->settingService->get('novu', 'enabled', false), FILTER_VALIDATE_BOOLEAN),
+            'app_identifier' => $this->settingService->get('novu', 'app_identifier', '') ?? '',
+            'api_url' => $this->settingService->get('novu', 'api_url', 'https://api.novu.co') ?? 'https://api.novu.co',
+            'socket_url' => $this->settingService->get('novu', 'socket_url', 'https://ws.novu.co') ?? 'https://ws.novu.co',
+        ];
+
         $emailConfigured = $emailConfigService->isConfigured();
         $passwordResetEnabled = $this->settingService->get('auth', 'password_reset_enabled', true);
 

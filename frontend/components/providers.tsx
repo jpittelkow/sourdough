@@ -25,7 +25,7 @@ function DeferredToaster() {
     setMounted(true);
   }, []);
   if (!mounted) return null;
-  return <Toaster richColors position="top-right" />;
+  return <Toaster richColors closeButton position="top-right" />;
 }
 
 function AuthInitializer({ children }: { children: React.ReactNode }) {

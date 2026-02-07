@@ -73,11 +73,11 @@ export function Sidebar() {
               <nav className="flex flex-col gap-2">
                 <Link href="/dashboard">
                   <Button
-                    variant={pathname === "/dashboard" ? "default" : "ghost"}
+                    variant={pathname === "/dashboard" ? "secondary" : "ghost"}
                     size="default"
                     className={cn(
                       "w-full justify-start gap-3 min-h-11",
-                      pathname === "/dashboard" && "bg-primary text-primary-foreground"
+                      pathname === "/dashboard" && "bg-secondary text-secondary-foreground font-medium"
                     )}
                     title="Home"
                   >
@@ -87,18 +87,18 @@ export function Sidebar() {
                 </Link>
               </nav>
               {isAdmin && (
-                <>
+                <div className="mt-auto">
                   <Separator orientation="horizontal" className="my-2" />
                   <nav className="flex flex-col gap-2">
                     <Button
                       variant={
-                        pathname?.startsWith("/configuration") ? "default" : "ghost"
+                        pathname?.startsWith("/configuration") ? "secondary" : "ghost"
                       }
                       size="default"
                       className={cn(
                         "w-full justify-start gap-3 min-h-11",
                         pathname?.startsWith("/configuration") &&
-                          "bg-primary text-primary-foreground"
+                          "bg-secondary text-secondary-foreground font-medium"
                       )}
                       title="Configuration"
                       onClick={() => {
@@ -110,7 +110,7 @@ export function Sidebar() {
                       <span>Configuration</span>
                     </Button>
                   </nav>
-                </>
+                </div>
               )}
               <SidebarVersionFooter isExpanded={true} />
             </div>
@@ -161,12 +161,12 @@ export function Sidebar() {
         <nav className="flex flex-col">
           <Link href="/dashboard">
             <Button
-              variant={pathname === "/dashboard" ? "default" : "ghost"}
+              variant={pathname === "/dashboard" ? "secondary" : "ghost"}
               size={isExpanded ? "default" : "icon"}
               className={cn(
                 "min-h-11",
                 isExpanded ? "w-full justify-start gap-3" : "w-12 h-12 mx-auto",
-                pathname === "/dashboard" && "bg-primary text-primary-foreground"
+                pathname === "/dashboard" && "bg-secondary text-secondary-foreground font-medium"
               )}
               title="Home"
             >
@@ -176,29 +176,30 @@ export function Sidebar() {
           </Link>
         </nav>
 
-        <Separator orientation="horizontal" className="my-2" />
-
         {isAdmin && (
-          <nav className="flex flex-col gap-2">
-            <Link href="/configuration">
-              <Button
-                variant={
-                  pathname?.startsWith("/configuration") ? "default" : "ghost"
-                }
-                size={isExpanded ? "default" : "icon"}
-                className={cn(
-                  "min-h-11",
-                  isExpanded ? "w-full justify-start gap-3" : "w-12 h-12 mx-auto",
-                  pathname?.startsWith("/configuration") &&
-                    "bg-primary text-primary-foreground"
-                )}
-                title="Configuration"
-              >
-                <Settings className="h-5 w-5 flex-shrink-0" />
-                {isExpanded && <span>Configuration</span>}
-              </Button>
-            </Link>
-          </nav>
+          <div className="mt-auto">
+            <Separator orientation="horizontal" className="my-2" />
+            <nav className="flex flex-col gap-2">
+              <Link href="/configuration">
+                <Button
+                  variant={
+                    pathname?.startsWith("/configuration") ? "secondary" : "ghost"
+                  }
+                  size={isExpanded ? "default" : "icon"}
+                  className={cn(
+                    "min-h-11",
+                    isExpanded ? "w-full justify-start gap-3" : "w-12 h-12 mx-auto",
+                    pathname?.startsWith("/configuration") &&
+                      "bg-secondary text-secondary-foreground font-medium"
+                  )}
+                  title="Configuration"
+                >
+                  <Settings className="h-5 w-5 flex-shrink-0" />
+                  {isExpanded && <span>Configuration</span>}
+                </Button>
+              </Link>
+            </nav>
+          </div>
         )}
 
         <SidebarVersionFooter isExpanded={isExpanded} />

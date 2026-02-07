@@ -81,7 +81,7 @@ export default function PreferencesPage() {
   const [webpushLoading, setWebpushLoading] = useState(false);
   const [webpushPermission, setWebpushPermission] = useState<NotificationPermission | "unsupported">("unsupported");
   const [installPrompting, setInstallPrompting] = useState(false);
-  const { features } = useAppConfig();
+  const { features, novu } = useAppConfig();
   const { isOffline } = useOnline();
   const { canPrompt, isInstalled, promptInstall } = useInstallPrompt();
 
@@ -489,11 +489,17 @@ export default function PreferencesPage() {
             Notification Preferences
           </CardTitle>
           <CardDescription>
-            Enable channels, add your webhook or phone number, test, and accept usage. Only channels enabled by an administrator are shown.
+            {novu?.enabled
+              ? "Notifications are delivered via Novu. Use the notification bell in the header to view and manage preferences."
+              : "Enable channels, add your webhook or phone number, test, and accept usage. Only channels enabled by an administrator are shown."}
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {channelsLoading ? (
+          {novu?.enabled ? (
+            <p className="text-sm text-muted-foreground">
+              Click the notification bell in the header to open your inbox and manage notification preferences.
+            </p>
+          ) : channelsLoading ? (
             <div className="flex items-center justify-center py-8">
               <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
             </div>

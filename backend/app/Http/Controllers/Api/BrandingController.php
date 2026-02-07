@@ -32,6 +32,7 @@ class BrandingController extends Controller
     {
         $validated = $request->validate([
             'logo_url' => ['sometimes', 'nullable', 'string'],
+            'logo_url_dark' => ['sometimes', 'nullable', 'string'],
             'favicon_url' => ['sometimes', 'nullable', 'string'],
             'primary_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
             'secondary_color' => ['sometimes', 'nullable', 'string', 'regex:/^#[0-9A-Fa-f]{6}$/'],
@@ -43,7 +44,7 @@ class BrandingController extends Controller
 
         foreach ($validated as $key => $value) {
             // Logo, favicon URLs, colors, and custom CSS are public
-            $isPublic = in_array($key, ['logo_url', 'favicon_url', 'primary_color', 'secondary_color', 'dark_mode_default', 'custom_css']);
+            $isPublic = in_array($key, ['logo_url', 'logo_url_dark', 'favicon_url', 'primary_color', 'secondary_color', 'dark_mode_default', 'custom_css']);
             
             SystemSetting::set($key, $value, 'branding', $user->id, $isPublic);
         }
@@ -93,6 +94,43 @@ class BrandingController extends Controller
     }
 
     /**
+     * Upload dark mode logo.
+     */
+    public function uploadLogoDark(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'logo' => ['required', 'image', 'max:2048'], // 2MB max
+        ]);
+
+        try {
+            // Get current dark logo URL before uploading new one
+            $currentUrl = SystemSetting::get('logo_url_dark', null, 'branding');
+            if ($currentUrl) {
+                $oldFilename = basename($currentUrl);
+                if ($oldFilename) {
+                    Storage::disk('public')->delete('branding/' . $oldFilename);
+                }
+            }
+
+            $path = $request->file('logo')->store('branding', 'public');
+            // Use relative URL to avoid port mismatch issues
+            $url = '/storage/' . $path;
+
+            $user = $request->user();
+            SystemSetting::set('logo_url_dark', $url, 'branding', $user->id, true);
+
+            return response()->json([
+                'message' => 'Dark mode logo uploaded successfully',
+                'url' => $url,
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to upload dark mode logo: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Upload favicon.
      */
     public function uploadFavicon(Request $request): JsonResponse
@@ -127,6 +165,33 @@ class BrandingController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'message' => 'Failed to upload favicon: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * Delete dark mode logo.
+     */
+    public function deleteLogoDark(Request $request): JsonResponse
+    {
+        try {
+            $currentUrl = SystemSetting::get('logo_url_dark', null, 'branding');
+            if ($currentUrl) {
+                $filename = basename($currentUrl);
+                if ($filename) {
+                    Storage::disk('public')->delete('branding/' . $filename);
+                }
+            }
+
+            $user = $request->user();
+            SystemSetting::set('logo_url_dark', null, 'branding', $user->id, true);
+
+            return response()->json([
+                'message' => 'Dark mode logo deleted successfully',
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'message' => 'Failed to delete dark mode logo: ' . $e->getMessage(),
             ], 500);
         }
     }

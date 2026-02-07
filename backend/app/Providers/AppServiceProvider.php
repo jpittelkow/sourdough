@@ -29,7 +29,8 @@ class AppServiceProvider extends ServiceProvider
         // Register Notification Orchestrator
         $this->app->singleton(\App\Services\Notifications\NotificationOrchestrator::class, function ($app) {
             return new \App\Services\Notifications\NotificationOrchestrator(
-                $app->make(\App\Services\NotificationTemplateService::class)
+                $app->make(\App\Services\NotificationTemplateService::class),
+                $app->make(\App\Services\NovuService::class)
             );
         });
 

@@ -91,11 +91,6 @@ export function ThemeProvider({
     [theme, resolvedTheme, storageKey]
   );
 
-  // Prevent flash of wrong theme
-  if (!mounted) {
-    return <>{children}</>;
-  }
-
   return (
     <ThemeProviderContext.Provider {...props} value={value}>
       {children}

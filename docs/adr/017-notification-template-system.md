@@ -45,6 +45,7 @@ We will implement a **per-type notification template system** for push, in-app, 
 
 - [ADR-005: Notification System Architecture](005-notification-system-architecture.md) — channel interface and orchestrator.
 - [ADR-016: Email Template System](016-email-template-system.md) — email continues to use EmailTemplate; notification templates cover push, inapp, chat.
+- [ADR-025: Novu Notification Integration](025-novu-notification-integration.md) — when Novu is enabled, templates and delivery are managed in Novu; the local template system is used only when Novu is not configured.
 
 ## Notes
 

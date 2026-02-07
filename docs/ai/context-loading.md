@@ -71,6 +71,7 @@ backend/database/migrations/                    # Database schema
 **Read first:**
 ```
 docs/adr/005-notification-system-architecture.md
+docs/adr/025-novu-notification-integration.md   # Optional Novu path
 backend/app/Services/Notifications/NotificationOrchestrator.php
 backend/app/Services/Notifications/NotificationChannelMetadata.php  # Shared trait
 backend/app/Services/Notifications/Channels/    # Existing channels
@@ -79,17 +80,24 @@ backend/config/notifications.php
 
 **Also useful:**
 ```
+backend/app/Services/NovuService.php            # Novu SDK wrapper (when Novu enabled)
+backend/app/Http/Controllers/Api/NovuSettingController.php   # Admin Novu config
+backend/app/Http/Controllers/Api/NovuController.php          # Subscriber HMAC
 backend/app/Http/Controllers/Api/NotificationController.php
 backend/app/Http/Controllers/Api/NotificationChannelConfigController.php  # Admin API
 backend/app/Http/Controllers/Api/UserNotificationSettingsController.php   # User API
 backend/app/Models/Notification.php
 frontend/app/(dashboard)/configuration/notifications/page.tsx  # Admin UI
+frontend/app/(dashboard)/configuration/novu/page.tsx          # Novu config
+frontend/components/notifications/notification-bell.tsx      # Bell (Novu vs local)
+frontend/components/notifications/novu-inbox.tsx             # Novu Inbox wrapper
 frontend/app/(dashboard)/user/preferences/page.tsx             # User UI
 ```
 
 **Recipes:**
 - [Trigger Notifications](recipes/trigger-notifications.md)
 - [Add Notification Channel](recipes/add-notification-channel.md)
+- [Configure Novu](recipes/configure-novu.md)
 
 ## LLM Work
 
@@ -584,7 +592,8 @@ frontend/app/(dashboard)/layout.tsx
 ```
 docs/plans/branding-ui-consistency-roadmap.md
 frontend/config/app.ts                  # Centralized app configuration
-frontend/components/logo.tsx            # Logo component with variants
+frontend/components/logo.tsx            # Logo component with dark/light mode variants
+frontend/lib/app-config.tsx             # App config provider (logoUrl, logoDarkUrl, etc.)
 frontend/app/globals.css                # CSS theme variables
 ```
 
@@ -592,6 +601,8 @@ frontend/app/globals.css                # CSS theme variables
 ```
 frontend/components/header.tsx          # Uses Logo component
 frontend/components/sidebar.tsx         # Uses Logo component
+frontend/components/theme-provider.tsx  # Theme provider (useTheme for dark mode detection)
+backend/app/Http/Controllers/Api/BrandingController.php  # Branding API (logo, dark logo, favicon)
 .env.example                            # Branding environment variables
 ```
 

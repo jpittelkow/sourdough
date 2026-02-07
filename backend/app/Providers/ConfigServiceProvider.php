@@ -47,6 +47,32 @@ class ConfigServiceProvider extends ServiceProvider
         if (isset($settings['search'])) {
             $this->injectSearchConfig($settings['search']);
         }
+
+        if (isset($settings['novu'])) {
+            $this->injectNovuConfig($settings['novu']);
+        }
+    }
+
+    /**
+     * Inject Novu settings into config.
+     */
+    private function injectNovuConfig(array $settings): void
+    {
+        if (array_key_exists('enabled', $settings)) {
+            config(['novu.enabled' => filter_var($settings['enabled'] ?? false, FILTER_VALIDATE_BOOLEAN)]);
+        }
+        if (array_key_exists('api_key', $settings)) {
+            config(['novu.api_key' => $settings['api_key'] ?? '']);
+        }
+        if (array_key_exists('app_identifier', $settings)) {
+            config(['novu.app_identifier' => $settings['app_identifier'] ?? '']);
+        }
+        if (array_key_exists('api_url', $settings) && ! empty(trim((string) ($settings['api_url'] ?? '')))) {
+            config(['novu.api_url' => rtrim((string) $settings['api_url'], '/')]);
+        }
+        if (array_key_exists('socket_url', $settings) && ! empty(trim((string) ($settings['socket_url'] ?? '')))) {
+            config(['novu.socket_url' => rtrim((string) $settings['socket_url'], '/')]);
+        }
     }
 
     /**

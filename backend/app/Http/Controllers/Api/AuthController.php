@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Services\AuditService;
 use App\Services\EmailConfigService;
 use App\Services\GroupService;
+use App\Services\NovuService;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class AuthController extends Controller
 
     public function __construct(
         private AuditService $auditService,
+        private NovuService $novuService,
         private SettingService $settingService
     ) {}
 
@@ -88,6 +90,8 @@ class AuthController extends Controller
 
         $this->auditService->logAuth('register', $user);
 
+        $this->novuService->syncSubscriber($user);
+
         return $this->createdResponse('Registration successful', ['user' => $user]);
     }
 
@@ -144,6 +148,8 @@ class AuthController extends Controller
         }
 
         $this->auditService->logAuth('login', $user);
+
+        $this->novuService->syncSubscriber($user);
 
         return $this->successResponse('Login successful', ['user' => $user]);
     }

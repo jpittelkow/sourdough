@@ -184,6 +184,7 @@ Users configure their notification preferences:
 ## Related Decisions
 
 - [ADR-001: Technology Stack](./001-technology-stack.md)
+- [ADR-025: Novu Notification Integration](./025-novu-notification-integration.md) — optional alternative: when Novu is enabled, the orchestrator delegates to Novu API; otherwise the channel-based implementation above is used.
 
 ## Notes
 

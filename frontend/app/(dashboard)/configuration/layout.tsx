@@ -92,6 +92,7 @@ const navigationGroups: NavGroup[] = [
       { name: "Email", href: "/configuration/email", icon: Mail, description: "Email delivery configuration", permission: "settings.view" },
       { name: "Email Templates", href: "/configuration/email-templates", icon: MailOpen, description: "Customize system emails", permission: "settings.view" },
       { name: "Notification Templates", href: "/configuration/notification-templates", icon: MessageSquareText, description: "Per-type push, in-app, chat templates", permission: "settings.view" },
+      { name: "Novu", href: "/configuration/novu", icon: Bell, description: "Novu notification infrastructure (optional)", permission: "settings.view" },
     ],
   },
   {
@@ -289,21 +290,14 @@ function GroupedNavigation({ pathname }: { pathname: string }) {
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-2 py-2 min-h-10 text-sm transition-colors",
                         isActive
-                          ? "bg-primary text-primary-foreground"
+                          ? "bg-secondary text-secondary-foreground font-medium border border-border"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >
                       <item.icon className="h-4 w-4 shrink-0" />
                       <div className="flex flex-col min-w-0">
                         <span className="font-medium truncate">{item.name}</span>
-                        <span
-                          className={cn(
-                            "text-xs truncate",
-                            isActive
-                              ? "text-primary-foreground/70"
-                              : "text-muted-foreground"
-                          )}
-                        >
+                        <span className="text-xs truncate text-muted-foreground">
                           {item.description}
                         </span>
                       </div>

@@ -32,6 +32,7 @@ import { useAppConfig } from "@/lib/app-config";
 
 const brandingSchema = z.object({
   logo_url: z.string().optional(),
+  logo_url_dark: z.string().optional(),
   favicon_url: z.string().optional(),
   primary_color: z.string()
     .refine((val) => {
@@ -58,8 +59,10 @@ export default function BrandingSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isUploadingDarkLogo, setIsUploadingDarkLogo] = useState(false);
   const [isUploadingFavicon, setIsUploadingFavicon] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoDarkPreview, setLogoDarkPreview] = useState<string | null>(null);
   const [faviconPreview, setFaviconPreview] = useState<string | null>(null);
   const queryClient = useQueryClient();
   const { appName } = useAppConfig();
@@ -69,6 +72,7 @@ export default function BrandingSettingsPage() {
     mode: "onBlur", // Validate on blur to avoid blocking while typing
     defaultValues: {
       logo_url: "",
+      logo_url_dark: "",
       favicon_url: "",
       primary_color: "",
       secondary_color: "",
@@ -77,6 +81,7 @@ export default function BrandingSettingsPage() {
   });
 
   const logoUrl = watch("logo_url");
+  const logoDarkUrl = watch("logo_url_dark");
   const faviconUrl = watch("favicon_url");
 
   const fetchSettings = useCallback(async () => {
@@ -89,6 +94,7 @@ export default function BrandingSettingsPage() {
       // Using reset() ensures isDirty works correctly by establishing new default values
       const formValues = {
         logo_url: settings.logo_url || "",
+        logo_url_dark: settings.logo_url_dark || "",
         favicon_url: settings.favicon_url || "",
         primary_color: settings.primary_color || "",
         secondary_color: settings.secondary_color || "",
@@ -99,6 +105,9 @@ export default function BrandingSettingsPage() {
 
       if (settings.logo_url) {
         setLogoPreview(settings.logo_url);
+      }
+      if (settings.logo_url_dark) {
+        setLogoDarkPreview(settings.logo_url_dark);
       }
       if (settings.favicon_url) {
         setFaviconPreview(settings.favicon_url);
@@ -123,6 +132,14 @@ export default function BrandingSettingsPage() {
   }, [logoUrl]);
 
   useEffect(() => {
+    if (logoDarkUrl) {
+      setLogoDarkPreview(logoDarkUrl);
+    } else {
+      setLogoDarkPreview(null);
+    }
+  }, [logoDarkUrl]);
+
+  useEffect(() => {
     if (faviconUrl) {
       setFaviconPreview(faviconUrl);
     } else {
@@ -137,6 +154,7 @@ export default function BrandingSettingsPage() {
       const payload = {
         ...data,
         logo_url: data.logo_url || null,
+        logo_url_dark: data.logo_url_dark || null,
         favicon_url: data.favicon_url || null,
         primary_color: data.primary_color || null,
         secondary_color: data.secondary_color || null,
@@ -192,6 +210,42 @@ export default function BrandingSettingsPage() {
     }
   };
 
+  const handleDarkLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please select an image file");
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be less than 2MB");
+      return;
+    }
+
+    setIsUploadingDarkLogo(true);
+    try {
+      const formData = new FormData();
+      formData.append("logo", file);
+
+      const response = await api.post("/branding/logo-dark", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      setValue("logo_url_dark", response.data.url, { shouldDirty: true });
+      setLogoDarkPreview(response.data.url);
+      toast.success("Dark mode logo uploaded successfully");
+      queryClient.invalidateQueries({ queryKey: ["app-config"] });
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to upload dark mode logo"));
+    } finally {
+      setIsUploadingDarkLogo(false);
+    }
+  };
+
   const handleFaviconUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -233,8 +287,10 @@ export default function BrandingSettingsPage() {
     setValue("primary_color", "#3b82f6", { shouldDirty: true });
     setValue("secondary_color", "#6366f1", { shouldDirty: true });
     setValue("logo_url", "", { shouldDirty: true });
+    setValue("logo_url_dark", "", { shouldDirty: true });
     setValue("favicon_url", "", { shouldDirty: true });
     setLogoPreview(null);
+    setLogoDarkPreview(null);
     setFaviconPreview(null);
     toast.success("Reset to default values");
   };
@@ -243,6 +299,12 @@ export default function BrandingSettingsPage() {
     setValue("logo_url", "", { shouldDirty: true });
     setLogoPreview(null);
     toast.success("Logo removed");
+  };
+
+  const handleDeleteDarkLogo = () => {
+    setValue("logo_url_dark", "", { shouldDirty: true });
+    setLogoDarkPreview(null);
+    toast.success("Dark mode logo removed");
   };
 
   const handleDeleteFavicon = () => {
@@ -341,6 +403,70 @@ export default function BrandingSettingsPage() {
                 {errors.logo_url && (
                   <p className="text-sm text-destructive">
                     {errors.logo_url.message}
+                  </p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Dark Mode Logo</Label>
+                <p className="text-sm text-muted-foreground">
+                  Optional. Shown when dark mode is active. Falls back to the main logo if not set.
+                </p>
+                <div className="flex items-center gap-4">
+                  {logoDarkPreview && (
+                    <div className="relative group">
+                      <div className="relative h-20 w-20 bg-gray-900 rounded">
+                        <Image
+                          src={logoDarkPreview}
+                          alt="Dark mode logo preview"
+                          fill
+                          className="object-contain border rounded"
+                          unoptimized
+                        />
+                      </div>
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="icon"
+                        className="absolute -top-2 -right-2 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={handleDeleteDarkLogo}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  )}
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleDarkLogoUpload}
+                      disabled={isUploadingDarkLogo}
+                      className="hidden"
+                      id="dark-logo-upload"
+                    />
+                    <Label
+                      htmlFor="dark-logo-upload"
+                      className="cursor-pointer inline-flex items-center gap-2 px-4 py-2 border rounded-md hover:bg-muted"
+                    >
+                      {isUploadingDarkLogo ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="h-4 w-4" />
+                      )}
+                      {isUploadingDarkLogo ? "Uploading..." : "Upload Dark Logo"}
+                    </Label>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Or enter a URL
+                    </p>
+                  </div>
+                </div>
+                <Input
+                  {...register("logo_url_dark")}
+                  placeholder="https://example.com/logo-dark.png"
+                />
+                {errors.logo_url_dark && (
+                  <p className="text-sm text-destructive">
+                    {errors.logo_url_dark.message}
                   </p>
                 )}
               </div>

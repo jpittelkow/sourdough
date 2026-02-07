@@ -24,6 +24,8 @@ use App\Http\Controllers\Api\BackupController;
 use App\Http\Controllers\Api\BackupSettingController;
 use App\Http\Controllers\Api\EmailTemplateController;
 use App\Http\Controllers\Api\NotificationTemplateController;
+use App\Http\Controllers\Api\NovuController;
+use App\Http\Controllers\Api\NovuSettingController;
 use App\Http\Controllers\Api\VersionController;
 use App\Http\Controllers\Api\LLMController;
 use App\Http\Controllers\Api\LLMModelController;
@@ -153,6 +155,9 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::put('/password', [ProfileController::class, 'updatePassword']);
         Route::delete('/', [ProfileController::class, 'destroy']);
     });
+
+    // Novu subscriber HMAC (for Inbox auth)
+    Route::get('/novu/subscriber-hash', [NovuController::class, 'subscriberHash']);
 
     // User Settings (access logging: Setting, self)
     Route::prefix('user')->group(function () {
@@ -332,6 +337,14 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::delete('/keys/{key}', [NotificationSettingController::class, 'reset'])->middleware('can:settings.edit');
     });
 
+    // Novu Settings (permission: settings.view / settings.edit)
+    Route::prefix('novu-settings')->group(function () {
+        Route::get('/', [NovuSettingController::class, 'show'])->middleware('can:settings.view');
+        Route::put('/', [NovuSettingController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('/test', [NovuSettingController::class, 'test'])->middleware('can:settings.edit');
+        Route::delete('/keys/{key}', [NovuSettingController::class, 'resetKey'])->middleware('can:settings.edit');
+    });
+
     // LLM System-Wide Settings (permission: settings.view / settings.edit)
     Route::prefix('llm-settings')->group(function () {
         Route::get('/', [LLMSettingController::class, 'show'])->middleware('can:settings.view');
@@ -429,8 +442,10 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     Route::prefix('branding')->group(function () {
         Route::put('/', [BrandingController::class, 'update'])->middleware('can:settings.edit');
         Route::post('/logo', [BrandingController::class, 'uploadLogo'])->middleware('can:settings.edit');
+        Route::post('/logo-dark', [BrandingController::class, 'uploadLogoDark'])->middleware('can:settings.edit');
         Route::post('/favicon', [BrandingController::class, 'uploadFavicon'])->middleware('can:settings.edit');
         Route::delete('/logo', [BrandingController::class, 'deleteLogo'])->middleware('can:settings.edit');
+        Route::delete('/logo-dark', [BrandingController::class, 'deleteLogoDark'])->middleware('can:settings.edit');
         Route::delete('/favicon', [BrandingController::class, 'deleteFavicon'])->middleware('can:settings.edit');
     });
     

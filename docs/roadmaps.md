@@ -19,7 +19,7 @@ Ready to start. These are unblocked and can begin immediately.
 
 Requires foundation work or longer-term planning.
 
-- [ ] **Notification Refactor to Novu** - Replace the current custom notification system (NotificationOrchestrator, per-channel implementations, in-app notification templates) with [Novu](https://novu.co/) as the unified notification infrastructure. Novu provides multi-channel delivery (email, SMS, push, in-app, chat), a visual workflow editor, subscriber management, digest/batching, and a pre-built notification center UI component. This refactor would remove the custom channel/provider pattern in `backend/app/Services/Notifications/` and replace it with Novu's SDK integration, simplifying notification management and enabling richer notification workflows. Relevant ADRs to update: [ADR-005](adr/005-notification-system-architecture.md), [ADR-017](adr/017-notification-template-system.md).
+- [ ] **Integration Usage Dashboard** - Track and visualize costs across all paid integrations (LLM, email, SMS, storage, broadcasting) in a unified admin dashboard. Combined stacked area chart with date range selector and integration/provider filters. Includes usage tracking instrumentation, stats API, cost alerts, and CSV export. See [Integration Costs > Usage Dashboard](#usage-dashboard-planned) for full phased plan.
 
 ## Pre-Release Checklist
 
@@ -45,6 +45,7 @@ High-priority work complete. Only optional/lower-priority items remain.
 | [Audit Logs & Logging](plans/audit-logs-roadmap.md) | 2026-01-29 | Optional: external storage, aggregation |
 | [LLM Model Discovery](plans/llm-model-discovery-roadmap.md) | 2026-01-29 | Optional: troubleshooting E2E, additional regions for Bedrock |
 | [Notifications](plans/notifications-roadmap.md) | 2026-01-27 | Optional: user docs |
+| Notification Refactor to Novu | 2026-02-07 | Optional Novu (Cloud/self-hosted); local system remains fallback. [ADR-025](adr/025-novu-notification-integration.md), [configure-novu](ai/recipes/configure-novu.md) |
 | [Versioning System](plans/versioning-system-roadmap.md) | 2026-01-30 | Optional: Phase 4 (version check, update notification) |
 | [Mobile Responsiveness](plans/mobile-responsive-roadmap.md) | 2026-01-27 | Optional: QA/testing items |
 | [SSO Settings Enhancement](plans/sso-settings-enhancement-roadmap.md) | 2026-01-30 | Optional: Phase 4 branded logos, Phase 9 screenshots |
@@ -83,6 +84,134 @@ All tasks complete.
 | Documentation Restructure | 2026-02-05 |
 | PWA: Configuration navigation on mobile | 2026-02-06 |
 | Faster Sign Out | 2026-02-06 |
+
+## Integration Costs
+
+Reference for paid third-party integrations used by Sourdough. All integrations are optional — the app runs fully self-hosted with no paid services required. Costs only apply when an admin configures and enables a paid provider.
+
+### LLM Providers (per-token/per-request)
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| OpenAI (GPT-4, GPT-4o) | Per input/output token | Varies by model; GPT-4o is cheaper than GPT-4 |
+| Anthropic (Claude) | Per input/output token | Varies by model tier (Haiku, Sonnet, Opus) |
+| Google Gemini | Per input/output token | Free tier available; paid for higher usage |
+| AWS Bedrock | Per input/output token | Pay-per-use via AWS account; model pricing varies |
+| Azure OpenAI | Per input/output token | Azure subscription required; same models as OpenAI |
+| Ollama (local) | Free (self-hosted) | Runs on local hardware; no API costs |
+
+**Cost amplifiers:** Aggregation mode queries all configured providers (multiplied cost); Council mode queries all providers plus a synthesis step. Single mode is the most cost-efficient.
+
+### Email Providers (per message)
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| SMTP (self-hosted) | Free | Requires own mail server |
+| Mailgun | Per email (free tier available) | 100 emails/day free, then per-email |
+| SendGrid | Per email (free tier available) | 100 emails/day free, then tiered plans |
+| AWS SES | Per email | ~$0.10/1,000 emails; very cost-effective at scale |
+| Postmark | Per email | Transactional-focused; tiered plans |
+
+### SMS Providers (per message)
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| Twilio | Per SMS segment | Pricing varies by country; ~$0.0079/msg (US) |
+| Vonage | Per SMS segment | Pricing varies by country |
+| AWS SNS | Per SMS | ~$0.00645/msg (US); international rates vary |
+
+### Storage Providers (per GB/month)
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| Local disk | Free | Default; limited by server disk |
+| Amazon S3 | Per GB stored + requests | ~$0.023/GB/month (Standard) |
+| Google Cloud Storage | Per GB stored + requests | ~$0.020/GB/month (Standard) |
+| Azure Blob Storage | Per GB stored + requests | ~$0.018/GB/month (Hot tier) |
+| DigitalOcean Spaces | Flat + per GB | $5/month includes 250 GB |
+| MinIO (self-hosted) | Free | S3-compatible; runs on own infrastructure |
+| Backblaze B2 | Per GB stored + requests | ~$0.006/GB/month; 10 GB free |
+
+### Real-Time / Broadcasting
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| Pusher | Per connection + messages | Free tier: 200k messages/day, 100 connections. Required only for live streaming features (audit logs, app logs) |
+
+### Notification Services (planned)
+
+| Provider | Pricing Model | Notes |
+|----------|--------------|-------|
+| Novu (planned) | Free tier + usage-based | Planned replacement for custom notification system. Free for 30k events/month |
+
+### Free Integrations (no cost)
+
+These integrations are self-hosted or free and incur no third-party costs:
+
+- **Meilisearch** — Embedded in Docker container (self-hosted)
+- **Ollama** — Local LLM inference (self-hosted)
+- **SSO/OAuth providers** — Google, GitHub, Microsoft, Apple, Discord, GitLab authentication is free
+- **Telegram, Discord, Slack, Matrix, ntfy** — Notification channels use free APIs/webhooks
+- **Web Push (VAPID)** — Browser push notifications are free
+- **SMTP** — Self-hosted email is free
+
+### Cost Management Considerations
+
+- **LLM is typically the largest cost** — Monitor token usage; prefer Single mode over Aggregation/Council for routine queries
+- **Email costs are usually negligible** — Most apps send fewer than 1,000 emails/month (well within free tiers)
+- **SMS is per-message** — Can add up with international recipients; consider limiting to critical notifications only
+- **Storage scales with data** — Local disk is free; cloud storage costs grow with backup frequency and file uploads
+- **Broadcasting is optional** — Only needed for real-time log streaming; most deployments don't require it
+
+### Usage Dashboard (Planned)
+
+A unified **Configuration > Usage** page for admins to visualize and monitor costs across all paid integrations. Single combined chart with date range selector and integration filters.
+
+**Phase 1: Usage Tracking (Backend)**
+
+- [ ] Create `integration_usage` table — columns: `id`, `integration` (enum: llm, email, sms, storage, broadcasting), `provider` (e.g. openai, twilio, ses), `metric` (e.g. tokens_in, tokens_out, messages, bytes, connections), `quantity` (numeric), `estimated_cost` (nullable decimal, USD), `metadata` (JSON — model name, recipient country, etc.), `user_id` (nullable), `created_at`
+- [ ] Create `IntegrationUsage` model with scopes: `byIntegration()`, `byProvider()`, `byDateRange()`, `byUser()`
+- [ ] Create `UsageTrackingService` — `record($integration, $provider, $metric, $quantity, $estimatedCost, $metadata)` method
+- [ ] Instrument LLM calls — log tokens in/out, provider, model, and estimated cost per query in `LLMOrchestrator` (after response received). Cost estimation uses configurable per-model rates stored in `llm.pricing` config
+- [ ] Instrument email sends — log per-send in `EmailChannel` and `TemplatedMail` with provider name
+- [ ] Instrument SMS sends — log per-message in SMS notification channel with provider and recipient country
+- [ ] Instrument storage operations — log upload/download size in `StorageService` for cloud providers only (skip local)
+- [ ] Instrument broadcasting — log connection events if Pusher is configured (optional, lower priority)
+
+**Phase 2: Usage Stats API (Backend)**
+
+- [ ] Create `UsageController` — admin-only (`can:settings.view`), routes under `/api/usage`
+- [ ] `GET /api/usage/stats` — aggregated usage data with query params: `date_from`, `date_to` (default last 30 days), `integration` (filter by type), `provider` (filter by provider), `group_by` (day/week/month, default day)
+- [ ] Response shape: `{ summary: { total_estimated_cost, by_integration: { llm: cost, email: cost, ... } }, daily: [{ date, llm: cost, email: cost, sms: cost, storage: cost, broadcasting: cost }], by_provider: [{ provider, integration, total_cost, total_quantity }] }`
+- [ ] `GET /api/usage/breakdown` — detailed breakdown for a single integration (e.g. LLM by model, SMS by country)
+- [ ] Add `usage` group to `settings-schema.php` for admin-configurable cost rates (per-model LLM pricing, per-message SMS rates) with sensible defaults
+
+**Phase 3: Usage Dashboard (Frontend)**
+
+- [ ] Add **Configuration > Usage** page at `/configuration/usage` — admin only
+- [ ] Add "Usage" menu item to Configuration navigation (Logs & Monitoring group) — see [recipe: add-configuration-menu-item](ai/recipes/add-configuration-menu-item.md)
+- [ ] **Date range selector** — Two `<Input type="date">` fields for `date_from` / `date_to` (consistent with Audit Log and Access Log filter pattern), plus preset buttons (Last 7 days, Last 30 days, Last 90 days, This month, Last month)
+- [ ] **Summary stat cards** — Row of `StatsCard` components (reuse `AuditStatsCard` pattern): Total Estimated Cost, LLM Cost, Email Cost, SMS Cost, Storage Cost. Each shows the value for the selected date range
+- [ ] **Combined cost chart** — Recharts `AreaChart` (stacked) with all integration costs on a single chart, one colored area per integration type (LLM, Email, SMS, Storage, Broadcasting). Uses `ChartContainer`, `ChartTooltip`, `ChartLegend` from `ui/chart.tsx`. X-axis is date, Y-axis is estimated cost in USD. Grouped by day/week/month based on date range length
+- [ ] **Integration filter** — Multi-select or toggle buttons to show/hide specific integration types on the chart (e.g. toggle off Email to focus on LLM costs). Filter also applies to the stat cards
+- [ ] **Provider filter** — Optional dropdown to filter by specific provider (e.g. only show OpenAI within LLM)
+- [ ] **Provider breakdown table** — Below the chart, a sortable table: Provider, Integration Type, Total Requests/Units, Estimated Cost, with totals row. Filterable by the same date range
+- [ ] **Empty state** — When no usage data exists, show a message explaining that usage tracking begins once paid integrations are configured and used
+
+**Phase 4: Cost Alerts & Export (Optional)**
+
+- [ ] **Cost alerts** — Configurable monthly budget threshold per integration; notify admins when usage exceeds 80% and 100% of budget. Uses existing notification system (`sendByType`). Settings stored in `usage` schema group
+- [ ] **CSV export** — Export usage data for the selected date range and filters as CSV (consistent with audit log export pattern)
+- [ ] **Per-user breakdown** — Optional view showing cost attribution per user (for LLM and SMS where `user_id` is tracked)
+- [ ] **Dashboard widget** — Optional "Monthly Costs" widget on the admin dashboard showing current month total and mini sparkline trend
+
+**Existing patterns to reuse:**
+- Charts: `ui/chart.tsx` (ChartContainer, ChartTooltip, ChartLegend) + Recharts AreaChart/PieChart
+- Date filters: Same `<Input type="date">` pattern from Audit Log and Access Log pages
+- Stat cards: `AuditStatsCard` component pattern (icon, value, description, color variant)
+- Page layout: Standard Configuration page with `CollapsibleCard` sections
+- Data fetching: `api.get()` with `react-query` for stats endpoint
+- Table: Existing sortable table patterns from Audit Log / Access Log pages
 
 ## Roadmap Maintenance
 

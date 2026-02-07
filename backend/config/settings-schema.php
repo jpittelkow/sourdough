@@ -190,6 +190,14 @@ return [
         'min_query_length' => ['env' => 'SEARCH_MIN_QUERY_LENGTH', 'default' => 2],
     ],
 
+    'novu' => [
+        'enabled' => ['env' => 'NOVU_ENABLED', 'default' => false, 'public' => true],
+        'api_key' => ['env' => 'NOVU_API_KEY', 'default' => '', 'encrypted' => true],
+        'app_identifier' => ['env' => 'NOVU_APP_IDENTIFIER', 'default' => '', 'public' => true],
+        'api_url' => ['env' => 'NOVU_API_URL', 'default' => 'https://api.novu.co', 'public' => true],
+        'socket_url' => ['env' => 'NOVU_SOCKET_URL', 'default' => 'https://ws.novu.co', 'public' => true],
+    ],
+
     'storage' => [
         'storage_alert_enabled' => ['env' => 'STORAGE_ALERT_ENABLED', 'default' => false],
         'storage_alert_threshold' => ['env' => 'STORAGE_ALERT_THRESHOLD', 'default' => 80],

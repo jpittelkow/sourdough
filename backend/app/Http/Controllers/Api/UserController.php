@@ -10,6 +10,7 @@ use App\Models\UserGroup;
 use App\Services\AuditService;
 use App\Services\EmailConfigService;
 use App\Services\GroupService;
+use App\Services\NovuService;
 use App\Services\PermissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -24,6 +25,7 @@ class UserController extends Controller
 
     public function __construct(
         private AuditService $auditService,
+        private NovuService $novuService,
         private PermissionService $permissionService
     ) {}
 
@@ -126,6 +128,8 @@ class UserController extends Controller
         $newValues = $user->fresh()->only(array_keys($validated));
 
         $this->auditService->logModelChange($user, 'user.updated', $oldValues, $newValues);
+
+        $this->novuService->syncSubscriber($user->fresh());
 
         $user->load('groups:id,name,slug');
 
