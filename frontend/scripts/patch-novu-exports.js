@@ -30,6 +30,11 @@ try {
     process.exit(0);
   }
 
+  if (!root?.browser?.import?.types || !root?.browser?.import?.default) {
+    // Unexpected shape — don't risk writing a broken exports map
+    process.exit(0);
+  }
+
   // Flatten: replace browser.import/require nesting with flat types/default
   pkg.exports['.'] = {
     browser: {

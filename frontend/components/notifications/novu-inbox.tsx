@@ -3,6 +3,8 @@
 import { useAuth } from "@/lib/auth";
 import { useAppConfig } from "@/lib/app-config";
 import { api } from "@/lib/api";
+import { errorLogger } from "@/lib/error-logger";
+import { getErrorMessage } from "@/lib/utils";
 import { useState, useEffect } from "react";
 import { Inbox } from "@novu/react";
 
@@ -28,7 +30,12 @@ export function NovuInboxBell() {
         const hash = res.data?.subscriber_hash;
         if (hash) setSubscriberHash(hash);
       })
-      .catch(() => {});
+      .catch((error: unknown) => {
+        // Non-fatal: subscriberHash is only required when HMAC is enabled in Novu.
+        errorLogger.captureMessage("Failed to fetch Novu subscriber hash", "warning", {
+          error: getErrorMessage(error, "Unknown error"),
+        });
+      });
   }, [user?.id, novu?.enabled]);
 
   if (!user || !novu?.enabled || !novu?.app_identifier) {

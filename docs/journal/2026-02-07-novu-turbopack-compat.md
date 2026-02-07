@@ -33,4 +33,5 @@ Additionally, `@novu/react` must be rendered client-side only (it depends on sol
 ## Notes
 
 - The patch script is designed to be non-fatal: if `@novu/react` is not installed or the exports map shape differs, it exits without modifying anything.
+- Follow-up hardening: added stricter shape checks in the patch script and added warning-level client error reporting if the subscriber hash fetch fails.
 
