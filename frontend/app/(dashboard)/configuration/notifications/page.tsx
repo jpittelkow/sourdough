@@ -359,7 +359,6 @@ export default function NotificationsPage() {
                       checked={ch.available}
                       onCheckedChange={(checked) => handleToggleAvailable(ch.id, checked)}
                       disabled={!ch.provider_configured || savingChannels.has(ch.id)}
-                      className="min-h-[44px]"
                     />
                     <Label className="text-sm text-muted-foreground">Available to users</Label>
                   </div>
@@ -619,7 +618,6 @@ export default function NotificationsPage() {
               <Switch
                 checked={watch("sns_enabled")}
                 onCheckedChange={(checked) => setValue("sns_enabled", checked, { shouldDirty: true })}
-                className="min-h-[44px]"
               />
             </div>
           </div>
@@ -703,7 +701,6 @@ export default function NotificationsPage() {
               <Switch
                 checked={watch("ntfy_enabled")}
                 onCheckedChange={(checked) => setValue("ntfy_enabled", checked, { shouldDirty: true })}
-                className="min-h-[44px]"
               />
             </div>
             <FormField id="ntfy_server" label="Server URL" error={errors.ntfy_server?.message}>

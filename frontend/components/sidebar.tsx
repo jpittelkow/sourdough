@@ -33,7 +33,7 @@ function SidebarVersionFooter({ isExpanded }: { isExpanded: boolean }) {
     : null;
 
   return (
-    <div className="mt-auto pt-3 border-t px-2 pb-2">
+    <div className="pt-3 border-t px-2 pb-2">
       <p className="text-xs text-muted-foreground text-center">
         {displayName} v{version}
         {shortSha && ` • ${shortSha}`}
@@ -77,7 +77,7 @@ export function Sidebar() {
                     size="default"
                     className={cn(
                       "w-full justify-start gap-3 min-h-11",
-                      pathname === "/dashboard" && "bg-secondary text-secondary-foreground font-medium"
+                      pathname === "/dashboard" && "bg-muted text-foreground font-medium"
                     )}
                     title="Home"
                   >
@@ -86,10 +86,11 @@ export function Sidebar() {
                   </Button>
                 </Link>
               </nav>
-              {isAdmin && (
-                <div className="mt-auto">
-                  <Separator orientation="horizontal" className="my-2" />
-                  <nav className="flex flex-col gap-2">
+              <div className="mt-auto">
+                {isAdmin && (
+                  <>
+                    <Separator orientation="horizontal" className="my-2" />
+                    <nav className="flex flex-col gap-2">
                     <Button
                       variant={
                         pathname?.startsWith("/configuration") ? "secondary" : "ghost"
@@ -98,7 +99,7 @@ export function Sidebar() {
                       className={cn(
                         "w-full justify-start gap-3 min-h-11",
                         pathname?.startsWith("/configuration") &&
-                          "bg-secondary text-secondary-foreground font-medium"
+                          "bg-muted text-foreground font-medium"
                       )}
                       title="Configuration"
                       onClick={() => {
@@ -109,10 +110,11 @@ export function Sidebar() {
                       <Settings className="h-5 w-5 flex-shrink-0" />
                       <span>Configuration</span>
                     </Button>
-                  </nav>
-                </div>
-              )}
-              <SidebarVersionFooter isExpanded={true} />
+                    </nav>
+                  </>
+                )}
+                <SidebarVersionFooter isExpanded={true} />
+              </div>
             </div>
           </div>
         </SheetContent>
@@ -166,7 +168,7 @@ export function Sidebar() {
               className={cn(
                 "min-h-11",
                 isExpanded ? "w-full justify-start gap-3" : "w-12 h-12 mx-auto",
-                pathname === "/dashboard" && "bg-secondary text-secondary-foreground font-medium"
+                pathname === "/dashboard" && "bg-muted text-foreground font-medium"
               )}
               title="Home"
             >
@@ -176,10 +178,11 @@ export function Sidebar() {
           </Link>
         </nav>
 
-        {isAdmin && (
-          <div className="mt-auto">
-            <Separator orientation="horizontal" className="my-2" />
-            <nav className="flex flex-col gap-2">
+        <div className="mt-auto">
+          {isAdmin && (
+            <>
+              <Separator orientation="horizontal" className="my-2" />
+              <nav className="flex flex-col gap-2">
               <Link href="/configuration">
                 <Button
                   variant={
@@ -190,7 +193,7 @@ export function Sidebar() {
                     "min-h-11",
                     isExpanded ? "w-full justify-start gap-3" : "w-12 h-12 mx-auto",
                     pathname?.startsWith("/configuration") &&
-                      "bg-secondary text-secondary-foreground font-medium"
+                      "bg-muted text-foreground font-medium"
                   )}
                   title="Configuration"
                 >
@@ -198,11 +201,11 @@ export function Sidebar() {
                   {isExpanded && <span>Configuration</span>}
                 </Button>
               </Link>
-            </nav>
-          </div>
-        )}
-
-        <SidebarVersionFooter isExpanded={isExpanded} />
+              </nav>
+            </>
+          )}
+          <SidebarVersionFooter isExpanded={isExpanded} />
+        </div>
       </div>
     </aside>
   );

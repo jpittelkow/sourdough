@@ -4,9 +4,16 @@ const nextConfig = {
   reactStrictMode: true,
   
   // Next.js 16+ uses Turbopack by default
-  // Empty config enables Turbopack (better performance than webpack)
   // Turbopack handles file watching automatically, including Docker volumes
-  turbopack: {},
+  turbopack: {
+    resolveAlias: {
+      // Turbopack cannot resolve the "browser" condition in @novu/react's
+      // exports map, causing "Module not found". Use a relative POSIX path
+      // to bypass exports map resolution (Turbopack doesn't support absolute
+      // Windows paths).
+      '@novu/react': './node_modules/@novu/react/dist/esm/index.js',
+    },
+  },
   
   // API rewrites for development
   // Note: Next.js API routes (app/api/*) take precedence over rewrites

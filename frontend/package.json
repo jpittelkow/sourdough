@@ -3,7 +3,9 @@
   "version": "0.1.21",
   "private": true,
   "scripts": {
+    "predev": "node scripts/patch-novu-exports.js",
     "dev": "next dev",
+    "prebuild": "node scripts/patch-novu-exports.js",
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",

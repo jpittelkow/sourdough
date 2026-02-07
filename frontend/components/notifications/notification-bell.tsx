@@ -6,8 +6,13 @@ import { useNotifications } from "@/lib/notifications";
 import { useAppConfig } from "@/lib/app-config";
 import { Button } from "@/components/ui/button";
 import { NotificationDropdown } from "./notification-dropdown";
-import { NovuInboxBell } from "./novu-inbox";
+import dynamic from "next/dynamic";
 import { cn } from "@/lib/utils";
+
+const NovuInboxBell = dynamic(
+  () => import("./novu-inbox").then((m) => ({ default: m.NovuInboxBell })),
+  { ssr: false }
+);
 
 export function NotificationBell() {
   const { novu } = useAppConfig();

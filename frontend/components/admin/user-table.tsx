@@ -214,7 +214,7 @@ export function UserTable({ users, onUserUpdated, currentUserId }: UserTableProp
                     <Badge variant="outline">Active</Badge>
                   )}
                   {user.email_verified_at ? (
-                    <Badge variant="default" className="bg-green-500">
+                    <Badge variant="success">
                       Verified
                     </Badge>
                   ) : (

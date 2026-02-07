@@ -42,6 +42,7 @@ We will integrate Novu as an **optional** notification path:
 
 - When Novu is enabled and `app_identifier` is set, the header shows the `@novu/react` Inbox component (bell + popover). When disabled, the existing NotificationBell and NotificationDropdown are used.
 - HMAC subscriber authentication is used for the Inbox when configured (backend endpoint provides hash for the current user).
+- **Next.js 16 / Turbopack compatibility**: `@novu/react` requires client-only rendering. Load the Inbox wrapper via `next/dynamic({ ssr: false })`, and apply the Turbopack resolution workaround (`frontend/next.config.js` alias + `frontend/scripts/patch-novu-exports.js` via `predev`/`prebuild`) to avoid module resolution issues with Novu’s exports map.
 
 ## Consequences
 
@@ -76,6 +77,8 @@ We will integrate Novu as an **optional** notification path:
 - `backend/app/Providers/ConfigServiceProvider.php` — injectNovuConfig
 - `frontend/components/notifications/novu-inbox.tsx` — Novu Inbox wrapper
 - `frontend/components/notifications/notification-bell.tsx` — conditional Novu vs local
+- `frontend/next.config.js` — Turbopack resolve alias for `@novu/react`
+- `frontend/scripts/patch-novu-exports.js` — flattens `@novu/react` exports for Turbopack
 
 ### Recipe
 

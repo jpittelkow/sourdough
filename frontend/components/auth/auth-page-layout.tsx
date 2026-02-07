@@ -31,8 +31,8 @@ export function AuthPageLayout({
       <div
         className={cn(
           "w-full max-w-md rounded-2xl p-6 sm:p-8 space-y-6",
-          "backdrop-blur-xl bg-white/80 dark:bg-gray-900/80",
-          "border border-white/20 dark:border-white/10",
+          "backdrop-blur-xl bg-card/80",
+          "border border-border/20",
           "shadow-2xl",
           "animate-in fade-in-0 slide-in-from-bottom-4 duration-500",
           className

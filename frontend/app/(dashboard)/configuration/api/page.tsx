@@ -365,7 +365,7 @@ export default function APISettingsPage() {
                               <div className="flex items-center gap-2">
                                 <span className="font-medium">{webhook.name}</span>
                                 {webhook.active ? (
-                                  <Badge variant="default" className="bg-green-500">
+                                  <Badge variant="success">
                                     Active
                                   </Badge>
                                 ) : (

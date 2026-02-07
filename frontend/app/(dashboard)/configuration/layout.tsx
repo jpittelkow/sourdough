@@ -290,7 +290,7 @@ function GroupedNavigation({ pathname }: { pathname: string }) {
                       className={cn(
                         "flex items-center gap-3 rounded-lg px-2 py-2 min-h-10 text-sm transition-colors",
                         isActive
-                          ? "bg-secondary text-secondary-foreground font-medium border border-border"
+                          ? "bg-muted text-foreground font-medium border border-border"
                           : "text-muted-foreground hover:bg-muted hover:text-foreground"
                       )}
                     >

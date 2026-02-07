@@ -229,7 +229,7 @@ export default function NovuConfigurationPage() {
                 )}
               </Button>
               {testResult === true && (
-                <Badge variant="default" className="bg-green-600">Connected</Badge>
+                <Badge variant="success">Connected</Badge>
               )}
               {testResult === false && (
                 <Badge variant="destructive">Connection failed</Badge>
