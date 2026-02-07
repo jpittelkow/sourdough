@@ -131,16 +131,16 @@ export default function LoginPage() {
         <FormField
           id="password"
           label={
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between w-full">
               <Label htmlFor="password">Password</Label>
-            {!isConfigLoading && features?.passwordResetAvailable && (
-                  <Link
-                    href="/forgot-password"
-                    className="text-sm text-primary hover:underline"
-                  >
-                    Forgot password?
-                  </Link>
-                )}
+              {!isConfigLoading && features?.passwordResetAvailable && (
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              )}
             </div>
           }
           error={errors.password?.message}

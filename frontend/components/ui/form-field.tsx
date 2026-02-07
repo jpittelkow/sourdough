@@ -40,7 +40,7 @@ export function FormField({
             {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
           </Label>
         ) : (
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-1.5 w-full">
             {label}
             {tooltip && <HelpTooltip content={tooltip} iconClassName="h-3.5 w-3.5" />}
           </span>
