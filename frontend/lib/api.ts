@@ -52,7 +52,8 @@ api.interceptors.response.use(
           !isRedirecting &&
           !window.location.pathname.includes("/login") &&
           !window.location.pathname.includes("/register") &&
-          !window.location.pathname.includes("/forgot-password")
+          !window.location.pathname.includes("/forgot-password") &&
+          !window.location.pathname.includes("/auth/callback")
         ) {
           isRedirecting = true;
           // Use replace to avoid adding to history, reset flag after navigation

@@ -13,13 +13,13 @@ _No items. Documentation Audit complete._
 Ready to start. These are unblocked and can begin immediately.
 
 - [ ] **Changelog Page** - Frontend page for users to view application changelog (version history, new features, bug fixes). Accessible from the dashboard or sidebar. Related: [Versioning System Roadmap](plans/versioning-system-roadmap.md) (see [changelog-roadmap](plans/changelog-roadmap.md))
-- [ ] **Faster Sign Out** - Optimize the sign-out flow for a quicker, more responsive logout experience (reduce API latency, immediate UI transition before server confirmation)
+- [ ] **UI Issues: Toggles & Theme Adherence** - Fix incorrect toggle states across the application (toggles displaying wrong on/off state or not syncing with actual values). Ensure all components properly adhere to light and dark theme — resolve instances where elements use hardcoded colors, fail to respect CSS theme variables, or appear broken when switching between light and dark mode.
 
 ## Planned Features
 
 Requires foundation work or longer-term planning.
 
-_No items._
+- [ ] **Notification Refactor to Novu** - Replace the current custom notification system (NotificationOrchestrator, per-channel implementations, in-app notification templates) with [Novu](https://novu.co/) as the unified notification infrastructure. Novu provides multi-channel delivery (email, SMS, push, in-app, chat), a visual workflow editor, subscriber management, digest/batching, and a pre-built notification center UI component. This refactor would remove the custom channel/provider pattern in `backend/app/Services/Notifications/` and replace it with Novu's SDK integration, simplifying notification management and enabling richer notification workflows. Relevant ADRs to update: [ADR-005](adr/005-notification-system-architecture.md), [ADR-017](adr/017-notification-template-system.md).
 
 ## Pre-Release Checklist
 
@@ -81,6 +81,8 @@ All tasks complete.
 | Login Testing & Review | 2026-02-05 |
 | GitHub Actions Hardening | 2026-02-05 |
 | Documentation Restructure | 2026-02-05 |
+| PWA: Configuration navigation on mobile | 2026-02-06 |
+| Faster Sign Out | 2026-02-06 |
 
 ## Roadmap Maintenance
 
@@ -106,6 +108,7 @@ Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-06 | [Faster Sign Out](journal/2026-02-06-faster-sign-out.md) |
 | 2026-02-05 | [Documentation Restructure](journal/2026-02-05-documentation-restructure.md) |
 | 2026-02-05 | [Frontend Code Review](journal/2026-02-05-frontend-code-review.md) |
 | 2026-02-05 | [Code Review Phase 2: Backend Architecture, Database, Response Format](journal/2026-02-05-code-review-phase-2.md) |
