@@ -28,6 +28,7 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send, Smartphone, Download } from "lucide-react";
+import { SaveButton } from "@/components/ui/save-button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
 import {
@@ -595,16 +596,14 @@ export default function PreferencesPage() {
                           </div>
                         ))}
                         <div className="flex gap-2">
-                          <Button
+                          <SaveButton
+                            type="button"
                             size="sm"
+                            isDirty={true}
+                            isSaving={savingChannel === channel.id}
+                            disabled={isOffline}
                             onClick={() => saveChannelSettings(channel.id)}
-                            disabled={savingChannel === channel.id || isOffline}
-                          >
-                            {savingChannel === channel.id && (
-                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            )}
-                            Save settings
-                          </Button>
+                          />
                           {channel.configured && (
                             <Button
                               size="sm"

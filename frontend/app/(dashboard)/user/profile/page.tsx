@@ -183,7 +183,7 @@ export default function ProfilePage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex justify-end">
             <SaveButton isDirty={isDirty} isSaving={isLoading} />
           </CardFooter>
         </form>

@@ -220,14 +220,13 @@ export default function SecurityPage() {
           )}
         </CardContent>
         {!authLoading && (
-          <CardFooter>
+          <CardFooter className="flex justify-end">
             <SaveButton
+              type="button"
               onClick={handleSaveAuth}
               isSaving={authSaving}
               isDirty={authDirty}
-            >
-              Save auth settings
-            </SaveButton>
+            />
           </CardFooter>
         )}
       </Card>

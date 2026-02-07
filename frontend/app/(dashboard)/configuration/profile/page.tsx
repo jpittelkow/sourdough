@@ -35,6 +35,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
+import { SaveButton } from "@/components/ui/save-button";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -168,11 +169,8 @@ export default function ProfilePage() {
               </div>
             </div>
           </CardContent>
-          <CardFooter>
-            <Button type="submit" disabled={isLoading || !isDirty}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+          <CardFooter className="flex justify-end">
+            <SaveButton isDirty={isDirty} isSaving={isLoading} />
           </CardFooter>
         </form>
       </Card>

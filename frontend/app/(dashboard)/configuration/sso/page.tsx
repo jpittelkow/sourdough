@@ -405,6 +405,7 @@ export default function SSOSettingsPage() {
               Master switch and SSO behavior options.
             </p>
             <SaveButton
+              type="button"
               isDirty={isGlobalDirty()}
               isSaving={isSavingGlobal}
               onClick={saveGlobal}
@@ -543,8 +544,9 @@ export default function SSOSettingsPage() {
                     />
                   </FormField>
                 </div>
-                <CardFooter className="flex flex-col gap-4 pt-4 sm:flex-row sm:justify-end">
+                <CardFooter className="flex justify-end">
                   <SaveButton
+                    type="button"
                     isDirty={isProviderDirty(id)}
                     isSaving={savingProvider === id}
                     onClick={() => saveProvider(id)}
@@ -712,8 +714,9 @@ export default function SSOSettingsPage() {
                 />
               </FormField>
             </div>
-            <CardFooter className="flex flex-col gap-4 pt-4 sm:flex-row sm:justify-end">
+            <CardFooter className="flex justify-end">
               <SaveButton
+                type="button"
                 isDirty={isProviderDirty("oidc")}
                 isSaving={savingProvider === "oidc"}
                 onClick={() => saveProvider("oidc")}

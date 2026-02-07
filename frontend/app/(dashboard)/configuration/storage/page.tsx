@@ -53,6 +53,7 @@ import {
 import { Loader2, FolderOpen, Globe, Archive, Database, Users, FileText, AlertTriangle, CheckCircle2, XCircle, BarChart3, Bell, Trash2 } from "lucide-react";
 import { ProviderIcon } from "@/components/provider-icons";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { SaveButton } from "@/components/ui/save-button";
 
 const DRIVERS = ["local", "s3", "gcs", "azure", "do_spaces", "minio", "b2"] as const;
 
@@ -1125,10 +1126,7 @@ export default function StorageSettingsPage() {
                 Test Connection
               </Button>
             )}
-            <Button type="submit" disabled={!isDirty || isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              Save Changes
-            </Button>
+            <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>
       </form>

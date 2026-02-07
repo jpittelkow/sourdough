@@ -303,10 +303,8 @@ export default function NotificationTemplateEditorPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
-              <SaveButton isDirty={isDirty} isSaving={isSaving}>
-                Save
-              </SaveButton>
+            <CardFooter className="flex flex-wrap justify-end gap-2">
+              <SaveButton isDirty={isDirty} isSaving={isSaving} />
               {template.is_system && (
                 <Button
                   type="button"

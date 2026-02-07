@@ -863,7 +863,7 @@ export default function BackupPage() {
               </Card>
 
               <Card>
-                <CardFooter>
+                <CardFooter className="flex justify-end">
                   <SaveButton isDirty={isDirty} isSaving={settingsSaving} />
                 </CardFooter>
               </Card>

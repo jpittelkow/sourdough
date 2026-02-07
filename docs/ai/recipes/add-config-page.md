@@ -373,7 +373,7 @@ export default function ExampleConfigPage() {
               {errors.webhook_url && <p className="text-sm text-destructive">{errors.webhook_url.message}</p>}
             </div>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex justify-end">
             <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>

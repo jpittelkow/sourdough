@@ -1,6 +1,6 @@
 # Recipe: Add PWA Install Prompt
 
-Implement a custom install prompt for a Progressive Web App: capture `beforeinstallprompt`, show a non-intrusive banner after 2+ visits, and offer "Install App" in settings.
+Implement a custom install prompt for a Progressive Web App: capture `beforeinstallprompt`, show an AlertDialog after 2+ visits, and offer "Install App" in settings.
 
 ## When to Use
 
@@ -35,9 +35,9 @@ const { canPrompt, isInstalled, promptInstall, shouldShowBanner, dismissBanner }
 
 ### 2. Render the global install banner in the app shell
 
-The shared `InstallPrompt` component is already integrated in `frontend/components/app-shell.tsx`. It renders only when `shouldShowBanner` is true and shows Install / Not now with a "Don't show again" checkbox.
+The shared `InstallPrompt` component is already integrated in `frontend/components/app-shell.tsx`. It uses a standard shadcn `AlertDialog` that opens when `shouldShowBanner` is true and shows Install / Not now with a "Don't show again" checkbox. The AlertDialog ensures proper text color in both light and dark modes.
 
-Do not duplicate the banner in multiple layouts; keep it in the shell so it appears once per app load.
+Do not duplicate the dialog in multiple layouts; keep it in the shell so it appears once per app load.
 
 ### 3. Add a manual "Install App" control (e.g. in settings)
 
@@ -72,7 +72,7 @@ return <p>Install is available in supported browsers via the browser menu.</p>;
 ## Checklist
 
 - [ ] Use `useInstallPrompt()` for install state; do not duplicate `beforeinstallprompt` logic.
-- [ ] Keep `<InstallPrompt />` in the app shell only.
+- [ ] Keep `<InstallPrompt />` in the app shell only (renders an AlertDialog).
 - [ ] Manual install button only when `canPrompt && !isInstalled`.
 - [ ] Handle `promptInstall()` async (loading state, toast on outcome if desired).
 - [ ] Do not log or store credentials; install analytics (if any) should be non-identifying.
@@ -82,7 +82,7 @@ return <p>Install is available in supported browsers via the browser menu.</p>;
 | File | Purpose |
 |------|---------|
 | `frontend/lib/use-install-prompt.ts` | Hook: deferred prompt, visit count, dismissal, promptInstall, dismissBanner |
-| `frontend/components/install-prompt.tsx` | Banner component (used in AppShell) |
+| `frontend/components/install-prompt.tsx` | AlertDialog component (used in AppShell) |
 | `frontend/components/app-shell.tsx` | Renders InstallPrompt |
 | `frontend/app/(dashboard)/user/preferences/page.tsx` | "Install App" card |
 

@@ -324,7 +324,7 @@ export default function EmailTemplateEditorPage() {
                 />
               </div>
             </CardContent>
-            <CardFooter className="flex flex-wrap gap-2">
+            <CardFooter className="flex flex-wrap justify-end gap-2">
               <SaveButton isDirty={isDirty} isSaving={isSaving} />
               <Button
                 type="button"

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { errorLogger } from "@/lib/error-logger";
@@ -11,9 +11,11 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SaveButton } from "@/components/ui/save-button";
 import {
   Dialog,
   DialogContent,
@@ -24,7 +26,6 @@ import {
 } from "@/components/ui/dialog";
 import {
   Loader2,
-  Save,
   Play,
   Eye,
   FileArchive,
@@ -66,18 +67,27 @@ export default function LogRetentionPage() {
   } | null>(null);
   const [deleteAllConfirmOpen, setDeleteAllConfirmOpen] = useState(false);
   const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const initialSettings = useRef<LogRetentionSettings>(settings);
+
+  const isDirty =
+    settings.app_retention_days !== initialSettings.current.app_retention_days ||
+    settings.audit_retention_days !== initialSettings.current.audit_retention_days ||
+    settings.access_retention_days !== initialSettings.current.access_retention_days ||
+    settings.hipaa_access_logging_enabled !== initialSettings.current.hipaa_access_logging_enabled;
 
   useEffect(() => {
     api
       .get<{ settings: LogRetentionSettings; access_min_days: number }>("/log-retention")
       .then((res) => {
         const s = res.data.settings;
-        setSettings({
+        const loaded: LogRetentionSettings = {
           app_retention_days: s.app_retention_days ?? 90,
           audit_retention_days: s.audit_retention_days ?? 365,
           access_retention_days: s.access_retention_days ?? ACCESS_MIN_DAYS,
           hipaa_access_logging_enabled: s.hipaa_access_logging_enabled ?? true,
-        });
+        };
+        setSettings(loaded);
+        initialSettings.current = loaded;
         setAccessMinDays(res.data.access_min_days ?? ACCESS_MIN_DAYS);
       })
       .catch(() => toast.error("Failed to load log retention settings"))
@@ -92,6 +102,7 @@ export default function LogRetentionPage() {
     setIsSaving(true);
     try {
       await api.put("/log-retention", settings);
+      initialSettings.current = { ...settings };
       toast.success("Log retention settings saved.");
     } catch (error: unknown) {
       toast.error(
@@ -275,15 +286,15 @@ export default function LogRetentionPage() {
               <p className="text-xs text-muted-foreground">Minimum {accessMinDays} days (6 years)</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <Save className="mr-2 h-4 w-4" />
-            )}
-            Save
-          </Button>
         </CardContent>
+        <CardFooter className="flex justify-end">
+          <SaveButton
+            type="button"
+            isDirty={isDirty}
+            isSaving={isSaving}
+            onClick={handleSave}
+          />
+        </CardFooter>
       </Card>
 
       <Card>
@@ -304,10 +315,12 @@ export default function LogRetentionPage() {
             }
             disabled={isSaving}
           />
-          <Button onClick={handleSave} disabled={isSaving} variant="outline" size="sm">
-            {isSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
-            Save
-          </Button>
+          <SaveButton
+            type="button"
+            isDirty={isDirty}
+            isSaving={isSaving}
+            onClick={handleSave}
+          />
           {!settings.hipaa_access_logging_enabled && (
             <div className="flex flex-col gap-2 rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/30">
               <p className="text-sm font-medium text-amber-800 dark:text-amber-200">

@@ -172,10 +172,39 @@ if (isLoading) {
   Save Changes
 </Button>
 
-// GOOD - use the shared component
+// GOOD - use the shared component (inside a <form>)
 import { SaveButton } from "@/components/ui/save-button";
 
 <SaveButton isDirty={isDirty} isSaving={isSaving} />
+
+// GOOD - onClick handler (no form), use type="button"
+<SaveButton type="button" isDirty={isDirty} isSaving={isSaving} onClick={handleSave} />
+```
+
+### Don't: Inconsistent Save Button Placement
+
+```tsx
+// BAD - save button floating inside CardContent
+<CardContent>
+  {/* form fields */}
+  <Button onClick={handleSave}>Save</Button>
+</CardContent>
+
+// BAD - CardFooter without alignment (left-aligns by default)
+<CardFooter>
+  <SaveButton isDirty={isDirty} isSaving={isSaving} />
+</CardFooter>
+
+// GOOD - save button in CardFooter with consistent right-alignment
+<CardFooter className="flex justify-end">
+  <SaveButton isDirty={isDirty} isSaving={isSaving} />
+</CardFooter>
+
+// GOOD - multiple buttons right-aligned
+<CardFooter className="flex flex-wrap justify-end gap-2">
+  <SaveButton isDirty={isDirty} isSaving={isSaving} />
+  <Button variant="outline" onClick={handleTest}>Test</Button>
+</CardFooter>
 ```
 
 ### Don't: Hardcode API URLs

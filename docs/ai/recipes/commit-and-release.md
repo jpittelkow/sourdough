@@ -29,6 +29,24 @@ Sourdough uses a **tag-triggered release workflow** (`.github/workflows/release.
 3. Check latest tag: `git tag --sort=-v:refname | Select-Object -First 3` (PowerShell) or `git tag --sort=-v:refname | head -3` (bash)
 4. Decide the next version (typically patch bump: `0.1.15` → `0.1.16`)
 
+## Version Bumping Strategy
+
+When releasing, you have two options for handling version bumps:
+
+**Option A: Bump locally (Recommended)**
+- Bump version files before committing using `scripts/bump-version.sh`
+- Version bump is included in your feature commit (cleaner history)
+- When you push the tag, the workflow's sync step detects files are already up to date and skips creating a separate commit
+- **Use this approach** for cleaner git history
+
+**Option B: Let workflow bump**
+- Don't bump version files locally
+- Push your feature commit and tag
+- Workflow will create a separate `Release vX.Y.Z` commit updating version files
+- **Use this approach** if you forget to bump locally or prefer separate release commits
+
+**Recommendation**: Use Option A (bump locally) for cleaner history. The workflow handles both cases correctly.
+
 ## Step 1: Stage and Review Changes
 
 ```powershell
@@ -193,13 +211,15 @@ git rebase --continue
 
 Git rebase operations modify files in `.git/` (like `index.lock`, `rebase-merge/`). If you get "Permission denied" errors, run with `required_permissions: ["all"]`.
 
-### 6. Don't Bump Version Locally if Workflow Will Do It
+### 6. Version Bumping Strategy
 
-If you push a tag and the workflow runs `sync-and-release`, it will update the version files for you. You only need to bump locally if:
-- You want the version bump **in your feature commit** (cleaner history)
-- You're doing a release commit (`Release vX.Y.Z`) yourself
+Both approaches work correctly:
 
-When in doubt, **bump locally** — it avoids the workflow needing to create an extra commit, and the workflow's sync step becomes a no-op ("Version files already up to date").
+- **Bump locally**: Use `scripts/bump-version.sh` before committing. The workflow's sync step will detect files are already up to date and skip creating a separate commit. This keeps version bumps in your feature commits (cleaner history).
+
+- **Let workflow bump**: Don't bump locally. The workflow will create a separate `Release vX.Y.Z` commit. This is fine but creates an extra commit in history.
+
+**Recommendation**: Bump locally for cleaner git history. See the "Version Bumping Strategy" section above for details.
 
 ## Quick Reference — Full Release in One Go
 
@@ -213,8 +233,11 @@ git add -A
 # Then commit:
 git commit -F .git/COMMIT_MSG
 
-# 3. Bump version (read current from VERSION, increment)
-# Update VERSION and frontend/package.json via Write/StrReplace tools
+# 3. Bump version using script (read current from VERSION first)
+# For patch bump:
+bash scripts/bump-version.sh patch
+# Or for exact version:
+bash scripts/bump-version.sh 0.1.16
 
 # 4. Commit version bump
 git add VERSION frontend/package.json

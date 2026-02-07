@@ -71,6 +71,38 @@ import { HelpLink } from "@/components/help/help-link";
 
 **Key files:** `frontend/lib/help/help-content.ts`, `frontend/components/help/`
 
+## SaveButton
+
+Standardized save button for all settings/configuration forms. Always use this instead of inline `Button` with manual loading logic.
+
+```tsx
+import { SaveButton } from "@/components/ui/save-button";
+
+// Inside a <form> (default type="submit")
+<SaveButton isDirty={isDirty} isSaving={isSaving} />
+
+// With onClick handler (no form), use type="button"
+<SaveButton type="button" isDirty={isDirty} isSaving={isSaving} onClick={handleSave} />
+
+// Custom size for inline contexts (e.g., per-item settings)
+<SaveButton type="button" size="sm" isDirty={true} isSaving={isSaving} onClick={handleSave} />
+```
+
+Props: `isDirty: boolean`, `isSaving: boolean`, `type?: "submit" | "button"` (default `"submit"`), `children?` (default `"Save Changes"`), plus all standard `ButtonProps`.
+
+### CardFooter Alignment Standards
+
+Always place save buttons in `<CardFooter>` with consistent alignment:
+
+| Pattern | CardFooter className | When to use |
+|---------|---------------------|-------------|
+| Single save button | `flex justify-end` | Most pages |
+| Save + helper text | `flex flex-col gap-4 sm:flex-row sm:justify-between` | When explanatory text accompanies save |
+| Save + other buttons | `flex flex-wrap justify-end gap-2` | Test Connection, Send Test, Preview alongside Save |
+| Reset + Save | `flex justify-between` | Destructive/secondary action opposite Save |
+
+**Key file:** `frontend/components/ui/save-button.tsx`
+
 ## Auth Page Components
 
 ### AuthPageLayout
@@ -128,7 +160,8 @@ const { canPrompt, isInstalled, promptInstall } = useInstallPrompt();
 ```
 
 - Hook: `useInstallPrompt()` returns `deferredPrompt`, `canPrompt`, `isInstalled`, `promptInstall()`, `dismissBanner()`, `shouldShowBanner`
-- Banner shows after 2+ visits, not dismissed, install available, not installed
+- Dialog shows after 2+ visits, not dismissed, install available, not installed
+- Uses `AlertDialog` (shadcn) for proper light/dark mode theming
 - Add `<InstallPrompt />` to AppShell
 
 **Key files:** `frontend/lib/use-install-prompt.ts`, `frontend/components/install-prompt.tsx`, `frontend/components/app-shell.tsx`

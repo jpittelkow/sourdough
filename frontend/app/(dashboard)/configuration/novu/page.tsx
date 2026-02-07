@@ -250,7 +250,7 @@ export default function NovuConfigurationPage() {
               </AlertDescription>
             </Alert>
           </CardContent>
-          <CardFooter>
+          <CardFooter className="flex justify-end">
             <SaveButton isDirty={isDirty} isSaving={isSaving} />
           </CardFooter>
         </Card>

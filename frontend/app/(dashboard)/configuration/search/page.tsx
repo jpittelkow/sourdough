@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
@@ -12,9 +12,11 @@ import {
   Card,
   CardContent,
   CardDescription,
+  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { SaveButton } from "@/components/ui/save-button";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -76,6 +78,19 @@ export default function SearchConfigurationPage() {
   const [isSavingInstance, setIsSavingInstance] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [reindexing, setReindexing] = useState<string | "all" | null>(null);
+  const initialInstanceSettings = useRef<InstanceSettings>(DEFAULT_INSTANCE_SETTINGS);
+  const initialSearchSettings = useRef<SearchSettings>(DEFAULT_SEARCH_SETTINGS);
+
+  const isInstanceDirty =
+    instanceSettings.enabled !== initialInstanceSettings.current.enabled ||
+    instanceSettings.use_embedded !== initialInstanceSettings.current.use_embedded ||
+    instanceSettings.host !== initialInstanceSettings.current.host ||
+    instanceSettings.api_key !== initialInstanceSettings.current.api_key;
+
+  const isSearchSettingsDirty =
+    searchSettings.results_per_page !== initialSearchSettings.current.results_per_page ||
+    searchSettings.suggestions_limit !== initialSearchSettings.current.suggestions_limit ||
+    searchSettings.min_query_length !== initialSearchSettings.current.min_query_length;
 
   const fetchStats = async () => {
     try {
@@ -95,17 +110,21 @@ export default function SearchConfigurationPage() {
       const res = await api.get<{ settings: Record<string, Record<string, unknown>> }>("/system-settings");
       const search = res.data?.settings?.search;
       if (search && typeof search === "object") {
-        setSearchSettings({
+        const loadedSearch: SearchSettings = {
           results_per_page: Number(search.results_per_page) || DEFAULT_SEARCH_SETTINGS.results_per_page,
           suggestions_limit: Number(search.suggestions_limit) || DEFAULT_SEARCH_SETTINGS.suggestions_limit,
           min_query_length: Number(search.min_query_length) ?? DEFAULT_SEARCH_SETTINGS.min_query_length,
-        });
-        setInstanceSettings({
+        };
+        const loadedInstance: InstanceSettings = {
           enabled: search.enabled !== false,
           use_embedded: search.use_embedded !== false,
           host: typeof search.host === "string" ? search.host : DEFAULT_INSTANCE_SETTINGS.host,
           api_key: typeof search.api_key === "string" ? search.api_key : "",
-        });
+        };
+        setSearchSettings(loadedSearch);
+        setInstanceSettings(loadedInstance);
+        initialSearchSettings.current = loadedSearch;
+        initialInstanceSettings.current = loadedInstance;
       }
     } catch {
       // Use defaults if fetch fails
@@ -168,6 +187,7 @@ export default function SearchConfigurationPage() {
         { group: "search", key: "min_query_length", value: searchSettings.min_query_length },
       ];
       await api.put("/system-settings", { settings: settingsArray });
+      initialSearchSettings.current = { ...searchSettings };
       toast.success("Search settings saved.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Failed to save search settings";
@@ -190,6 +210,7 @@ export default function SearchConfigurationPage() {
         { group: "search", key: "api_key", value: instanceSettings.use_embedded ? "" : instanceSettings.api_key },
       ];
       await api.put("/system-settings", { settings: settingsArray });
+      initialInstanceSettings.current = { ...instanceSettings };
       if (!instanceSettings.use_embedded) {
         toast.success("Instance settings saved. Run Reindex all to populate the external instance.", {
           duration: 6000,
@@ -358,13 +379,15 @@ export default function SearchConfigurationPage() {
                   )}
                 </div>
               )}
-              <Button onClick={handleSaveInstance} disabled={isSavingInstance}>
-                {isSavingInstance ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Save instance settings
-              </Button>
             </CardContent>
+            <CardFooter className="flex justify-end">
+              <SaveButton
+                type="button"
+                isDirty={isInstanceDirty}
+                isSaving={isSavingInstance}
+                onClick={handleSaveInstance}
+              />
+            </CardFooter>
           </Card>
         </TabsContent>
         <TabsContent value="indexes" className="space-y-4">
@@ -491,13 +514,15 @@ export default function SearchConfigurationPage() {
                   />
                 </div>
               </div>
-              <Button onClick={handleSaveSettings} disabled={isSavingSettings}>
-                {isSavingSettings ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : null}
-                Save settings
-              </Button>
             </CardContent>
+            <CardFooter className="flex justify-end">
+              <SaveButton
+                type="button"
+                isDirty={isSearchSettingsDirty}
+                isSaving={isSavingSettings}
+                onClick={handleSaveSettings}
+              />
+            </CardFooter>
           </Card>
         </TabsContent>
       </Tabs>
