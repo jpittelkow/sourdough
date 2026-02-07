@@ -219,7 +219,8 @@ frontend/lib/auth.ts
 backend/app/Services/Auth/SSOService.php
 backend/app/Services/Auth/TwoFactorService.php
 backend/app/Services/Auth/PasskeyService.php
-frontend/app/(auth)/                            # Auth pages
+frontend/app/(auth)/                            # Auth pages (login, register, etc.)
+frontend/app/auth/callback/page.tsx             # SSO callback handler (post-OAuth redirect; NOT inside (auth) route group — see file comments)
 frontend/components/auth/                       # Auth components
   - auth-page-layout.tsx                        # Layout wrapper
   - auth-divider.tsx                            # SSO/email divider

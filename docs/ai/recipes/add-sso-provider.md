@@ -26,6 +26,71 @@ SSO uses **Laravel Socialite** for OAuth flows. Provider credentials and options
 └─────────────────────────────────────────────────────────────┘
 ```
 
+### Complete SSO Authentication Flow
+
+Understanding the full flow is critical for debugging SSO issues:
+
+```
+┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
+│   Frontend        │     │   Backend (API)   │     │   OAuth Provider  │
+│   (Next.js)       │     │   (Laravel)       │     │   (Google, etc.)  │
+└────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
+         │                        │                         │
+    1. Click "Continue             │                         │
+       with Google"               │                         │
+         │                        │                         │
+    2. window.location.href =     │                         │
+       /api/auth/sso/google       │                         │
+         │───────────────────────>│                         │
+         │                   3. SSOController::redirect()   │
+         │                      Store state in session      │
+         │                      302 redirect ──────────────>│
+         │                        │                    4. User logs in
+         │                        │                    at Google
+         │                        │                         │
+         │                        │<─────── 5. Redirect to  │
+         │                        │    /api/auth/callback/google
+         │                   6. SSOController::callback()   │
+         │                      - Validate state token      │
+         │                      - Exchange code for user    │
+         │                      - Create/find user          │
+         │                      - Auth::login() (session)   │
+         │<───────────────── 7. 302 redirect to             │
+         │                   /auth/callback?success=true    │
+         │                        │                         │
+    8. frontend/app/(auth)/       │                         │
+       callback/page.tsx          │                         │
+       - fetchUser()──────────────>│                         │
+         │<──────── 9. Return user│                         │
+   10. router.replace("/dashboard")                         │
+         │                        │                         │
+```
+
+> **IMPORTANT — DO NOT DELETE, RENAME, OR MOVE the frontend callback page:**
+> The file `frontend/app/auth/callback/page.tsx` is the **shared SSO callback handler**
+> for ALL providers. Every SSO provider (Google, GitHub, Microsoft, Apple, Discord, GitLab,
+> OIDC) redirects to this same page after authentication. The backend `SSOController::redirectToFrontend()`
+> always redirects to `/auth/callback?...` regardless of which provider was used.
+> Removing this file will cause a **404 error** after any SSO provider authentication.
+>
+> **File location is critical:** This file is at `app/auth/callback/` — NOT inside the
+> `app/(auth)/` route group. In Next.js, parenthesized directory names like `(auth)` are
+> **route groups** that do NOT affect the URL. Placing the file inside `(auth)` would make
+> the URL `/callback` instead of `/auth/callback`, causing a 404.
+>
+> **When adding a new SSO provider, you do NOT need to modify the callback page.**
+> It is provider-agnostic by design.
+
+### Key Files in the SSO Flow
+
+| File | Role |
+|------|------|
+| `frontend/components/auth/sso-buttons.tsx` | Renders "Continue with {provider}" buttons; navigates to `/api/auth/sso/{provider}` |
+| `backend/app/Http/Controllers/Api/SSOController.php` | `redirect()` → provider; `callback()` → processes OAuth, redirects to frontend |
+| `backend/app/Services/Auth/SSOService.php` | Provider-agnostic OAuth logic (state tokens, user creation, account linking) |
+| `frontend/app/auth/callback/page.tsx` | **Shared callback handler** — fetches user session and redirects to dashboard (or shows error). At `app/auth/` (not `app/(auth)/`) so URL is `/auth/callback`. |
+| `backend/app/Providers/ConfigServiceProvider.php` | Injects SSO credentials from DB into Socialite config at boot |
+
 ## Files to Create/Modify
 
 ### Backend
@@ -45,6 +110,7 @@ SSO uses **Laravel Socialite** for OAuth flows. Provider credentials and options
 |------|--------|---------|
 | `frontend/components/provider-icons.tsx` | Modify | Add provider icon to the shared icon map so **sign-in, register, and SSO config** show the correct icon |
 | `frontend/app/(dashboard)/configuration/sso/page.tsx` | Modify | Add provider card and form fields on the **SSO setup page** (Configuration > SSO) |
+| `frontend/app/auth/callback/page.tsx` | **DO NOT MODIFY or MOVE** | Shared SSO callback handler for all providers. Provider-agnostic by design. Must be at `app/auth/callback/` (NOT inside `(auth)` route group) so the URL is `/auth/callback`. |
 
 ### Optional (custom Socialite driver)
 
@@ -248,14 +314,19 @@ EXAMPLE_CLIENT_SECRET=
 - [ ] **SSO setup page:** Provider added to `providers` array (with `enabledKey` and `testPassedKey`) in `frontend/app/(dashboard)/configuration/sso/page.tsx`; schema and defaultValues include `example_enabled` and `example_test_passed`; Enable toggle only when configured and test passed; Test button only when client_id and client_secret filled; refetch after successful test
 - [ ] **Setup modal:** Provider added to `SSOSetupModal` in `frontend/components/admin/sso-setup-modal.tsx` (provider id + content: steps, console URL, doc URL, scopes)
 
+### Shared (DO NOT MODIFY when adding a provider)
+
+- [ ] **SSO callback page exists:** `frontend/app/auth/callback/page.tsx` — handles the redirect from backend after ALL providers. Do not modify, rename, move, or delete this file. It must be at `app/auth/` (NOT `app/(auth)/`) so the URL is `/auth/callback`.
+
 ### Testing
 
 - [ ] Admin can set client ID/secret in Configuration > SSO (setup page)
 - [ ] **Test connection** requires both client ID and client secret; validates credentials at token endpoint (fails with wrong credentials, passes with correct credentials)
 - [ ] Enable toggle appears only after a successful test; provider appears on login only when credentials + test passed + enabled
 - [ ] Provider appears with correct icon on **sign-in and register pages** when credentials, test passed, and enabled (buttons come from `GET /auth/sso/providers`)
-- [ ] Redirect to provider and callback complete successfully
+- [ ] Redirect to provider and callback complete successfully (no 404 on return)
 - [ ] New user can register via SSO; existing user can link account (if allow_linking enabled)
+- [ ] Error cases show user-friendly messages on the callback page (e.g., invalid state, provider disabled)
 
 ## Existing Providers for Reference
 

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { useAuth, isAdminUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,7 @@ function SidebarVersionFooter({ isExpanded }: { isExpanded: boolean }) {
 export function Sidebar() {
   const { user } = useAuth();
   const pathname = usePathname();
+  const router = useRouter();
   const { isExpanded, toggleSidebar, isMobileMenuOpen, setMobileMenuOpen } =
     useSidebar();
   const isMobile = useIsMobile();
@@ -89,23 +90,25 @@ export function Sidebar() {
                 <>
                   <Separator orientation="horizontal" className="my-2" />
                   <nav className="flex flex-col gap-2">
-                    <Link href="/configuration">
-                      <Button
-                        variant={
-                          pathname?.startsWith("/configuration") ? "default" : "ghost"
-                        }
-                        size="default"
-                        className={cn(
-                          "w-full justify-start gap-3 min-h-11",
-                          pathname?.startsWith("/configuration") &&
-                            "bg-primary text-primary-foreground"
-                        )}
-                        title="Configuration"
-                      >
-                        <Settings className="h-5 w-5 flex-shrink-0" />
-                        <span>Configuration</span>
-                      </Button>
-                    </Link>
+                    <Button
+                      variant={
+                        pathname?.startsWith("/configuration") ? "default" : "ghost"
+                      }
+                      size="default"
+                      className={cn(
+                        "w-full justify-start gap-3 min-h-11",
+                        pathname?.startsWith("/configuration") &&
+                          "bg-primary text-primary-foreground"
+                      )}
+                      title="Configuration"
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        router.push("/configuration");
+                      }}
+                    >
+                      <Settings className="h-5 w-5 flex-shrink-0" />
+                      <span>Configuration</span>
+                    </Button>
                   </nav>
                 </>
               )}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth, isAdminUser } from "@/lib/auth";
+import { api } from "@/lib/api";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,6 +14,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { User, Settings, Shield, LogOut, ChevronDown, Info, Sparkles, HelpCircle } from "lucide-react";
 import { AboutDialog } from "@/components/about-dialog";
 import { useWizard } from "@/components/onboarding/wizard-provider";
@@ -28,9 +39,10 @@ function getInitials(name: string) {
 }
 
 export function UserDropdown() {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const router = useRouter();
   const [aboutOpen, setAboutOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const { resetWizard } = useWizard();
   const { setIsOpen: setHelpOpen } = useHelp();
 
@@ -38,9 +50,10 @@ export function UserDropdown() {
     return null;
   }
 
-  const handleLogout = async () => {
-    await logout();
+  const handleLogout = () => {
+    useAuth.setState({ user: null, error: null });
     router.push("/login");
+    api.post("/auth/logout").catch(() => {});
   };
 
   const handleShowWizard = async () => {
@@ -110,12 +123,31 @@ export function UserDropdown() {
           About
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleLogout}>
+        <DropdownMenuItem onClick={() => setShowLogoutConfirm(true)}>
           <LogOut className="mr-2 h-4 w-4" />
           Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <AlertDialog open={showLogoutConfirm} onOpenChange={setShowLogoutConfirm}>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Sign out?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Are you sure you want to sign out of your account?
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleLogout}
+            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+          >
+            Sign Out
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
     <AboutDialog open={aboutOpen} onOpenChange={setAboutOpen} />
     </>
   );
