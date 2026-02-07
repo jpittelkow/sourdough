@@ -103,7 +103,7 @@ export function Logo({ variant = "full", size = "md", className }: LogoProps) {
   // If logo exists, show only the logo (replaces app name)
   if (hasLogo) {
     return (
-      <div className={cn("relative flex-shrink-0", sizes.full, "w-auto max-w-[200px]", className)}>
+      <div className={cn("relative flex flex-shrink-0 items-center", sizes.full, "w-auto max-w-[200px]", className)}>
         <Image
           src={currentLogo}
           alt={appName || ''}

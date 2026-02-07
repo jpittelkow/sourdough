@@ -216,7 +216,8 @@ frontend/lib/auth.ts
 
 **Also useful:**
 ```
-backend/app/Services/Auth/SSOService.php
+backend/app/Services/Auth/SSOService.php        # SSO logic (cache-based state tokens, stateless Socialite)
+backend/routes/web.php                          # SSO browser routes (redirect + callback) — uses web middleware, NOT api
 backend/app/Services/Auth/TwoFactorService.php
 backend/app/Services/Auth/PasskeyService.php
 frontend/app/(auth)/                            # Auth pages (login, register, etc.)

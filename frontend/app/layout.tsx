@@ -40,9 +40,26 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const themeScript = `
+(function() {
+  var key = 'sourdough-theme';
+  var stored = localStorage.getItem(key);
+  var resolved;
+  if (stored === 'light' || stored === 'dark') {
+    resolved = stored;
+  } else {
+    resolved = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  }
+  document.documentElement.classList.add(resolved);
+})();
+  `.trim();
+
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} ${newsreader.variable} ${inter.className}`}>
+        <script
+          dangerouslySetInnerHTML={{ __html: themeScript }}
+        />
         <Providers>
           {children}
         </Providers>

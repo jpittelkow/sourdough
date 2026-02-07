@@ -94,8 +94,9 @@ Route::prefix('auth')->group(function () {
         ->middleware('auth:sanctum');
     
     // SSO Routes
-    Route::get('/sso/{provider}', [SSOController::class, 'redirect']);
-    Route::get('/callback/{provider}', [SSOController::class, 'callback']);
+    // NOTE: The redirect (/sso/{provider}) and callback (/callback/{provider})
+    // routes are in routes/web.php, NOT here. They need the 'web' middleware
+    // for proper session/cookie handling during OAuth flows. See web.php comments.
     Route::post('/sso/{provider}/link', [SSOController::class, 'link'])
         ->middleware('auth:sanctum');
     Route::delete('/sso/{provider}/unlink', [SSOController::class, 'unlink'])

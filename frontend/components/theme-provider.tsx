@@ -30,11 +30,12 @@ export function ThemeProvider({
   const [resolvedTheme, setResolvedTheme] = React.useState<"dark" | "light">("light");
   const [mounted, setMounted] = React.useState(false);
 
-  // Load theme from localStorage on mount
+  // Load theme from localStorage on mount (only use valid values so light persists)
   React.useEffect(() => {
-    const stored = localStorage.getItem(storageKey) as Theme | null;
-    if (stored) {
-      setTheme(stored);
+    const stored = localStorage.getItem(storageKey);
+    const valid: Theme[] = ["light", "dark", "system"];
+    if (stored && valid.includes(stored as Theme)) {
+      setTheme(stored as Theme);
     }
     setMounted(true);
   }, [storageKey]);

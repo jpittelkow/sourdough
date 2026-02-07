@@ -8,6 +8,7 @@ import { useSearch } from "@/components/search/search-provider";
 import { SearchInline } from "@/components/search/search-inline";
 import { NotificationBell } from "@/components/notifications/notification-bell";
 import { HelpIcon } from "@/components/help/help-icon";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const isMac =
   typeof navigator !== "undefined" &&
@@ -53,6 +54,7 @@ export function Header() {
           )}
           <HelpIcon />
           <NotificationBell />
+          <ThemeToggle />
           <UserDropdown />
         </div>
       </div>

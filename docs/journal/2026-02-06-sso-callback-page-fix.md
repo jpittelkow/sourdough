@@ -32,6 +32,7 @@ This affected ALL SSO providers — Google, GitHub, Microsoft, Apple, Discord, G
 
 ## Observations
 
+- The SSO backend had a separate session persistence issue discovered after this fix — see [2026-02-06-sso-session-persistence-fix.md](2026-02-06-sso-session-persistence-fix.md). The OAuth callback from Google arrives with an external Referer, so Sanctum's session middleware didn't activate. Fix: moved SSO routes to `web` middleware + cache-based state.
 - The SSO backend was correctly implemented — `SSOController` creates a session via `Auth::login()` before redirecting. The only missing piece was the frontend page to receive the redirect.
 - The callback page is intentionally provider-agnostic. All providers go through the same `SSOController::callback()` → `redirectToFrontend()` flow. Adding new providers does NOT require modifying the callback page.
 - The `ERROR_MESSAGES` map in the callback page covers all error codes that `SSOController` and `SSOService` can produce.

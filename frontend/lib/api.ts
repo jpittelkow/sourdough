@@ -46,7 +46,11 @@ api.interceptors.response.use(
         "An error occurred";
 
       // Handle 401 (Unauthorized) - redirect to login
-      if (error.response.status === 401) {
+      // Skip redirect for auth-check endpoint (/auth/user) — a 401 there just
+      // means "not logged in" and is expected on public pages like the homepage.
+      const requestUrl = error.config?.url || "";
+      const isAuthCheck = requestUrl === "/auth/user" || requestUrl.endsWith("/auth/user");
+      if (error.response.status === 401 && !isAuthCheck) {
         if (
           typeof window !== "undefined" &&
           !isRedirecting &&

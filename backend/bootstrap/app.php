@@ -34,19 +34,26 @@ return Application::configure(basePath: dirname(__DIR__))
             'log.access' => \App\Http\Middleware\LogResourceAccess::class,
         ]);
 
-        // Exclude client error reporting from CSRF (rate-limited, no auth, logging only)
+        // Exclude routes from CSRF verification:
+        // - client-errors: rate-limited, no auth, logging only
+        // - SSO routes: browser navigation routes that receive external OAuth redirects
+        //   (GET requests bypass CSRF by default, but listed here for explicitness)
         $middleware->validateCsrfTokens(except: [
             'api/client-errors',
+            'api/auth/sso/*',
+            'api/auth/callback/*',
         ]);
 
-        // Enable stateful API authentication with session support
+        // Enable stateful API authentication with session support.
+        // Sanctum's EnsureFrontendRequestsAreStateful (prepended above) handles
+        // EncryptCookies + StartSession automatically for requests from stateful
+        // domains (configured in config/sanctum.php).
+        //
+        // NOTE: SSO browser navigation routes (redirect & callback) are in
+        // routes/web.php (not api.php) because the OAuth callback comes from
+        // an external provider — Sanctum won't recognize it as stateful.
+        // See routes/web.php for details.
         $middleware->statefulApi();
-        
-        // Explicitly add session middleware for API routes to ensure sessions work
-        $middleware->api([
-            \Illuminate\Session\Middleware\StartSession::class,
-            \Illuminate\View\Middleware\ShareErrorsFromSession::class,
-        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

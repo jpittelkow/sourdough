@@ -5,6 +5,8 @@ namespace App\Services\Auth;
 use App\Models\User;
 use App\Models\SocialAccount;
 use App\Services\GroupService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Facades\Socialite;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 
@@ -51,6 +53,16 @@ class SSOService
     /**
      * Get the redirect URL for a provider.
      * Generates a cryptographic state token for CSRF protection.
+     *
+     * State tokens are stored in the cache (not the session) because:
+     *   - The OAuth callback comes from an external provider (e.g. Google),
+     *     so the Referer header doesn't match the app's stateful domains.
+     *   - Sanctum's EnsureFrontendRequestsAreStateful won't activate session
+     *     middleware for external Referers, breaking session-based state storage.
+     *   - Cache-based storage is Referer-independent and more robust.
+     *
+     * Socialite is used in stateless() mode to prevent it from storing its own
+     * state in the session (which would conflict with our custom state handling).
      */
     public function getRedirectUrl(string $provider, ?string $customState = null): string
     {
@@ -62,16 +74,24 @@ class SSOService
         // If custom state is provided (e.g., for linking), append it
         $fullState = $customState ? "{$stateToken}:{$customState}" : $stateToken;
 
-        // Store the state token in session for validation on callback
-        session()->put("sso_state:{$provider}", $stateToken);
+        // Store the state token in cache for validation on callback.
+        // Key: the token itself. Value: the provider name (for extra validation).
+        // TTL: 10 minutes — generous to handle slow OAuth provider flows.
+        Cache::put("sso_state:{$stateToken}", $provider, 600);
 
         $driver->with(['state' => $fullState]);
 
-        return $driver->redirect()->getTargetUrl();
+        // Use stateless() so Socialite doesn't store its own state in the session.
+        // We manage state ourselves via cache.
+        return $driver->stateless()->redirect()->getTargetUrl();
     }
 
     /**
      * Validate the OAuth state token from callback.
+     *
+     * State tokens are stored in the cache (see getRedirectUrl). This method
+     * pulls the token from cache (one-time use via Cache::pull) and validates
+     * that the received token matches and was issued for the correct provider.
      *
      * @param string $provider The OAuth provider
      * @param string|null $state The state parameter from callback
@@ -87,9 +107,20 @@ class SSOService
             ];
         }
 
-        $expectedToken = session()->pull("sso_state:{$provider}");
+        // Parse the state - it may contain custom state after the token
+        $parts = explode(':', $state, 2);
+        $receivedToken = $parts[0];
+        $customState = $parts[1] ?? null;
 
-        if (empty($expectedToken)) {
+        // Pull from cache (one-time use — prevents replay attacks)
+        $cachedProvider = Cache::pull("sso_state:{$receivedToken}");
+
+        if (empty($cachedProvider)) {
+            Log::warning('SSO state token not found in cache', [
+                'provider' => $provider,
+                'token_prefix' => substr($receivedToken, 0, 8) . '...',
+            ]);
+
             return [
                 'valid' => false,
                 'custom_state' => null,
@@ -97,13 +128,15 @@ class SSOService
             ];
         }
 
-        // Parse the state - it may contain custom state after the token
-        $parts = explode(':', $state, 2);
-        $receivedToken = $parts[0];
-        $customState = $parts[1] ?? null;
+        // Validate that the token was issued for this specific provider.
+        // Uses hash_equals for timing-safe comparison (defense-in-depth).
+        if (!hash_equals($cachedProvider, $provider)) {
+            Log::warning('SSO state token provider mismatch', [
+                'expected_provider' => $cachedProvider,
+                'received_provider' => $provider,
+                'token_prefix' => substr($receivedToken, 0, 8) . '...',
+            ]);
 
-        // Use timing-safe comparison to prevent timing attacks
-        if (!hash_equals($expectedToken, $receivedToken)) {
             return [
                 'valid' => false,
                 'custom_state' => null,
@@ -120,10 +153,15 @@ class SSOService
 
     /**
      * Get the user data from the SSO provider callback.
+     *
+     * Uses stateless() mode because we handle state validation ourselves
+     * (via cache-based tokens). Without stateless(), Socialite would try to
+     * validate its own session-stored state, which would fail and throw
+     * an InvalidStateException.
      */
     public function getSocialUser(string $provider): SocialiteUser
     {
-        return Socialite::driver($provider)->user();
+        return Socialite::driver($provider)->stateless()->user();
     }
 
     /**

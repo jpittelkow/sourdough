@@ -32,7 +32,7 @@ Understanding the full flow is critical for debugging SSO issues:
 
 ```
 ┌──────────────────┐     ┌──────────────────┐     ┌──────────────────┐
-│   Frontend        │     │   Backend (API)   │     │   OAuth Provider  │
+│   Frontend        │     │   Backend         │     │   OAuth Provider  │
 │   (Next.js)       │     │   (Laravel)       │     │   (Google, etc.)  │
 └────────┬─────────┘     └────────┬─────────┘     └────────┬─────────┘
          │                        │                         │
@@ -43,7 +43,8 @@ Understanding the full flow is critical for debugging SSO issues:
        /api/auth/sso/google       │                         │
          │───────────────────────>│                         │
          │                   3. SSOController::redirect()   │
-         │                      Store state in session      │
+         │                      Store state in CACHE        │
+         │                      (Socialite stateless mode)  │
          │                      302 redirect ──────────────>│
          │                        │                    4. User logs in
          │                        │                    at Google
@@ -51,20 +52,34 @@ Understanding the full flow is critical for debugging SSO issues:
          │                        │<─────── 5. Redirect to  │
          │                        │    /api/auth/callback/google
          │                   6. SSOController::callback()   │
-         │                      - Validate state token      │
+         │                      - Validate state from CACHE │
          │                      - Exchange code for user    │
          │                      - Create/find user          │
          │                      - Auth::login() (session)   │
          │<───────────────── 7. 302 redirect to             │
          │                   /auth/callback?success=true    │
          │                        │                         │
-    8. frontend/app/(auth)/       │                         │
+    8. frontend/app/auth/         │                         │
        callback/page.tsx          │                         │
        - fetchUser()──────────────>│                         │
          │<──────── 9. Return user│                         │
    10. router.replace("/dashboard")                         │
          │                        │                         │
 ```
+
+> **CRITICAL — SSO routes use `web` middleware, not `api`:**
+> The SSO redirect and callback routes are defined in `routes/web.php` (with
+> an `/api/auth` prefix), NOT in `routes/api.php`. This is because the OAuth
+> callback from Google/GitHub/etc. has a Referer from the external provider,
+> and Sanctum's `EnsureFrontendRequestsAreStateful` won't activate session
+> middleware for external Referers. The `web` middleware group always includes
+> `EncryptCookies` + `StartSession`, ensuring sessions work on both legs of
+> the OAuth flow. See `routes/web.php` comments for full explanation.
+>
+> **State tokens use Cache, not sessions:**
+> OAuth state tokens are stored in `Cache` (not `session()`) for robustness.
+> Socialite is used in `stateless()` mode to prevent session conflicts.
+> See `SSOService::getRedirectUrl()` and `SSOService::validateStateToken()`.
 
 > **IMPORTANT — DO NOT DELETE, RENAME, OR MOVE the frontend callback page:**
 > The file `frontend/app/auth/callback/page.tsx` is the **shared SSO callback handler**
@@ -86,8 +101,9 @@ Understanding the full flow is critical for debugging SSO issues:
 | File | Role |
 |------|------|
 | `frontend/components/auth/sso-buttons.tsx` | Renders "Continue with {provider}" buttons; navigates to `/api/auth/sso/{provider}` |
+| `backend/routes/web.php` | **SSO browser routes** (redirect + callback) — uses `web` middleware for proper session/cookie handling. DO NOT move to `api.php`. |
 | `backend/app/Http/Controllers/Api/SSOController.php` | `redirect()` → provider; `callback()` → processes OAuth, redirects to frontend |
-| `backend/app/Services/Auth/SSOService.php` | Provider-agnostic OAuth logic (state tokens, user creation, account linking) |
+| `backend/app/Services/Auth/SSOService.php` | Provider-agnostic OAuth logic (cache-based state tokens, stateless Socialite, user creation, account linking) |
 | `frontend/app/auth/callback/page.tsx` | **Shared callback handler** — fetches user session and redirects to dashboard (or shows error). At `app/auth/` (not `app/(auth)/`) so URL is `/auth/callback`. |
 | `backend/app/Providers/ConfigServiceProvider.php` | Injects SSO credentials from DB into Socialite config at boot |
 
