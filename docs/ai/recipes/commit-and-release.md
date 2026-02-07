@@ -1,0 +1,238 @@
+# Recipe: Commit, Push, and Release
+
+Step-by-step guide to commit changes, push to remote, and create a versioned release.
+
+## How Releases Work
+
+Sourdough uses a **tag-triggered release workflow** (`.github/workflows/release.yml`). There are two paths:
+
+| Trigger | What happens |
+|---------|-------------|
+| **Push a `v*` tag** | Workflow syncs `VERSION` + `frontend/package.json` to match the tag, creates a GitHub Release, builds and pushes a Docker image |
+| **Manual workflow_dispatch** | Workflow bumps version files, commits, tags, creates release, builds Docker |
+
+**For AI-assisted releases, always use the tag push path.** The workflow handles version file sync, GitHub Release creation, and Docker build automatically.
+
+## Key Files
+
+| File | Purpose |
+|------|---------|
+| `VERSION` | Single source of truth for app version (e.g. `0.1.15`) |
+| `frontend/package.json` | `"version"` field — must match `VERSION` |
+| `scripts/bump-version.sh` | Script to bump both files (`patch`, `minor`, `major`, or exact version) |
+| `.github/workflows/release.yml` | Release workflow (tag push or workflow_dispatch) |
+
+## Before You Start
+
+1. Ensure working tree is clean or has only the changes you want to commit
+2. Check current version: read `VERSION` file
+3. Check latest tag: `git tag --sort=-v:refname | Select-Object -First 3` (PowerShell) or `git tag --sort=-v:refname | head -3` (bash)
+4. Decide the next version (typically patch bump: `0.1.15` → `0.1.16`)
+
+## Step 1: Stage and Review Changes
+
+```powershell
+# Check what's changed
+git status
+git diff --stat
+
+# Stage everything
+git add -A
+
+# Or stage selectively
+git add <specific files>
+```
+
+## Step 2: Commit
+
+**CRITICAL — PowerShell does not support heredoc (`<<'EOF'`).** Use one of these approaches:
+
+### Option A: Write message to temp file (recommended for multiline)
+
+Write the commit message to `.git/COMMIT_MSG` using the Write tool, then:
+
+```powershell
+git commit -F .git/COMMIT_MSG
+```
+
+### Option B: Inline single-line message
+
+```powershell
+git commit -m "feat: short description of changes"
+```
+
+### Commit Message Format
+
+Follow conventional commits style matching the repo history:
+
+```
+feat: short summary of what changed
+
+- Detail 1
+- Detail 2
+- Detail 3
+```
+
+Common prefixes: `feat:`, `fix:`, `chore:`, `docs:`, `refactor:`
+
+## Step 3: Push the Commit
+
+```powershell
+git push origin master
+```
+
+### If Push is Rejected (Remote Has New Commits)
+
+This commonly happens when a previous release workflow synced version files:
+
+```powershell
+# Fetch and rebase
+git fetch origin
+git pull --rebase origin master
+```
+
+**If rebase has conflicts** (typically in `VERSION` and/or `frontend/package.json`):
+
+1. Resolve conflicts — keep the **higher version** or the version you intend to release
+2. Stage resolved files: `git add VERSION frontend/package.json`
+3. Continue rebase: `$env:GIT_EDITOR = "true"; git rebase --continue`
+   - **CRITICAL**: Must set `GIT_EDITOR` because PowerShell terminals are "dumb" — git will fail with `Terminal is dumb, but EDITOR unset` otherwise
+   - Must run with `required_permissions: ["all"]` to avoid sandbox permission issues on `.git/` files
+
+Then push again:
+
+```powershell
+git push origin master
+```
+
+## Step 4: Create and Push the Tag
+
+```powershell
+# Create the tag locally
+git tag v0.1.16
+
+# Push the commit AND the tag together
+git push origin master v0.1.16
+```
+
+**IMPORTANT**: Push the commit and tag in the **same command** to avoid the race condition where the tag arrives before the commit (which causes the release workflow to build the wrong code).
+
+If the commit was already pushed in Step 3, just push the tag:
+
+```powershell
+git push origin v0.1.16
+```
+
+## Step 5: Verify the Release
+
+The tag push triggers the GitHub Actions release workflow which will:
+
+1. Check out `master`
+2. Run `scripts/bump-version.sh` to sync `VERSION` and `frontend/package.json`
+3. Commit version sync (if files changed) as `Release v0.1.16`
+4. Create a GitHub Release with auto-generated release notes
+5. Build and push the Docker image to `ghcr.io`
+
+Check the workflow status:
+
+```powershell
+gh run list --limit 3
+```
+
+Or check on GitHub: `https://github.com/<owner>/<repo>/actions`
+
+## Common Gotchas
+
+### 1. PowerShell Heredoc
+
+PowerShell does **not** support bash-style heredoc (`<<'EOF'`). Use a temp file for multiline commit messages:
+
+```
+# WRONG — will fail in PowerShell:
+git commit -m "$(cat <<'EOF'
+message
+EOF
+)"
+
+# RIGHT — use a file:
+# Write message to .git/COMMIT_MSG with the Write tool
+git commit -F .git/COMMIT_MSG
+```
+
+### 2. Version File Conflicts After Rebase
+
+The release workflow pushes a `Release vX.Y.Z` commit that updates `VERSION` and `frontend/package.json`. If you rebase on top of this, you'll get conflicts in those files. Always resolve to the **version you're about to release**.
+
+### 3. Tag Already Exists on Remote
+
+If you pushed a tag and then needed to rebase (changing the commit SHA), you need to force-update the tag:
+
+```powershell
+# Delete remote tag
+git push origin :refs/tags/v0.1.16
+
+# Re-create locally
+git tag -f v0.1.16
+
+# Push again
+git push origin v0.1.16
+```
+
+**However**, if the release workflow already ran for that tag, it may have created a GitHub Release and/or Docker image. In that case, it's cleaner to bump to the next patch version instead.
+
+### 4. GIT_EDITOR Not Set
+
+When running `git rebase --continue` in PowerShell, git needs an editor to confirm the commit message. Set the editor to a no-op:
+
+```powershell
+$env:GIT_EDITOR = "true"
+git rebase --continue
+```
+
+### 5. Sandbox Permission Denied on `.git/`
+
+Git rebase operations modify files in `.git/` (like `index.lock`, `rebase-merge/`). If you get "Permission denied" errors, run with `required_permissions: ["all"]`.
+
+### 6. Don't Bump Version Locally if Workflow Will Do It
+
+If you push a tag and the workflow runs `sync-and-release`, it will update the version files for you. You only need to bump locally if:
+- You want the version bump **in your feature commit** (cleaner history)
+- You're doing a release commit (`Release vX.Y.Z`) yourself
+
+When in doubt, **bump locally** — it avoids the workflow needing to create an extra commit, and the workflow's sync step becomes a no-op ("Version files already up to date").
+
+## Quick Reference — Full Release in One Go
+
+For a clean release with no complications:
+
+```powershell
+# 1. Stage all changes
+git add -A
+
+# 2. Write commit message (use Write tool for multiline)
+# Then commit:
+git commit -F .git/COMMIT_MSG
+
+# 3. Bump version (read current from VERSION, increment)
+# Update VERSION and frontend/package.json via Write/StrReplace tools
+
+# 4. Commit version bump
+git add VERSION frontend/package.json
+git commit -m "Release v0.1.16"
+
+# 5. Tag
+git tag v0.1.16
+
+# 6. Push everything
+git push origin master v0.1.16
+```
+
+## Checklist
+
+- [ ] All changes staged and committed with descriptive message
+- [ ] No debug code, secrets, or console.log in committed files
+- [ ] Version bumped in `VERSION` and `frontend/package.json`
+- [ ] Tag created matching the version (`vX.Y.Z`)
+- [ ] Commit and tag pushed to remote
+- [ ] Release workflow triggered (check GitHub Actions)
+- [ ] `git status` shows clean working tree, up to date with remote

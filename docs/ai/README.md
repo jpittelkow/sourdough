@@ -24,6 +24,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 | Testing | [ADR-008](../adr/008-testing-strategy.md), `e2e/`, `backend/tests/` |
 | PWA | [PWA roadmap](../plans/pwa-roadmap.md), `frontend/public/sw.js`, `frontend/lib/use-install-prompt.ts`, [add-pwa-install-prompt](recipes/add-pwa-install-prompt.md), [context-loading: PWA Work](context-loading.md#pwa-work) |
 | Security | [ADR-024](../adr/024-security-hardening.md), [Security roadmap](../plans/security-compliance-roadmap.md), `backend/app/Services/UrlValidationService.php`, `backend/app/Providers/AppServiceProvider.php` |
+| Release/Deploy | `VERSION`, `.github/workflows/release.yml`, [commit-and-release recipe](recipes/commit-and-release.md), [context-loading: Release Work](context-loading.md#release--deployment-work) |
 
 **Full context loading details:** [context-loading.md](context-loading.md)
 
@@ -59,6 +60,7 @@ Example plan reference:
 
 | Task | Recipe |
 |------|--------|
+| Commit, Push & Release | [commit-and-release.md](recipes/commit-and-release.md) |
 | Code Review | [code-review.md](recipes/code-review.md) |
 | Add API Endpoint | [add-api-endpoint.md](recipes/add-api-endpoint.md) |
 | Add Admin-Protected Action | [add-admin-protected-action.md](recipes/add-admin-protected-action.md) |

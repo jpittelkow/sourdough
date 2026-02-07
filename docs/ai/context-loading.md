@@ -681,6 +681,26 @@ frontend/app/(dashboard)/configuration/api/page.tsx  # API tokens + webhooks pag
 
 API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in `PersonalAccessToken` model). Users can create, list, and revoke their own tokens. Tokens are managed on the **Configuration > API** page (not user profile). This page has mixed permissions: the tokens section is visible to all authenticated users; the webhooks section is admin-only.
 
+## Release / Deployment Work
+
+**Read first:**
+```
+docs/ai/recipes/commit-and-release.md  # Step-by-step release recipe (START HERE)
+VERSION                                 # Current version number
+.github/workflows/release.yml          # Release workflow (tag push + workflow_dispatch)
+scripts/bump-version.sh                # Version bump script
+frontend/package.json                  # version field (must match VERSION)
+```
+
+**Key points:**
+- Releases are triggered by pushing a `v*` tag to remote
+- The workflow auto-syncs version files, creates a GitHub Release, and builds Docker
+- PowerShell does not support heredoc — use temp files for multiline commit messages
+- Rebase conflicts in VERSION/package.json are common after release workflow commits
+
+**Recipe:**
+- [Commit, Push & Release](recipes/commit-and-release.md)
+
 ## Adding a New Feature (Full Stack)
 
 **Read in order:**
