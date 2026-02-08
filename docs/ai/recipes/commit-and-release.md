@@ -2,6 +2,8 @@
 
 Step-by-step guide to commit changes, push to remote, and create a versioned release.
 
+**Quick shortcut:** Use `./scripts/push.ps1 [patch|minor|major] [commit-message]` to automate the entire release process. See [Quick Reference](../../quick-reference.md#versioning) for details.
+
 ## How Releases Work
 
 Sourdough uses a **tag-triggered release workflow** (`.github/workflows/release.yml`). There are two paths:
@@ -20,6 +22,7 @@ Sourdough uses a **tag-triggered release workflow** (`.github/workflows/release.
 | `VERSION` | Single source of truth for app version (e.g. `0.1.15`) |
 | `frontend/package.json` | `"version"` field — must match `VERSION` |
 | `scripts/bump-version.sh` | Script to bump both files (`patch`, `minor`, `major`, or exact version) |
+| `scripts/push.ps1` | Quick release script — automates commit, version bump, tag, and push |
 | `.github/workflows/release.yml` | Release workflow (tag push or workflow_dispatch) |
 
 ## Before You Start

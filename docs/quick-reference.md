@@ -116,6 +116,7 @@ Sourdough follows [Semantic Versioning](https://semver.org/):
 
 Current version is stored in the `VERSION` file and accessible via `/api/version`.
 
-**Release workflow (two methods):**
+**Release workflow (three methods):**
+- **Quick script (recommended):** Run `./scripts/push.ps1 [patch|minor|major|<version>] [commit-message]`. Automates the full release: stages all changes, commits, bumps version, tags, and pushes. Example: `./scripts/push.ps1 patch "feat: add new feature"`.
 - **Manual dispatch:** GitHub Actions > Release > Run workflow. Select version type (patch/minor/major/custom). The workflow bumps version files, commits, creates a tag, publishes a GitHub Release, and pushes the Docker image to GHCR.
 - **Tag push:** Run `git tag v1.3.0 && git push --tags`. The workflow auto-syncs `VERSION` and `frontend/package.json` on master to match the tag, creates a GitHub Release, and pushes the Docker image. The tag is the single source of truth -- no need to manually edit version files.
