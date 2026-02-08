@@ -70,7 +70,6 @@ export default function PreferencesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>({
-    theme: theme || "system",
     default_llm_mode: "single",
     notification_channels: [],
   });
@@ -125,45 +124,31 @@ export default function PreferencesPage() {
       const response = await api.get("/user/settings");
       const data = response.data;
       
-      // Validate and normalize theme value
-      const validThemes = ["light", "dark", "system"] as const;
-      const themeValue = validThemes.includes(data.theme) 
-        ? data.theme 
-        : (theme || "system");
-      
       // Validate and normalize LLM mode value
       const validModes = ["single", "aggregation", "council"] as const;
       const llmModeValue = validModes.includes(data.default_llm_mode)
         ? data.default_llm_mode
         : "single";
       
-      setPreferences({
-        theme: themeValue,
+      // Theme is NOT loaded from the API — localStorage (via ThemeProvider) is
+      // the single source of truth. This prevents the server from overriding the
+      // user's local choice (race condition / stale-server-value bug).
+      setPreferences((prev) => ({
+        ...prev,
         default_llm_mode: llmModeValue,
         notification_channels: Array.isArray(data.notification_channels) 
           ? data.notification_channels 
           : [],
-      });
-      
-      // Sync theme if it's different
-      if (themeValue && themeValue !== theme) {
-        setTheme(themeValue);
-      }
+      }));
     } catch (error: unknown) {
       // If endpoint doesn't exist yet, use defaults
       errorLogger.captureMessage("Failed to fetch preferences", "warning", {
         error: error instanceof Error ? error.message : String(error),
       });
-      const currentTheme = theme || "system";
-      setPreferences({
-        theme: currentTheme,
-        default_llm_mode: "single",
-        notification_channels: [],
-      });
     } finally {
       setIsLoading(false);
     }
-  }, [theme, setTheme]);
+  }, []);
 
   useEffect(() => {
     fetchPreferences();
@@ -401,7 +386,7 @@ export default function PreferencesPage() {
           <div className="space-y-2">
             <Label>Theme</Label>
             <RadioGroup
-              value={preferences.theme ?? "system"}
+              value={theme}
               onValueChange={(value) => {
                 if (isOffline) return;
                 const validTheme = ["light", "dark", "system"].includes(value)
