@@ -17,7 +17,7 @@ $ErrorActionPreference = "Stop"
 $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 $VersionFile = Join-Path $RootDir "VERSION"
-$PackageJson = Join-Path $RootDir "frontend" "package.json"
+$PackageJson = Join-Path (Join-Path $RootDir "frontend") "package.json"
 
 # Check if we're in a git repository
 if (-not (Test-Path ".git")) {
@@ -104,7 +104,7 @@ Set-Content -Path $PackageJson -Value $PackageContent -NoNewline
 Write-Host "Updated version files" -ForegroundColor Cyan
 
 # Stage version files
-Invoke-Expression "git add `"$VersionFile`" `"$PackageJson`""
+git add "$VersionFile" "$PackageJson"
 
 # Commit version bump
 Write-Host "Committing version bump..." -ForegroundColor Cyan
