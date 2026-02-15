@@ -115,13 +115,18 @@ These variables are set automatically by `docker-compose.prod.yml` but **must be
 |----------|----------------|-------|
 | `DB_DATABASE` | `/var/www/html/data/database.sqlite` | **Critical** - Without this, migrations write to a non-persistent location |
 | `DB_CONNECTION` | `sqlite` | Database driver |
-| `APP_KEY` | `base64:...` | Generate with `php artisan key:generate --show` |
 | `APP_ENV` | `production` | Environment mode |
 | `APP_URL` | `http://your-nas-ip:port` | Your access URL (use `https://yourdomain.com` if behind a reverse proxy/tunnel) |
-| `FRONTEND_URL` | `http://your-nas-ip:port` | Same as APP_URL |
 | `TRUSTED_PROXIES` | *(empty)* | Set to `*` if using a reverse proxy or Cloudflare Tunnel |
-| `MEILI_MASTER_KEY` | (random string) | Search engine API key; **required** in production (container will exit if unset) |
-| `SANCTUM_STATEFUL_DOMAINS` | (e.g. `your-nas.local:8080`) | Comma-separated domains for cookie-based auth; set to your app URL for login to work |
+
+The following are **auto-generated or auto-derived** on first boot and do not need to be set manually:
+
+| Variable | Behavior | Override when... |
+|----------|----------|-----------------|
+| `APP_KEY` | Auto-generated and persisted in the data volume. See [Application Key docs](development.md#application-key-app_key) for generation, rotation, and migration details. | Migrating from an existing deployment |
+| `MEILI_MASTER_KEY` | Auto-generated and persisted in the data volume | Running Meilisearch externally |
+| `FRONTEND_URL` | Defaults to `APP_URL` | Frontend is on a different origin (not typical) |
+| `SANCTUM_STATEFUL_DOMAINS` | Auto-derived from `APP_URL` hostname | Multiple domains need cookie-based auth |
 
 ### Required Volume Mappings
 
@@ -147,17 +152,15 @@ NAS systems often use specific user/group IDs. Set these to match your host volu
 In Unraid's Docker tab, add these variables:
 
 ```
-APP_KEY=base64:YourGeneratedKeyHere
 APP_ENV=production
 APP_URL=http://192.168.1.100:8080
-FRONTEND_URL=http://192.168.1.100:8080
 DB_CONNECTION=sqlite
 DB_DATABASE=/var/www/html/data/database.sqlite
-MEILI_MASTER_KEY=YourRandomSecretKey
-SANCTUM_STATEFUL_DOMAINS=192.168.1.100:8080
 PUID=99
 PGID=100
 ```
+
+`APP_KEY`, `MEILI_MASTER_KEY`, `FRONTEND_URL`, and `SANCTUM_STATEFUL_DOMAINS` are all handled automatically. See the table above for when you might need to override them.
 
 ### Troubleshooting NAS Deployments
 
@@ -195,9 +198,9 @@ When running behind a reverse proxy (Cloudflare Tunnel, Traefik, Nginx proxy, Ca
 
 ```env
 APP_URL=https://yourdomain.com
-FRONTEND_URL=https://yourdomain.com
-SANCTUM_STATEFUL_DOMAINS=yourdomain.com
 ```
+
+`FRONTEND_URL` and `SANCTUM_STATEFUL_DOMAINS` are automatically derived from `APP_URL` -- you do not need to set them separately.
 
 **This is critical for OAuth/SSO.** The OAuth callback URL is built from `APP_URL`. If `APP_URL` is set to a private IP (e.g. `http://192.168.1.4:8080`), Google and other OAuth providers will reject the redirect URI with errors like "device_id and device_name are required for private IP".
 
@@ -219,8 +222,6 @@ Without trusted proxies, Laravel may generate HTTP URLs instead of HTTPS, break 
 
 ```env
 APP_URL=https://myapp.example.com
-FRONTEND_URL=https://myapp.example.com
-SANCTUM_STATEFUL_DOMAINS=myapp.example.com
 TRUSTED_PROXIES=*
 ```
 
@@ -261,7 +262,7 @@ Meilisearch runs inside the main app container, managed by Supervisor alongside 
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
-| `MEILI_MASTER_KEY` | (dev: masterKey) | API key; required in production |
+| `MEILI_MASTER_KEY` | *(auto-generated)* | API key; auto-generated and persisted in the data volume on first boot. Override only if running Meilisearch externally. Dev defaults to `masterKey`. |
 
 ### Search box not working
 

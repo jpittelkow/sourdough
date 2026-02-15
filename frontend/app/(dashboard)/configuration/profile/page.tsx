@@ -36,6 +36,7 @@ import {
 } from "@/components/ui/dialog";
 import { AlertTriangle, Loader2 } from "lucide-react";
 import { SaveButton } from "@/components/ui/save-button";
+import { HelpLink } from "@/components/help/help-link";
 
 const profileSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -108,7 +109,8 @@ export default function ProfilePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Profile</h1>
         <p className="text-muted-foreground">
-          Manage your account settings and profile information.
+          Manage your account settings and profile information.{" "}
+          <HelpLink articleId="profile" />
         </p>
       </div>
 

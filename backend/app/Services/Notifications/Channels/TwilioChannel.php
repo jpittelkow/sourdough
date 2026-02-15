@@ -4,10 +4,13 @@ namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
 use App\Services\NotificationTemplateService;
+use App\Services\UsageTrackingService;
 use Illuminate\Support\Facades\Http;
 
 class TwilioChannel implements ChannelInterface
 {
+    use ExtractsCountryFromPhone;
+
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
         $resolved = $this->resolveContent($user, $type, $title, $message, $data);
@@ -42,6 +45,10 @@ class TwilioChannel implements ChannelInterface
         if (!$response->successful()) {
             throw new \RuntimeException('Twilio API error: ' . $response->body());
         }
+
+        // Record usage for integration usage dashboard
+        $country = $this->extractCountryFromPhone($phoneNumber);
+        app(UsageTrackingService::class)->recordSMS('twilio', $country, $user->id);
 
         return [
             'sid' => $response->json('sid'),

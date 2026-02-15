@@ -12,23 +12,22 @@ _No items. Documentation Audit complete._
 
 Ready to start. These are unblocked and can begin immediately.
 
-- [ ] **Changelog Page** - Frontend page for users to view application changelog (version history, new features, bug fixes). Accessible from the dashboard or sidebar. Related: [Versioning System Roadmap](plans/versioning-system-roadmap.md) (see [changelog-roadmap](plans/changelog-roadmap.md))
-- [ ] **UI Issues: Toggles & Theme Adherence** - Fix incorrect toggle states across the application (toggles displaying wrong on/off state or not syncing with actual values). Ensure all components properly adhere to light and dark theme — resolve instances where elements use hardcoded colors, fail to respect CSS theme variables, or appear broken when switching between light and dark mode.
+_No items._
 
 ## Planned Features
 
 Requires foundation work or longer-term planning.
 
-- [ ] **Integration Usage Dashboard** - Track and visualize costs across all paid integrations (LLM, email, SMS, storage, broadcasting) in a unified admin dashboard. Combined stacked area chart with date range selector and integration/provider filters. Includes usage tracking instrumentation, stats API, cost alerts, and CSV export. See [Integration Costs > Usage Dashboard](#usage-dashboard-planned) for full phased plan.
+_No items._
 
 ## Pre-Release Checklist
 
 After completing Planned Features, complete these final tasks before release:
 
-- [ ] **Documentation Architecture Review** - Fix cross-document inconsistencies, add architectural clarity, improve developer experience docs (see [Documentation Architecture Review](plans/documentation-architecture-review-roadmap.md))
-- [ ] **Final Code Review** - Review all modified files for bugs, debug code, hardcoded values, and adherence to patterns (see [Code Review recipe](ai/recipes/code-review.md))
-- [ ] **Roadmap Cleanup** - Archive completed roadmaps, verify all links work, update stale entries (see Roadmap Maintenance below)
-- [ ] **User Build Verification** - Manually verify the Docker build works end-to-end (see Build Verification below)
+- [x] **Documentation Architecture Review** - Fix cross-document inconsistencies, add architectural clarity, improve developer experience docs (see [Documentation Architecture Review](plans/documentation-architecture-review-roadmap.md)) — completed 2026-02-05
+- [x] **Final Code Review** - Review all modified files for bugs, debug code, hardcoded values, and adherence to patterns (see [Code Review recipe](ai/recipes/code-review.md)) — completed 2026-02-14
+- [x] **Roadmap Cleanup** - Archive completed roadmaps, verify all links work, update stale entries (see Roadmap Maintenance below) — completed 2026-02-14
+- [x] **User Build Verification** - Manually verify the Docker build works end-to-end (see Build Verification below) — completed 2026-02-15
 
 ## Completed (Core Done)
 
@@ -36,6 +35,9 @@ High-priority work complete. Only optional/lower-priority items remain.
 
 | Roadmap | Completed | Remaining Work |
 |---------|-----------|----------------|
+| Integration Usage Dashboard | 2026-02-14 | Optional: additional LLM pricing presets, broadcasting instrumentation via event listener |
+| [Changelog Page](plans/changelog-roadmap.md) | 2026-02-14 | Optional: Phase 4 (auto-generate from GitHub releases, "What's New" modal) |
+| UI Issues: Toggles & Theme Adherence | 2026-02-14 | Manual testing recommended during build verification |
 | [In-App Documentation & Onboarding](plans/in-app-documentation-roadmap.md) | 2026-02-05 | Optional: additional help articles, advanced onboarding flows |
 | [Progressive Web App (PWA)](plans/pwa-roadmap.md) | 2026-01-31 | Optional: periodic sync, protocol handlers, rich notifications |
 | [Storage Settings Enhancement](plans/storage-settings-roadmap.md) | 2026-01-31 | Optional: usage-over-time chart, orphaned/duplicate file detection |
@@ -138,11 +140,11 @@ Reference for paid third-party integrations used by Sourdough. All integrations 
 |----------|--------------|-------|
 | Pusher | Per connection + messages | Free tier: 200k messages/day, 100 connections. Required only for live streaming features (audit logs, app logs) |
 
-### Notification Services (planned)
+### Notification Services (optional)
 
 | Provider | Pricing Model | Notes |
 |----------|--------------|-------|
-| Novu (planned) | Free tier + usage-based | Planned replacement for custom notification system. Free for 30k events/month |
+| Novu (optional) | Free tier + usage-based | Optional notification infrastructure (Cloud or self-hosted). Free for 30k events/month. Local system remains default fallback. See [ADR-025](adr/025-novu-notification-integration.md). |
 
 ### Free Integrations (no cost)
 
@@ -163,55 +165,51 @@ These integrations are self-hosted or free and incur no third-party costs:
 - **Storage scales with data** — Local disk is free; cloud storage costs grow with backup frequency and file uploads
 - **Broadcasting is optional** — Only needed for real-time log streaming; most deployments don't require it
 
-### Usage Dashboard (Planned)
+### Usage Dashboard (Completed 2026-02-14)
 
-A unified **Configuration > Usage** page for admins to visualize and monitor costs across all paid integrations. Single combined chart with date range selector and integration filters.
+A unified **Configuration > Usage & Costs** page for admins to visualize and monitor costs across all paid integrations. Single combined chart with date range selector and integration filters.
 
-**Phase 1: Usage Tracking (Backend)**
+**Phase 1: Usage Tracking (Backend)** — Done
 
-- [ ] Create `integration_usage` table — columns: `id`, `integration` (enum: llm, email, sms, storage, broadcasting), `provider` (e.g. openai, twilio, ses), `metric` (e.g. tokens_in, tokens_out, messages, bytes, connections), `quantity` (numeric), `estimated_cost` (nullable decimal, USD), `metadata` (JSON — model name, recipient country, etc.), `user_id` (nullable), `created_at`
-- [ ] Create `IntegrationUsage` model with scopes: `byIntegration()`, `byProvider()`, `byDateRange()`, `byUser()`
-- [ ] Create `UsageTrackingService` — `record($integration, $provider, $metric, $quantity, $estimatedCost, $metadata)` method
-- [ ] Instrument LLM calls — log tokens in/out, provider, model, and estimated cost per query in `LLMOrchestrator` (after response received). Cost estimation uses configurable per-model rates stored in `llm.pricing` config
-- [ ] Instrument email sends — log per-send in `EmailChannel` and `TemplatedMail` with provider name
-- [ ] Instrument SMS sends — log per-message in SMS notification channel with provider and recipient country
-- [ ] Instrument storage operations — log upload/download size in `StorageService` for cloud providers only (skip local)
+- [x] Create `integration_usage` table — columns: `id`, `integration`, `provider`, `metric`, `quantity`, `estimated_cost`, `metadata` (JSON), `user_id` (nullable), `created_at`
+- [x] Create `IntegrationUsage` model with scopes: `byIntegration()`, `byProvider()`, `byDateRange()`, `byUser()`
+- [x] Create `UsageTrackingService` — `record()` method plus convenience methods (`recordLLM`, `recordEmail`, `recordSMS`, `recordStorage`, `recordBroadcast`)
+- [x] Instrument LLM calls — log tokens in/out, provider, model, and estimated cost in `LLMOrchestrator::logRequest()`. Cost estimation uses configurable per-model rates from `settings-schema.php` with default fallbacks
+- [x] Instrument email sends — log per-send in `EmailChannel` with provider name
+- [x] Instrument SMS sends — log per-message in `TwilioChannel`, `VonageChannel`, `SNSChannel` with provider and recipient country
+- [x] Instrument storage operations — log upload/download size in `StorageService` for cloud providers only (skip local)
 - [ ] Instrument broadcasting — log connection events if Pusher is configured (optional, lower priority)
 
-**Phase 2: Usage Stats API (Backend)**
+**Phase 2: Usage Stats API (Backend)** — Done
 
-- [ ] Create `UsageController` — admin-only (`can:settings.view`), routes under `/api/usage`
-- [ ] `GET /api/usage/stats` — aggregated usage data with query params: `date_from`, `date_to` (default last 30 days), `integration` (filter by type), `provider` (filter by provider), `group_by` (day/week/month, default day)
-- [ ] Response shape: `{ summary: { total_estimated_cost, by_integration: { llm: cost, email: cost, ... } }, daily: [{ date, llm: cost, email: cost, sms: cost, storage: cost, broadcasting: cost }], by_provider: [{ provider, integration, total_cost, total_quantity }] }`
-- [ ] `GET /api/usage/breakdown` — detailed breakdown for a single integration (e.g. LLM by model, SMS by country)
-- [ ] Add `usage` group to `settings-schema.php` for admin-configurable cost rates (per-model LLM pricing, per-message SMS rates) with sensible defaults
+- [x] Create `UsageController` — protected by `can:usage.view` permission, routes under `/api/usage`
+- [x] `GET /api/usage/stats` — aggregated usage data with query params: `date_from`, `date_to`, `integration`, `provider`, `group_by`
+- [x] Response shape: `{ summary: { total_estimated_cost, by_integration }, daily: [...], by_provider: [...] }`
+- [x] `GET /api/usage/breakdown` — detailed breakdown for a single integration (LLM by model, per-user attribution)
+- [x] Add `usage` group to `settings-schema.php` for pricing, budgets, and alert threshold
 
-**Phase 3: Usage Dashboard (Frontend)**
+**Phase 3: Usage Dashboard (Frontend)** — Done
 
-- [ ] Add **Configuration > Usage** page at `/configuration/usage` — admin only
-- [ ] Add "Usage" menu item to Configuration navigation (Logs & Monitoring group) — see [recipe: add-configuration-menu-item](ai/recipes/add-configuration-menu-item.md)
-- [ ] **Date range selector** — Two `<Input type="date">` fields for `date_from` / `date_to` (consistent with Audit Log and Access Log filter pattern), plus preset buttons (Last 7 days, Last 30 days, Last 90 days, This month, Last month)
-- [ ] **Summary stat cards** — Row of `StatsCard` components (reuse `AuditStatsCard` pattern): Total Estimated Cost, LLM Cost, Email Cost, SMS Cost, Storage Cost. Each shows the value for the selected date range
-- [ ] **Combined cost chart** — Recharts `AreaChart` (stacked) with all integration costs on a single chart, one colored area per integration type (LLM, Email, SMS, Storage, Broadcasting). Uses `ChartContainer`, `ChartTooltip`, `ChartLegend` from `ui/chart.tsx`. X-axis is date, Y-axis is estimated cost in USD. Grouped by day/week/month based on date range length
-- [ ] **Integration filter** — Multi-select or toggle buttons to show/hide specific integration types on the chart (e.g. toggle off Email to focus on LLM costs). Filter also applies to the stat cards
-- [ ] **Provider filter** — Optional dropdown to filter by specific provider (e.g. only show OpenAI within LLM)
-- [ ] **Provider breakdown table** — Below the chart, a sortable table: Provider, Integration Type, Total Requests/Units, Estimated Cost, with totals row. Filterable by the same date range
-- [ ] **Empty state** — When no usage data exists, show a message explaining that usage tracking begins once paid integrations are configured and used
+- [x] Add **Configuration > Usage & Costs** page at `/configuration/usage`
+- [x] Add "Usage & Costs" menu item to Configuration navigation (Logs & Monitoring group) with `usage.view` permission
+- [x] **Date range selector** — Two `<Input type="date">` fields plus preset buttons (Last 7/30/90 days, This month, Last month)
+- [x] **Summary stat cards** — Reusing `AuditStatsCard` pattern: Total Cost, LLM, Email, SMS, Storage, Broadcasting
+- [x] **Combined cost chart** — Recharts stacked `AreaChart` with `ChartContainer`, `ChartTooltip`, `ChartLegend`
+- [x] **Integration filter** — Toggle buttons to show/hide integration types on chart and stat cards
+- [x] **Provider breakdown table** — Sortable table: Provider, Integration, Total Units, Est. Cost, with totals row
+- [x] **Empty state** — Message explaining usage tracking begins once paid integrations are used
 
-**Phase 4: Cost Alerts & Export (Optional)**
+**Phase 4: Cost Alerts & Export** — Done
 
-- [ ] **Cost alerts** — Configurable monthly budget threshold per integration; notify admins when usage exceeds 80% and 100% of budget. Uses existing notification system (`sendByType`). Settings stored in `usage` schema group
-- [ ] **CSV export** — Export usage data for the selected date range and filters as CSV (consistent with audit log export pattern)
-- [ ] **Per-user breakdown** — Optional view showing cost attribution per user (for LLM and SMS where `user_id` is tracked)
-- [ ] **Dashboard widget** — Optional "Monthly Costs" widget on the admin dashboard showing current month total and mini sparkline trend
+- [x] **Cost alerts** — Configurable monthly budget per integration; `UsageAlertService` + `CheckUsageBudgetsCommand` (daily schedule) notify admins at threshold and 100%
+- [x] **CSV export** — `GET /api/usage/export` streams CSV with chunked queries (protected by `can:logs.export`)
+- [x] **Per-user breakdown** — `GET /api/usage/breakdown` includes per-user cost attribution for LLM and SMS
+- [x] **Dashboard widget** — `UsageDashboardWidget` on admin dashboard showing current month total + mini sparkline trend
 
-**Existing patterns to reuse:**
-- Charts: `ui/chart.tsx` (ChartContainer, ChartTooltip, ChartLegend) + Recharts AreaChart/PieChart
-- Date filters: Same `<Input type="date">` pattern from Audit Log and Access Log pages
-- Stat cards: `AuditStatsCard` component pattern (icon, value, description, color variant)
-- Page layout: Standard Configuration page with `CollapsibleCard` sections
-- Data fetching: `api.get()` with `react-query` for stats endpoint
-- Table: Existing sortable table patterns from Audit Log / Access Log pages
+**Optional remaining work:**
+- [ ] Additional LLM pricing presets for newer models (e.g. Claude 4, GPT-5)
+- [ ] Broadcasting instrumentation via Pusher event listener (low priority, most deployments don't use broadcasting)
+- [ ] Provider filter dropdown on the Usage page (currently filters by integration toggle only, not individual provider)
 
 ## Roadmap Maintenance
 
@@ -231,12 +229,21 @@ To verify the build works end-to-end:
 3. Test: login flow, dashboard loads, configuration pages work
 4. Check browser console for errors
 
+**Production build verified 2026-02-15**: Docker build, registration, login, dashboard, configuration pages all working. Production standalone mode is clean.
+
+**Known dev-mode issues** (do not affect production):
+- The dev compose (`docker-compose.yml`) runs Next.js in Turbopack dev mode. After a `down -v` (which deletes the `node_modules` volume), the `start-nextjs.sh` script auto-installs dependencies but Turbopack may produce stale module chunks for `lib/utils.ts` (e.g. `formatCurrency is not a function`). Workaround: restart the container once after the initial `npm install` completes, or test with a production container (`docker run` without source mounts).
+- Hydration mismatch warning (debug level) from Sonner Toaster's deferred client-side mount — cosmetic only, does not crash production builds.
+
 ## Journal Entries
 
 Implementation history and development notes in `journal/`:
 
 | Date | Entry |
 |------|-------|
+| 2026-02-14 | [Documentation & Architecture Review](journal/2026-02-14-documentation-architecture-review.md) |
+| 2026-02-14 | [Integration Usage Dashboard](journal/2026-02-14-integration-usage-dashboard.md) |
+| 2026-02-14 | [Changelog Page & Theme Adherence Fixes](journal/2026-02-14-changelog-and-theme-fixes.md) |
 | 2026-02-06 | [Faster Sign Out](journal/2026-02-06-faster-sign-out.md) |
 | 2026-02-05 | [Documentation Restructure](journal/2026-02-05-documentation-restructure.md) |
 | 2026-02-05 | [Frontend Code Review](journal/2026-02-05-frontend-code-review.md) |

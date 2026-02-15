@@ -8,6 +8,7 @@ Quick-start guide for AI assistants developing on Sourdough.
 
 | Task Type | Read First |
 |-----------|------------|
+| **New Project Setup** | Say **"Get cooking"** — [setup-new-project](recipes/setup-new-project.md) (master index), [Tier 1](recipes/setup-identity-branding.md), [Tier 2](recipes/setup-features-auth.md), [Tier 3](recipes/setup-infrastructure-repo.md), `FORK-ME.md`, `docs/customization-checklist.md` |
 | Frontend UI | `frontend/app/(dashboard)/`, `frontend/components/`, `frontend/lib/api.ts` |
 | Backend API | `backend/routes/api.php`, `backend/app/Http/Controllers/Api/` |
 | Branding/UI | `frontend/config/app.ts`, `frontend/components/logo.tsx`, [branding roadmap](../plans/branding-ui-consistency-roadmap.md) |
@@ -60,6 +61,10 @@ Example plan reference:
 
 | Task | Recipe |
 |------|--------|
+| **Set Up New Project** | [setup-new-project.md](recipes/setup-new-project.md) (master index) |
+| — Tier 1: Identity & Branding | [setup-identity-branding.md](recipes/setup-identity-branding.md) |
+| — Tier 2: Features & Auth | [setup-features-auth.md](recipes/setup-features-auth.md) |
+| — Tier 3: Infrastructure & Repo | [setup-infrastructure-repo.md](recipes/setup-infrastructure-repo.md) |
 | Commit, Push & Release | [commit-and-release.md](recipes/commit-and-release.md) |
 | Code Review | [code-review.md](recipes/code-review.md) |
 | Add API Endpoint | [add-api-endpoint.md](recipes/add-api-endpoint.md) |

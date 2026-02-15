@@ -3,8 +3,8 @@
 Add a user-facing changelog page in the frontend so users can see what's new, what changed, and what was fixed across application versions.
 
 **Priority**: MEDIUM  
-**Status**: Not Started  
-**Last Updated**: 2026-02-05
+**Status**: Phases 1-3 Complete  
+**Last Updated**: 2026-02-14
 
 **Dependencies**:
 - [Versioning System](versioning-system-roadmap.md) - Version numbers, VERSION file, release workflow (Phases 1-3 complete)
@@ -13,26 +13,26 @@ Add a user-facing changelog page in the frontend so users can see what's new, wh
 
 ## Task Checklist
 
-### Phase 1: Backend - Changelog Data Source (HIGH Priority)
-- [ ] Create a `CHANGELOG.md` file in the project root (or use existing if present)
-- [ ] Create a backend API endpoint (`GET /api/changelog`) that serves changelog entries
-- [ ] Decide on data format: parse `CHANGELOG.md` (Keep a Changelog format) or use structured JSON/database
-- [ ] Support pagination for large changelogs
-- [ ] Include version number, date, and categorized entries (Added, Changed, Fixed, Removed, Security)
+### Phase 1: Backend - Changelog Data Source (HIGH Priority) -- COMPLETE
+- [x] Create a `CHANGELOG.md` file in the project root (Keep a Changelog format)
+- [x] Create a backend API endpoint (`GET /api/changelog`) that serves changelog entries
+- [x] Parse `CHANGELOG.md` (Keep a Changelog format) with ChangelogService
+- [x] Support pagination for large changelogs
+- [x] Include version number, date, and categorized entries (Added, Changed, Fixed, Removed, Security)
 
-### Phase 2: Frontend - Changelog Page (HIGH Priority)
-- [ ] Create changelog page at `frontend/app/(dashboard)/changelog/page.tsx`
-- [ ] Display changelog entries grouped by version with release dates
-- [ ] Use categorized sections (New Features, Improvements, Bug Fixes, Security)
-- [ ] Style with existing UI components (cards, badges for categories)
-- [ ] Mobile-responsive layout (mobile-first CSS)
-- [ ] Add loading and empty states
+### Phase 2: Frontend - Changelog Page (HIGH Priority) -- COMPLETE
+- [x] Create changelog page at `frontend/app/(dashboard)/configuration/changelog/page.tsx`
+- [x] Display changelog entries grouped by version with release dates
+- [x] Use categorized sections with color-coded badges (Added, Changed, Fixed, Removed, Security)
+- [x] Style with existing UI components (cards, badges, collapsible)
+- [x] Mobile-responsive layout (mobile-first CSS)
+- [x] Add loading skeleton and empty states
 
-### Phase 3: Navigation & Discovery (MEDIUM Priority)
-- [ ] Add "What's New" or "Changelog" link to the sidebar or user menu
-- [ ] Consider a notification badge/dot when there are unread changelog entries (entries newer than user's last visit)
-- [ ] Add changelog to the search index (searchable via Cmd+K)
-- [ ] Add page to `search-pages.ts` for static page search
+### Phase 3: Navigation & Discovery (MEDIUM Priority) -- COMPLETE
+- [x] Add "Changelog" to Configuration > General group in config navigation
+- [x] Sidebar version footer links to changelog page
+- [x] Add changelog to backend search index (`search-pages.php`)
+- [x] Add changelog to frontend search pages (`search-pages.ts`)
 
 ### Phase 4: Release Integration (LOW Priority)
 - [ ] Auto-generate changelog entries from GitHub release notes (via release workflow)
@@ -98,7 +98,7 @@ Use the [Keep a Changelog](https://keepachangelog.com/) format in `CHANGELOG.md`
 ### Frontend Page Structure
 
 ```
-frontend/app/(dashboard)/changelog/page.tsx   # Main changelog page
+frontend/app/(dashboard)/configuration/changelog/page.tsx   # Main changelog page
 ```
 
 Each version displayed as a card with:
@@ -114,7 +114,7 @@ Each version displayed as a card with:
 - `CHANGELOG.md` - Changelog entries (Keep a Changelog format)
 - `backend/app/Http/Controllers/Api/ChangelogController.php` - API endpoint
 - `backend/app/Services/ChangelogService.php` - Parse and serve changelog data
-- `frontend/app/(dashboard)/changelog/page.tsx` - Changelog page
+- `frontend/app/(dashboard)/configuration/changelog/page.tsx` - Changelog page
 
 **Files to Modify**:
 - `backend/routes/api.php` - Add changelog route

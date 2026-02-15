@@ -51,13 +51,13 @@ Core functionality and feature documentation:
 **Help Documentation Center:** Searchable in-app help system accessible from anywhere:
 - **Access:** Click help icon in header, press `?` or `Ctrl+/`, or select "Help Center" in user dropdown
 - **Features:** Category sidebar, article content with markdown rendering, Fuse.js client-side search
-- **Content:** User categories (Getting Started, Your Account, Security, Notifications) and admin-only categories (Admin Settings, Search Administration)
-- **Contextual Links:** `HelpLink` component for "Learn more" links on settings pages
+- **Content:** User categories (Getting Started, Your Account, Security, Notifications) and permission-gated categories (Administration, User Management, Security & Access, Communications, Integrations, Audit Logs, Application Logs, Log Settings & Jobs, Usage & Costs, Backup & Data)
+- **Contextual Links:** `HelpLink` component for "Learn more" links on all config pages
 
 **Capabilities:**
 - Wizard state tracking (completed steps, dismissed, reset) via API and database
 - Keyboard shortcuts: `?` and `Ctrl+/` to toggle help center (disabled when typing in inputs)
-- Admin-only help content shown only to admin users
+- Permission-based help content: categories have a `permission` field (e.g., `backups.view`, `audit.view`) so non-admin users with specific permissions see relevant help articles. Admin users see everything.
 - React context providers for both wizard (`WizardProvider`) and help (`HelpProvider`)
 
 ## Notification System
@@ -121,6 +121,8 @@ Core functionality and feature documentation:
 
 **LLM model discovery:** When adding a provider in Configuration > AI, enter your API key (or Ollama host), click **Test** to validate credentials, then **Fetch Models** to load available models from the provider API. Model list is cached server-side for 1 hour. OpenAI, Claude, Gemini, and Ollama are supported for discovery; Azure and Bedrock deferred.
 
+**Editable providers:** Existing providers can be edited in-place (pencil icon or "Edit settings" button on each provider card). Users can update the API key, model, endpoint, base URL, AWS region, and credentials without deleting and re-adding the provider. Sensitive fields (API key, AWS credentials) show "Leave blank to keep current" placeholder; only changed values are sent to the backend.
+
 ## Configuration Management
 
 - [ADR-014: Database Settings with Environment Fallback](adr/014-database-settings-env-fallback.md) - Database-stored settings with env fallback
@@ -128,6 +130,8 @@ Core functionality and feature documentation:
 - Mail settings: Configuration > Email (`/configuration/email`); SMTP and provider credentials stored in DB with encryption for secrets
 - Auth settings: Configuration > Security (`/configuration/security`), admin-only; **Authentication (system-wide)** card: email verification mode (disabled/optional/required), self-service password reset toggle, two-factor mode (disabled/optional/required), passkey mode (disabled/optional/required). No per-user features here—users manage password, 2FA, passkeys, and SSO at User menu > Security (`/user/security`). Stored in `auth` group in settings schema; public features exposed via `GET /system-settings/public` for login/forgot-password UI.
 - SSO settings: Configuration > SSO (`/configuration/sso`); OAuth client IDs and secrets for Google, GitHub, Microsoft, Apple, Discord, GitLab, and OIDC; per-provider **enabled** toggle and **per-provider save** (global options card has its own save); setup instruction modals and copyable redirect URIs; test connection per provider
+
+**Changelog:** Configuration > Changelog (`/configuration/changelog`) displays version history parsed from `CHANGELOG.md` (Keep a Changelog format). Entries grouped by version with release dates, categorized sections (Added, Changed, Fixed, Removed, Security) with color-coded badges. Older versions are collapsible. API: `GET /api/changelog` with pagination. Sidebar version footer links to the changelog page.
 
 **Configuration navigation:** Admin configuration uses grouped, collapsible navigation (General, Users & Access, Communications, Integrations, Logs & Monitoring, Data). Groups expand/collapse; the group containing the current page is expanded by default. Expanded state persists in localStorage. Same structure on desktop sidebar and mobile drawer. See [Recipe: Add configuration menu item](ai/recipes/add-configuration-menu-item.md) and [Patterns: Configuration Navigation](ai/patterns/ui-patterns.md).
 
@@ -272,6 +276,21 @@ Core functionality and feature documentation:
 - **Failed Jobs tab**: List failed queue jobs with retry, delete, retry all, clear all.
 - **API**: `GET /api/jobs/scheduled` (tasks with triggerable, last_run, dangerous); `POST /api/jobs/run/{command}` (body: optional `{ options: {} }`); existing queue/failed endpoints. Manual runs are audited (`scheduled_command_run`).
 
+## Integration Usage & Costs
+
+**Configuration > Usage & Costs** (`/configuration/usage`) – Track and visualize costs across all paid integrations. Admin only (permission: `usage.view`).
+
+**Capabilities:**
+- **Usage Tracking**: Automatic instrumentation of all paid integration calls (LLM, Email, SMS, Storage, Broadcasting). Records integration type, provider, metric, quantity, estimated cost, and user attribution in `integration_usage` table.
+- **Stats API**: Aggregated usage stats with date range, integration, and provider filters. Daily/weekly/monthly cost breakdown per integration type. Provider-level breakdown with cost and quantity totals.
+- **Dashboard Page**: Date range selector with presets (7d, 30d, 90d, this month, last month). Summary stat cards (Total Cost, LLM, Email, SMS, Storage, Broadcasting). Stacked area chart showing cost trends by integration type. Integration filter toggles to show/hide types. Sortable provider breakdown table with totals row. Empty state when no usage data exists.
+- **Cost Alerts**: Configurable monthly budget per integration type. Alert threshold (default 80%). Daily scheduled check notifies admins when budgets are approaching or exceeded.
+- **CSV Export**: Download filtered usage data as CSV (date range + integration + provider filters).
+- **Dashboard Widget**: Monthly cost summary with sparkline trend on the main dashboard for admin users.
+- **Per-User Breakdown**: Usage attributed to individual users for LLM and SMS integrations.
+- **Settings Schema**: `usage` group in `settings-schema.php` with LLM pricing, per-integration budgets, and alert threshold.
+- **API**: `GET /api/usage/stats` (aggregated stats), `GET /api/usage/breakdown` (per-integration detail), `GET /api/usage/export` (CSV download).
+
 ## User Pages
 
 User-facing pages for managing personal account settings.
@@ -364,7 +383,7 @@ Accessible from the **user dropdown** in the header (click your name) → **Secu
 - **Permissions-Policy:** Disables camera, microphone, and geolocation browser APIs
 
 ### CORS Configuration
-- **Restricted origins:** Only `FRONTEND_URL` allowed (configured via environment)
+- **Restricted origins:** Only `FRONTEND_URL` allowed (defaults to `APP_URL`; configured via environment)
 - **Restricted methods:** Only `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `OPTIONS`
 - **Restricted headers:** Only necessary headers (`Content-Type`, `Authorization`, `X-XSRF-TOKEN`, etc.)
 - **Preflight caching:** 24-hour cache for CORS preflight responses

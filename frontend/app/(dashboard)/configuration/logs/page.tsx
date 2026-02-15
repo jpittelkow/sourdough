@@ -22,14 +22,15 @@ import {
 } from "@/components/ui/select";
 import { useAppLogStream, type AppLogEntry } from "@/lib/use-app-log-stream";
 import { Download, Loader2, Radio, Trash2, Wifi, WifiOff } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 const LEVEL_VARIANTS: Record<string, string> = {
   debug: "text-muted-foreground",
-  info: "text-blue-400",
-  notice: "text-sky-400",
-  warning: "text-amber-400",
-  error: "text-red-400",
-  critical: "text-red-500",
+  info: "text-blue-600 dark:text-blue-400",
+  notice: "text-sky-600 dark:text-sky-400",
+  warning: "text-amber-600 dark:text-amber-400",
+  error: "text-red-600 dark:text-red-400",
+  critical: "text-red-700 dark:text-red-500",
 };
 
 function formatContext(ctx: Record<string, unknown>): string {
@@ -84,7 +85,8 @@ export default function ApplicationLogsPage() {
           </h1>
           <p className="text-muted-foreground mt-1">
             Real-time console logs. Enable Live, set LOG_BROADCAST_ENABLED=true,
-            add &quot;broadcast&quot; to LOG_STACK, and configure Pusher.
+            add &quot;broadcast&quot; to LOG_STACK, and configure Pusher.{" "}
+            <HelpLink articleId="application-logs" />
           </p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

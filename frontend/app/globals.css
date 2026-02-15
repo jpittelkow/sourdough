@@ -57,7 +57,7 @@
     @apply bg-background text-foreground;
   }
   h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-newsreader, var(--font-inter), system-ui, sans-serif);
+    font-family: var(--font-heading, var(--font-body), system-ui, sans-serif);
   }
 }
 

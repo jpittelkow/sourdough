@@ -193,6 +193,10 @@ class LLMController extends Controller
             'model' => ['sometimes', 'string'],
             'api_key' => ['sometimes', 'nullable', 'string'],
             'base_url' => ['sometimes', 'nullable', 'string'],
+            'endpoint' => ['sometimes', 'nullable', 'string'],
+            'region' => ['sometimes', 'nullable', 'string'],
+            'access_key' => ['sometimes', 'nullable', 'string'],
+            'secret_key' => ['sometimes', 'nullable', 'string'],
             'is_enabled' => ['sometimes', 'boolean'],
             'is_primary' => ['sometimes', 'boolean'],
         ]);
@@ -204,16 +208,61 @@ class LLMController extends Controller
                 ->update(['is_primary' => false]);
         }
 
-        // Update base_url in settings
-        if (isset($validated['base_url'])) {
-            $settings = $providerModel->settings ?? [];
-            if (!empty($validated['base_url'])) {
-                $settings['base_url'] = $validated['base_url'];
-            } else {
-                unset($settings['base_url']);
+        // Merge provider-specific fields into the settings JSON column
+        $settingsFields = ['base_url', 'endpoint', 'region', 'access_key', 'secret_key'];
+        $hasSettingsUpdate = false;
+        foreach ($settingsFields as $field) {
+            if (isset($validated[$field])) {
+                $hasSettingsUpdate = true;
+                break;
             }
+        }
+
+        if ($hasSettingsUpdate || (isset($validated['model']) && $providerModel->provider === 'azure')) {
+            $settings = $providerModel->settings ?? [];
+
+            foreach (['base_url', 'endpoint', 'region'] as $field) {
+                if (isset($validated[$field])) {
+                    if (!empty($validated[$field])) {
+                        $settings[$field] = $validated[$field];
+                    } else {
+                        unset($settings[$field]);
+                    }
+                    unset($validated[$field]);
+                }
+            }
+
+            // Handle Bedrock AWS credentials (map to access_key_id / secret_access_key)
+            if (isset($validated['access_key'])) {
+                if (!empty($validated['access_key'])) {
+                    $settings['access_key'] = $validated['access_key'];
+                    if ($providerModel->provider === 'bedrock') {
+                        $settings['access_key_id'] = $validated['access_key'];
+                    }
+                } else {
+                    unset($settings['access_key'], $settings['access_key_id']);
+                }
+                unset($validated['access_key']);
+            }
+
+            if (isset($validated['secret_key'])) {
+                if (!empty($validated['secret_key'])) {
+                    $settings['secret_key'] = $validated['secret_key'];
+                    if ($providerModel->provider === 'bedrock') {
+                        $settings['secret_access_key'] = $validated['secret_key'];
+                    }
+                } else {
+                    unset($settings['secret_key'], $settings['secret_access_key']);
+                }
+                unset($validated['secret_key']);
+            }
+
+            // Update Azure deployment name when model changes
+            if (isset($validated['model']) && $providerModel->provider === 'azure') {
+                $settings['deployment'] = $validated['model'];
+            }
+
             $validated['settings'] = !empty($settings) ? $settings : null;
-            unset($validated['base_url']);
         }
 
         $providerModel->update($validated);
@@ -248,6 +297,8 @@ class LLMController extends Controller
      */
     private function formatProvider($provider): array
     {
+        $settings = $provider->settings ?? [];
+
         return [
             'id' => $provider->id,
             'provider' => $provider->provider,
@@ -257,6 +308,11 @@ class LLMController extends Controller
             'is_primary' => $provider->is_primary,
             'last_test_at' => $provider->last_test_at?->toISOString(),
             'last_test_success' => $provider->last_test_success,
+            'base_url' => $settings['base_url'] ?? null,
+            'endpoint' => $settings['endpoint'] ?? null,
+            'region' => $settings['region'] ?? null,
+            'access_key_set' => !empty($settings['access_key']) || !empty($settings['access_key_id']),
+            'secret_key_set' => !empty($settings['secret_key']) || !empty($settings['secret_access_key']),
         ];
     }
 

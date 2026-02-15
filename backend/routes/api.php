@@ -42,8 +42,10 @@ use App\Http\Controllers\Api\SuspiciousActivityController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\Admin\SearchAdminController;
 use App\Http\Controllers\Api\GroupController;
+use App\Http\Controllers\Api\ChangelogController;
 use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\OnboardingController;
+use App\Http\Controllers\Api\UsageController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -181,6 +183,9 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::post('/wizard/reset', [OnboardingController::class, 'resetWizard']);
     });
     
+    // Changelog (authenticated, read-only)
+    Route::get('/changelog', [ChangelogController::class, 'index']);
+
     // Settings (permission: settings.view / settings.edit)
     Route::prefix('settings')->group(function () {
         Route::get('/', [SettingController::class, 'index'])->middleware('can:settings.view');
@@ -297,6 +302,13 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     Route::prefix('log-retention')->group(function () {
         Route::get('/', [LogRetentionController::class, 'show'])->middleware('can:settings.view');
         Route::put('/', [LogRetentionController::class, 'update'])->middleware('can:settings.edit');
+    });
+
+    // Integration Usage (permission: usage.view / logs.export)
+    Route::prefix('usage')->group(function () {
+        Route::get('/stats', [UsageController::class, 'stats'])->middleware('can:usage.view');
+        Route::get('/breakdown', [UsageController::class, 'breakdown'])->middleware('can:usage.view');
+        Route::get('/export', [UsageController::class, 'export'])->middleware('can:logs.export');
     });
 
     // Suspicious activity alerts (permission: logs.view)

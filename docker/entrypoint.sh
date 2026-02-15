@@ -1,9 +1,31 @@
 #!/bin/sh
 set -e
 
-echo "=== Sourdough Container Starting ==="
-echo "Version: ${APP_VERSION:-unknown}"
-echo "Build: ${APP_BUILD_SHA:-development}"
+# ASCII Art Banner
+cat << 'BANNER'
+
+   ____                      _                   _
+  / ___|  ___  _   _ _ __ __| | ___  _   _  __ _| |__
+  \___ \ / _ \| | | | '__/ _` |/ _ \| | | |/ _` | '_ \
+   ___) | (_) | |_| | | | (_| | (_) | |_| | (_| | | | |
+  |____/ \___/ \__,_|_|  \__,_|\___/ \__,_|\__, |_| |_|
+                                            |___/
+                    (  )  (  )
+                     (  )  (  )
+                      ~ ~  ~ ~
+                   .-----------.
+                  /   ~~~~~~~   \
+                 /  ~~~~~~~~~~~  \
+                /  ~~~~ ~~~~ ~~~  \
+               |  ~ ~~~ ~~~~ ~~   |
+               |  ~~~ ~~~~ ~~~~ ~ |
+               |  ~ ~~~ ~~~~ ~~   |
+                \_________________/
+
+BANNER
+echo "  ${APP_NAME:-Sourdough} - powered by Sourdough ${APP_VERSION:-unknown}"
+echo "  Build: ${APP_BUILD_SHA:-development}"
+echo ""
 
 #==============================================================================
 # PUID/PGID Support (for Unraid, Synology, etc.)
@@ -32,12 +54,6 @@ if [ -n "${PUID}" ] && [ -n "${PGID}" ]; then
     echo "  User www-data: UID=$(id -u www-data) GID=$(id -g www-data)"
 else
     echo "No PUID/PGID set, using default www-data (UID=$(id -u www-data) GID=$(id -g www-data))"
-fi
-
-# Require MEILI_MASTER_KEY in production
-if [ "${APP_ENV}" = "production" ] && [ -z "${MEILI_MASTER_KEY}" ]; then
-    echo "ERROR: MEILI_MASTER_KEY must be set in production"
-    exit 1
 fi
 
 # Directory paths
@@ -124,20 +140,78 @@ if [ -f ".env" ]; then
     sed -i "s|DB_DATABASE=.*|DB_DATABASE=${DB_PATH}|g" .env
 fi
 
-# Generate app key if not set
+#==============================================================================
+# Auto-generate and persist APP_KEY to data volume
+#==============================================================================
+KEY_FILE="${DATA_DIR}/.app_key"
 if [ -z "${APP_KEY}" ]; then
-    if [ ! -f ".env" ] || ! grep -q "^APP_KEY=base64:" .env; then
-        echo "Generating application key..."
+    if [ -f "${KEY_FILE}" ]; then
+        echo "Loading APP_KEY from persistent storage..."
+        export APP_KEY=$(cat "${KEY_FILE}")
+    else
+        echo "Generating new APP_KEY..."
+        # Ensure .env exists for artisan to work
         cp .env.example .env 2>/dev/null || true
-        php artisan key:generate --force
+        APP_KEY=$(php artisan key:generate --show)
+        echo "${APP_KEY}" > "${KEY_FILE}"
+        chmod 600 "${KEY_FILE}"
+        chown www-data:www-data "${KEY_FILE}"
+        export APP_KEY
+        echo "APP_KEY generated and saved to persistent storage"
     fi
 fi
+# Write APP_KEY into .env for Laravel
+if [ -f ".env" ]; then
+    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+elif [ -f ".env.example" ]; then
+    cp .env.example .env
+    sed -i "s|^APP_KEY=.*|APP_KEY=${APP_KEY}|" .env
+fi
+
+#==============================================================================
+# Auto-generate and persist MEILI_MASTER_KEY to data volume
+#==============================================================================
+MEILI_KEY_FILE="${DATA_DIR}/.meili_key"
+if [ -z "${MEILI_MASTER_KEY}" ]; then
+    if [ -f "${MEILI_KEY_FILE}" ]; then
+        echo "Loading MEILI_MASTER_KEY from persistent storage..."
+        export MEILI_MASTER_KEY=$(cat "${MEILI_KEY_FILE}")
+    else
+        echo "Generating new MEILI_MASTER_KEY..."
+        MEILI_MASTER_KEY=$(openssl rand -base64 32)
+        echo "${MEILI_MASTER_KEY}" > "${MEILI_KEY_FILE}"
+        chmod 600 "${MEILI_KEY_FILE}"
+        chown www-data:www-data "${MEILI_KEY_FILE}"
+        export MEILI_MASTER_KEY
+        echo "MEILI_MASTER_KEY generated and saved to persistent storage"
+    fi
+fi
+export MEILISEARCH_KEY="${MEILISEARCH_KEY:-${MEILI_MASTER_KEY}}"
+
+#==============================================================================
+# Auto-derive environment variables from APP_URL
+#==============================================================================
+# Default FRONTEND_URL to APP_URL (same origin in single-container setup)
+export FRONTEND_URL="${FRONTEND_URL:-${APP_URL:-http://localhost}}"
+
+# Auto-derive SANCTUM_STATEFUL_DOMAINS from APP_URL if not set
+if [ -z "${SANCTUM_STATEFUL_DOMAINS}" ] && [ -n "${APP_URL}" ]; then
+    DOMAIN=$(echo "${APP_URL}" | sed 's|^http[s]*://||' | sed 's|/.*||')
+    export SANCTUM_STATEFUL_DOMAINS="localhost,${DOMAIN}"
+    echo "Auto-derived SANCTUM_STATEFUL_DOMAINS=${SANCTUM_STATEFUL_DOMAINS}"
+fi
+
+# Internal API URL for server-side fetches (e.g. dynamic manifest route).
+# In the single-container setup Nginx listens on port 80 and proxies to Laravel.
+export INTERNAL_API_URL="${INTERNAL_API_URL:-http://127.0.0.1:80}"
 
 # Run database migrations with Scout disabled (Meilisearch not started yet)
 echo "Running database migrations..."
 SCOUT_DRIVER=null php artisan migrate --force
 
 # Clear and cache config in production
+# NOTE: This must run AFTER all env vars are derived (FRONTEND_URL, SANCTUM_STATEFUL_DOMAINS, etc.)
+# because config:cache bakes env values into the cached config file.
 if [ "${APP_ENV}" = "production" ]; then
     echo "Optimizing for production..."
     php artisan config:cache
@@ -156,11 +230,8 @@ chmod -R 775 ${BACKEND_DIR}/storage
 chown -R www-data:www-data ${BACKEND_DIR}/bootstrap/cache
 chmod -R 775 ${BACKEND_DIR}/bootstrap/cache
 
-# Internal API URL for server-side fetches (e.g. dynamic manifest route).
-# In the single-container setup Nginx listens on port 80 and proxies to Laravel.
-export INTERNAL_API_URL="${INTERNAL_API_URL:-http://127.0.0.1:80}"
-
-echo "=== Sourdough Ready ==="
+echo "  === ${APP_NAME:-Sourdough} is Ready! ==="
+echo ""
 
 # Execute the main command
 exec "$@"

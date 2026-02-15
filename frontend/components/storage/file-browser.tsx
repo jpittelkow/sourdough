@@ -37,10 +37,10 @@ function formatSize(bytes: number | null): string {
 }
 
 function getFileIcon(item: FileManagerItem) {
-  if (item.isDirectory) return <FolderOpen className="h-5 w-5 text-amber-500" />;
+  if (item.isDirectory) return <FolderOpen className="h-5 w-5 text-amber-600 dark:text-amber-400" />;
   const ext = item.name.split(".").pop()?.toLowerCase();
   const imageExts = ["jpg", "jpeg", "png", "gif", "webp", "svg"];
-  if (ext && imageExts.includes(ext)) return <Image className="h-5 w-5 text-blue-500" />;
+  if (ext && imageExts.includes(ext)) return <Image className="h-5 w-5 text-blue-600 dark:text-blue-400" />;
   const textExts = ["txt", "md", "json", "log", "csv"];
   if (ext && textExts.includes(ext)) return <FileText className="h-5 w-5 text-muted-foreground" />;
   return <File className="h-5 w-5 text-muted-foreground" />;

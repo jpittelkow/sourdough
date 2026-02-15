@@ -5,6 +5,7 @@ namespace App\Services\LLM;
 use App\Models\User;
 use App\Models\AIProvider;
 use App\Models\AIRequestLog;
+use App\Services\UsageTrackingService;
 use App\Services\LLM\Providers\AnthropicProvider;
 use App\Services\LLM\Providers\OpenAIProvider;
 use App\Services\LLM\Providers\GeminiProvider;
@@ -672,6 +673,24 @@ class LLMOrchestrator
                     'providers_used' => $result['providers_used'] ?? null,
                 ],
             ]);
+
+            // Record usage for the integration usage dashboard
+            if ($result['success'] ?? false) {
+                $provider = $result['provider'] ?? $result['synthesis_provider'] ?? 'multiple';
+                $tokensIn = (int) ($result['tokens']['input'] ?? 0);
+                $tokensOut = (int) ($result['tokens']['output'] ?? 0);
+                // Providers don't currently populate 'cost'; falls back to estimateLLMCost() in UsageTrackingService
+                $cost = $result['cost'] ?? null;
+
+                app(UsageTrackingService::class)->recordLLM(
+                    $provider,
+                    $result['model'] ?? null,
+                    $tokensIn,
+                    $tokensOut,
+                    $cost !== null ? (float) $cost : null,
+                    $user->id
+                );
+            }
         } catch (\Exception $e) {
             Log::error('Failed to log LLM request', ['error' => $e->getMessage()]);
         }

@@ -6,8 +6,15 @@ import {
   QuickActionsWidget,
 } from "@/components/dashboard/widgets";
 import { OfflineBadge } from "@/components/offline-badge";
+import { UsageDashboardWidget } from "@/components/usage/usage-dashboard-widget";
+import { useAuth, isAdminUser } from "@/lib/auth";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  const canViewUsage = user
+    ? isAdminUser(user) || (user.permissions?.includes("usage.view") ?? false)
+    : false;
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center gap-2 flex-wrap">
@@ -19,6 +26,12 @@ export default function DashboardPage() {
         <StatsWidget />
         <QuickActionsWidget />
       </div>
+      {canViewUsage && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Monthly Costs</h2>
+          <UsageDashboardWidget />
+        </div>
+      )}
     </div>
   );
 }

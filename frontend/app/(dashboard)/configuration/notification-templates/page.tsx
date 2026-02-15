@@ -23,6 +23,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { ChevronRight } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface NotificationTemplateSummary {
   id: number;
@@ -77,7 +78,8 @@ export default function NotificationTemplatesListPage() {
         <h1 className="text-3xl font-bold">Notification Templates</h1>
         <p className="text-muted-foreground mt-2">
           Customize per-type notification messages for push, in-app, and chat
-          channels
+          channels.{" "}
+          <HelpLink articleId="notification-templates" />
         </p>
       </div>
 

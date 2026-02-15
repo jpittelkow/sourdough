@@ -54,6 +54,7 @@ import { Loader2, FolderOpen, Globe, Archive, Database, Users, FileText, AlertTr
 import { ProviderIcon } from "@/components/provider-icons";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
+import { HelpLink } from "@/components/help/help-link";
 
 const DRIVERS = ["local", "s3", "gcs", "azure", "do_spaces", "minio", "b2"] as const;
 
@@ -478,7 +479,8 @@ export default function StorageSettingsPage() {
         <div>
           <h1 className="text-3xl font-bold">Storage Settings</h1>
           <p className="text-muted-foreground mt-2">
-            Configure file storage and upload policies
+            Configure file storage and upload policies.{" "}
+            <HelpLink articleId="storage-settings" />
           </p>
         </div>
         {isAdminUser(user) && (

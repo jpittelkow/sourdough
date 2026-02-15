@@ -323,7 +323,7 @@ export default function SecurityPage() {
               <div
                 className={`p-3 rounded-full ${
                   twoFactorStatus?.enabled
-                    ? "bg-green-500/10 text-green-500"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400"
                     : "bg-muted text-muted-foreground"
                 }`}
               >

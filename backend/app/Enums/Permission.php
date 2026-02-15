@@ -29,6 +29,9 @@ enum Permission: string
     case LOGS_EXPORT = 'logs.export';
     case AUDIT_VIEW = 'audit.view';
 
+    // Usage
+    case USAGE_VIEW = 'usage.view';
+
     /**
      * All permission values as strings.
      */
@@ -50,6 +53,7 @@ enum Permission: string
             'Settings' => [self::SETTINGS_VIEW, self::SETTINGS_EDIT],
             'Backups' => [self::BACKUPS_VIEW, self::BACKUPS_CREATE, self::BACKUPS_RESTORE, self::BACKUPS_DELETE],
             'Logs' => [self::LOGS_VIEW, self::LOGS_EXPORT, self::AUDIT_VIEW],
+            'Usage' => [self::USAGE_VIEW],
         ];
     }
 }

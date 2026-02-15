@@ -4,19 +4,22 @@ namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
 use App\Services\NotificationTemplateService;
+use App\Services\UsageTrackingService;
 use Illuminate\Support\Facades\Http;
 
 class SNSChannel implements ChannelInterface
 {
+    use ExtractsCountryFromPhone;
+
     private string $accessKeyId;
     private string $secretAccessKey;
     private string $region;
 
     public function __construct()
     {
-        $this->accessKeyId = env('AWS_ACCESS_KEY_ID', '');
-        $this->secretAccessKey = env('AWS_SECRET_ACCESS_KEY', '');
-        $this->region = config('notifications.channels.sns.region', env('AWS_DEFAULT_REGION', 'us-east-1'));
+        $this->accessKeyId = config('notifications.channels.sns.key', '');
+        $this->secretAccessKey = config('notifications.channels.sns.secret', '');
+        $this->region = config('notifications.channels.sns.region', 'us-east-1');
     }
 
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
@@ -61,6 +64,10 @@ class SNSChannel implements ChannelInterface
         // Parse XML response
         $xml = simplexml_load_string($response->body());
         $messageId = (string) ($xml->PublishResult->MessageId ?? '');
+
+        // Record usage for integration usage dashboard
+        $country = $this->extractCountryFromPhone($phoneNumber);
+        app(UsageTrackingService::class)->recordSMS('sns', $country, $user->id);
 
         return [
             'message_id' => $messageId,

@@ -385,6 +385,9 @@ export default function SystemSettingsPage() {
                   )}
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <SaveButton isDirty={isDirty} isSaving={isSaving} />
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -446,6 +449,9 @@ export default function SystemSettingsPage() {
                   </p>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <SaveButton isDirty={isDirty} isSaving={isSaving} />
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -530,6 +536,9 @@ export default function SystemSettingsPage() {
                   )}
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <SaveButton isDirty={isDirty} isSaving={isSaving} />
+              </CardFooter>
             </Card>
           </TabsContent>
 
@@ -579,15 +588,12 @@ export default function SystemSettingsPage() {
                   </Select>
                 </div>
               </CardContent>
+              <CardFooter className="flex justify-end">
+                <SaveButton isDirty={isDirty} isSaving={isSaving} />
+              </CardFooter>
             </Card>
           </TabsContent>
         </Tabs>
-
-        <Card className="mt-6">
-          <CardFooter className="flex justify-end">
-            <SaveButton isDirty={isDirty} isSaving={isSaving} />
-          </CardFooter>
-        </Card>
       </form>
     </div>
   );

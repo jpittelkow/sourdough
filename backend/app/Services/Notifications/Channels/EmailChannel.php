@@ -5,6 +5,7 @@ namespace App\Services\Notifications\Channels;
 use App\Mail\TemplatedMail;
 use App\Models\User;
 use App\Services\EmailTemplateService;
+use App\Services\UsageTrackingService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
@@ -25,6 +26,10 @@ class EmailChannel implements ChannelInterface
             ]);
 
             Mail::to($user->email)->send(new TemplatedMail($rendered));
+
+            // Record usage for integration usage dashboard
+            $mailProvider = config('mail.default', 'smtp');
+            app(UsageTrackingService::class)->recordEmail($mailProvider, $user->id);
 
             Log::info('Email sent', [
                 'user_id' => $user->id,

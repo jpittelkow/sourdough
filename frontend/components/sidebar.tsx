@@ -34,10 +34,12 @@ function SidebarVersionFooter({ isExpanded }: { isExpanded: boolean }) {
 
   return (
     <div className="pt-3 border-t px-2 pb-2">
-      <p className="text-xs text-muted-foreground text-center">
-        {displayName} v{version}
-        {shortSha && ` • ${shortSha}`}
-      </p>
+      <Link href="/configuration/changelog" className="block text-center">
+        <p className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          {displayName} v{version}
+          {shortSha && ` • ${shortSha}`}
+        </p>
+      </Link>
     </div>
   );
 }
@@ -51,6 +53,7 @@ export function Sidebar() {
   const isMobile = useIsMobile();
 
   // Safe admin check (handles stale bundle where isAdminUser might not exist)
+  // TODO: Remove Boolean(user?.is_admin) fallback once all bundles have been refreshed post-release
   const isAdmin =
     typeof isAdminUser === "function" ? isAdminUser(user) : Boolean(user?.is_admin);
 

@@ -12,7 +12,10 @@ When adding documentation for a feature, settings page, or workflow that users n
 
 Edit `frontend/lib/help/help-content.ts`:
 
-1. Choose the correct category (user or admin).
+1. Choose the correct category. Categories are organized by permission:
+   - **`userHelpCategories`** — Visible to all authenticated users (no permission required). Use for account, security, and general user features.
+   - **`permissionHelpCategories`** — Gated by the `permission` field on each category. Use for admin/config features. Pick the category whose permission matches the config page's required permission.
+
 2. Add a new article object to the category's `articles` array:
 
 ```ts
@@ -42,7 +45,23 @@ Common issues and solutions.`,
 - **tags**: Keywords for the in-modal Fuse.js search.
 - **content**: Markdown body. Use `#` for headings, `**bold**`, lists, etc.
 
-For admin-only articles, add to an `adminHelpCategories` entry. For user articles, add to `userHelpCategories`.
+**Permission-gated categories and their permissions:**
+
+| Category | Permission | Use For |
+|---|---|---|
+| Administration | `settings.view` | General admin, branding |
+| User Management | `users.view` | Users |
+| Groups & Permissions | `groups.view` | Groups, permission matrix |
+| Security & Access | `settings.view` | Security, SSO, API & Webhooks |
+| Communications | `settings.view` | Email, notifications, templates, Novu |
+| Integrations | `settings.view` | AI/LLM, storage, search |
+| Audit Logs | `audit.view` | Audit log |
+| Application Logs | `logs.view` | App logs, access logs |
+| Log Settings & Jobs | `settings.view` | Log retention, scheduled jobs |
+| Usage & Costs | `usage.view` | Usage analytics |
+| Backup & Data | `backups.view` | Backup configuration |
+
+If no existing category fits, create a new one in `permissionHelpCategories` with the appropriate `permission` field.
 
 ### 2. Add Search Entry
 
@@ -54,13 +73,15 @@ Edit `backend/config/search-pages.php` and add an entry so the article appears i
     'title' => 'Help: My Feature',
     'subtitle' => 'Help article',
     'url' => 'help:my-feature',   // Must use help: prefix; segment after : is the article id
-    'admin_only' => true,          // true if article is in adminHelpCategories
+    'admin_only' => true,          // true for permission-gated articles
+    'permission' => 'settings.view', // Match the category's permission
     'content' => 'feature guide how-to keywords that users might search',
 ],
 ```
 
 - **url**: Must be `help:{article-id}`. The frontend intercepts this and opens the help modal.
 - **content**: Searchable keywords. Include synonyms and related terms.
+- **permission**: Set to the same permission as the help category. Omit for user-visible articles.
 
 ### 3. Add HelpLink to the Page
 
@@ -93,8 +114,9 @@ docker-compose exec app php /var/www/html/backend/artisan search:reindex pages
 ## Checklist
 
 - [ ] Added article to `help-content.ts` in the correct category
+- [ ] Category has the correct `permission` field (or none for user-visible articles)
 - [ ] Added search entry to `search-pages.php` with `help:` URL prefix
-- [ ] Set `admin_only` correctly on the search entry
+- [ ] Set `admin_only` and `permission` correctly on the search entry
 - [ ] Added HelpLink to the relevant page
 - [ ] Ran `search:reindex pages`
 - [ ] Verified help center, search, and HelpLink all work

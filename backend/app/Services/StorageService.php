@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use App\Services\UsageTrackingService;
 
 class StorageService
 {
@@ -275,6 +276,9 @@ class StorageService
 
         $disk->put($targetPath, File::get($file->getRealPath()));
 
+        // Record usage for cloud storage providers
+        $this->trackStorageUsage('upload', $file->getSize());
+
         return [
             'path' => $targetPath,
             'name' => $filename,
@@ -360,6 +364,14 @@ class StorageService
             throw new \Illuminate\Contracts\Filesystem\FileNotFoundException($path);
         }
 
+        // Record usage for cloud storage providers
+        try {
+            $size = $disk->size($path);
+            $this->trackStorageUsage('download', $size);
+        } catch (\Throwable $e) {
+            // Don't fail the download if usage tracking fails
+        }
+
         return $disk->download($path, basename($path));
     }
 
@@ -429,6 +441,30 @@ class StorageService
             $disk->makeDirectory($to . '/' . $dirName);
             $this->moveDirectoryContents($disk, $dir, $to . '/' . $dirName);
             $disk->deleteDirectory($dir);
+        }
+    }
+
+    /**
+     * Track storage usage for cloud providers only (skip local).
+     */
+    private function trackStorageUsage(string $operation, int $bytes): void
+    {
+        $diskName = config('filesystems.default', 'local');
+        $diskDriver = config("filesystems.disks.{$diskName}.driver", 'local');
+
+        if ($diskDriver === 'local') {
+            return;
+        }
+
+        // Use the disk name as provider (e.g. s3, gcs, azure, do_spaces, minio, b2)
+        // since disk names in this project match the StorageService::PROVIDERS keys
+        $provider = $diskName;
+
+        try {
+            $userId = auth()->id();
+            app(UsageTrackingService::class)->recordStorage($provider, $operation, $bytes, $userId);
+        } catch (\Throwable $e) {
+            // Silently fail - don't disrupt storage operations
         }
     }
 

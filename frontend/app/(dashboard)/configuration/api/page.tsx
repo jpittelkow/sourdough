@@ -47,6 +47,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useAuth, isAdminUser } from "@/lib/auth";
+import { HelpLink } from "@/components/help/help-link";
 
 interface ApiToken {
   id: number;
@@ -234,7 +235,8 @@ export default function APISettingsPage() {
       <div>
         <h1 className="text-3xl font-bold">API & Webhooks</h1>
         <p className="text-muted-foreground mt-2">
-          Manage API tokens and webhook endpoints
+          Manage API tokens and webhook endpoints.{" "}
+          <HelpLink articleId="api-webhooks" />
         </p>
       </div>
 

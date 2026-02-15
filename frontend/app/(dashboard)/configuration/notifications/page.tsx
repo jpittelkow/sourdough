@@ -39,6 +39,7 @@ import {
   CheckCircle,
   XCircle,
 } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface AdminChannel {
   id: string;
@@ -279,7 +280,8 @@ export default function NotificationsPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Notifications</h1>
         <p className="text-muted-foreground mt-1">
-          Enable which notification channels are available to users. Configure channel credentials below. Users set their own webhooks and phone numbers in Preferences.
+          Enable which notification channels are available to users. Configure channel credentials below. Users set their own webhooks and phone numbers in Preferences.{" "}
+          <HelpLink articleId="notification-channels" />
         </p>
       </div>
 

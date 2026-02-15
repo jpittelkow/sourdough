@@ -44,6 +44,8 @@ import {
   Search,
   UsersRound,
   MessageSquareText,
+  ScrollText,
+  BarChart3,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -71,6 +73,7 @@ const navigationGroups: NavGroup[] = [
     items: [
       { name: "System", href: "/configuration/system", icon: Globe, description: "Application-wide settings", permission: "settings.view" },
       { name: "Theme & Branding", href: "/configuration/branding", icon: Palette, description: "Visual customization", permission: "settings.edit" },
+      { name: "Changelog", href: "/configuration/changelog", icon: ScrollText, description: "Version history and release notes" },
     ],
   },
   {
@@ -113,6 +116,7 @@ const navigationGroups: NavGroup[] = [
       { name: "Access Logs (HIPAA)", href: "/configuration/access-logs", icon: FileText, description: "PHI access audit trail", permission: "logs.view" },
       { name: "Log retention", href: "/configuration/log-retention", icon: FileText, description: "Retention and cleanup config", permission: "settings.view" },
       { name: "Jobs", href: "/configuration/jobs", icon: Clock, description: "Monitor scheduled jobs", permission: "settings.view" },
+      { name: "Usage & Costs", href: "/configuration/usage", icon: BarChart3, description: "Integration usage analytics", permission: "usage.view" },
     ],
   },
   {
@@ -132,6 +136,7 @@ const CONFIG_ACCESS_PERMISSIONS = [
   "audit.view",
   "logs.view",
   "backups.view",
+  "usage.view",
 ];
 
 function getGroupId(group: NavGroup, index: number): string {
@@ -313,7 +318,7 @@ function GroupedNavigation({ pathname }: { pathname: string }) {
   );
 }
 
-// Version footer component
+// Version footer component (links to changelog, consistent with SidebarVersionFooter)
 function VersionFooter() {
   const { version, buildSha } = useVersion();
   const { appName } = useAppConfig();
@@ -329,10 +334,12 @@ function VersionFooter() {
 
   return (
     <div className="mt-auto pt-4 border-t">
-      <p className="text-xs text-muted-foreground px-3">
-        {displayName} v{version}
-        {shortSha && ` • Build ${shortSha}`}
-      </p>
+      <Link href="/configuration/changelog" className="block px-3">
+        <p className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+          {displayName} v{version}
+          {shortSha && ` • Build ${shortSha}`}
+        </p>
+      </Link>
     </div>
   );
 }

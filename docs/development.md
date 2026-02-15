@@ -76,10 +76,68 @@ Sourdough is configured via environment variables. See `.env.example` for all op
 
 | Variable | Description |
 |----------|-------------|
-| `APP_KEY` | Encryption key (auto-generated) |
-| `APP_URL` | Backend URL |
-| `FRONTEND_URL` | Frontend URL |
-| `SANCTUM_STATEFUL_DOMAINS` | Domain(s) for Sanctum cookie auth. Must match the domain users access the app from (e.g. `localhost:8080`, `app.example.com`). If incorrect, login will silently fail with 401 on subsequent requests. Comma-separated for multiple domains. |
+| `APP_URL` | Application URL. All other URL-related variables are derived from this. |
+
+### Auto-Generated / Auto-Derived Variables
+
+These are handled automatically in Docker and do not need to be set manually:
+
+| Variable | Behavior | When to Override |
+|----------|----------|-----------------|
+| `APP_KEY` | Auto-generated on first boot, persisted in the data volume | Migrating from an existing deployment |
+| `MEILI_MASTER_KEY` | Auto-generated on first boot, persisted in the data volume | Running Meilisearch externally |
+| `FRONTEND_URL` | Defaults to `APP_URL` | Local dev (non-Docker) where frontend and backend run on different ports |
+| `SANCTUM_STATEFUL_DOMAINS` | Auto-derived from `APP_URL` hostname | Multiple domains need cookie-based auth. If incorrect, login will silently fail with 401 on subsequent requests. |
+
+### Application Key (APP_KEY)
+
+Laravel uses `APP_KEY` for all symmetric encryption — the `Crypt` facade, `encrypt()`/`decrypt()` helpers, signed cookies, session data, and password reset tokens. Without a valid key, none of these features work.
+
+#### How it's generated
+
+**Docker:** The entrypoint ([`docker/entrypoint.sh`](../docker/entrypoint.sh)) auto-generates a key on first boot via `php artisan key:generate --show`, saves it to `data/.app_key`, and loads it on every subsequent boot. You do not need to set it manually.
+
+**Local development (non-Docker):** Running `php artisan key:generate` during setup writes the key directly into `backend/.env`. This is included in the [Local Setup](#local-setup) steps above.
+
+#### Specifying your own key
+
+If you want to provide your own key instead of auto-generating one, set `APP_KEY` in your environment before the application starts:
+
+```env
+# In .env or as a Docker environment variable
+APP_KEY=base64:your-base64-encoded-key-here
+```
+
+When the Docker entrypoint detects that `APP_KEY` is already set, it skips generation entirely and uses your value as-is.
+
+To generate a key without writing it to `.env` (useful for populating a secrets manager or Docker env var):
+
+```bash
+cd backend
+php artisan key:generate --show
+# Output: base64:xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+Copy the full output (including the `base64:` prefix) into your environment variable.
+
+#### Key rotation
+
+Rotating `APP_KEY` has significant consequences:
+
+- All existing encrypted data (values stored with `Crypt::encrypt()`) becomes **permanently unreadable**
+- All active sessions are invalidated — users will be logged out
+- Signed cookies and password reset tokens are invalidated
+- Laravel has **no built-in re-encryption migration** — you must decrypt data with the old key and re-encrypt with the new one yourself
+
+Only rotate the key if it has been compromised. See [ADR-015](adr/015-env-only-settings.md) and the [Cryptographic Controls](compliance/iso27001/cryptographic-controls.md) policy for more on key management.
+
+#### Migrating to a new deployment
+
+To preserve encrypted data when moving to a new server or container:
+
+1. Copy the key from the old deployment — either from `data/.app_key` (Docker) or `backend/.env` (local)
+2. Set it as `APP_KEY` in the new environment **before first boot**
+3. The entrypoint will detect the existing key and skip generation
 
 ### Optional Features
 

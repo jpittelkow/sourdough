@@ -56,3 +56,8 @@ Schedule::command('log:check-suspicious')
 Schedule::command('storage:check-alerts')
     ->daily()
     ->withoutOverlapping(60);
+
+// Integration usage budget alerts
+Schedule::command('usage:check-budgets')
+    ->daily()
+    ->withoutOverlapping(60);

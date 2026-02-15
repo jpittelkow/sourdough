@@ -15,6 +15,7 @@ import { GroupTable, type Group } from "@/components/admin/group-table";
 import { GroupDialog } from "@/components/admin/group-dialog";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { Plus } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface GroupsResponse {
   data: Group[];
@@ -54,7 +55,8 @@ export default function GroupsPage() {
             User Groups
           </h1>
           <p className="mt-2 text-muted-foreground">
-            Manage user groups and permissions
+            Manage user groups and permissions.{" "}
+            <HelpLink articleId="groups-management" />
           </p>
         </div>
         <Button

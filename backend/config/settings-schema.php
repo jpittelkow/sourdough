@@ -204,4 +204,14 @@ return [
         'storage_alert_critical' => ['env' => 'STORAGE_ALERT_CRITICAL', 'default' => 95],
         'storage_alert_email' => ['env' => 'STORAGE_ALERT_EMAIL', 'default' => true],
     ],
+
+    'usage' => [
+        'pricing_llm' => ['env' => 'USAGE_PRICING_LLM', 'default' => '{}'],
+        'budget_llm' => ['env' => 'USAGE_BUDGET_LLM', 'default' => null],
+        'budget_email' => ['env' => 'USAGE_BUDGET_EMAIL', 'default' => null],
+        'budget_sms' => ['env' => 'USAGE_BUDGET_SMS', 'default' => null],
+        'budget_storage' => ['env' => 'USAGE_BUDGET_STORAGE', 'default' => null],
+        'budget_broadcasting' => ['env' => 'USAGE_BUDGET_BROADCASTING', 'default' => null],
+        'alert_threshold' => ['env' => 'USAGE_ALERT_THRESHOLD', 'default' => 80],
+    ],
 ];

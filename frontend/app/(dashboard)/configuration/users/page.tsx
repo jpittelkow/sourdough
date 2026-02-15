@@ -26,6 +26,7 @@ import {
 } from "@/components/ui/select";
 import { useGroups } from "@/lib/use-groups";
 import { Plus, Search, Loader2 } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface User {
   id: number;
@@ -106,7 +107,8 @@ export default function UsersPage() {
         <div>
           <h1 className="text-3xl font-bold">User Management</h1>
           <p className="text-muted-foreground mt-2">
-            Manage application users and permissions
+            Manage application users and permissions.{" "}
+            <HelpLink articleId="user-management" />
           </p>
         </div>
         <Button onClick={() => setCreateDialogOpen(true)}>

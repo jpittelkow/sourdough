@@ -21,7 +21,6 @@ import { AuthDivider } from "@/components/auth/auth-divider";
 import { isPasskeySupported } from "@/lib/use-passkeys";
 import { FormField } from "@/components/ui/form-field";
 import { LoadingButton } from "@/components/ui/loading-button";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -39,7 +38,6 @@ export default function LoginPage() {
   const showPasskeyLogin = passkeyMode !== "disabled" && isPasskeySupported();
   const [isLoading, setIsLoading] = useState(false);
   const [requires2FA, setRequires2FA] = useState(false);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const {
     register,
@@ -106,11 +104,6 @@ export default function LoginPage() {
       <AuthDivider />
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {formError && (
-          <Alert variant="destructive">
-            <AlertDescription>{formError}</AlertDescription>
-          </Alert>
-        )}
         <FormField
           id="email"
           label="Email"
@@ -158,7 +151,7 @@ export default function LoginPage() {
             type="checkbox"
             id="remember"
             {...register("remember")}
-            className="h-4 w-4 rounded border-gray-300"
+            className="h-4 w-4 rounded border-border"
           />
           <Label htmlFor="remember" className="text-sm font-normal">
             Remember me

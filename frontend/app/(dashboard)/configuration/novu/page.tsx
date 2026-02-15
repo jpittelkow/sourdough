@@ -27,6 +27,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader2, ExternalLink } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 const novuSchema = z.object({
   enabled: z.boolean().default(false),
@@ -148,7 +149,8 @@ export default function NovuConfigurationPage() {
       <div>
         <h1 className="text-3xl font-bold">Novu</h1>
         <p className="text-muted-foreground mt-2">
-          Optional notification infrastructure. When enabled, notifications are sent via Novu (Cloud or self-hosted) and the in-app notification center uses Novu&apos;s inbox.
+          Optional notification infrastructure. When enabled, notifications are sent via Novu (Cloud or self-hosted) and the in-app notification center uses Novu&apos;s inbox.{" "}
+          <HelpLink articleId="novu-configuration" />
         </p>
       </div>
 

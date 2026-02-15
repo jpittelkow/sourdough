@@ -15,7 +15,7 @@ import { useHelp } from "@/components/help/help-provider";
 import { HelpSidebar } from "@/components/help/help-sidebar";
 import { HelpSearch } from "@/components/help/help-search";
 import { HelpArticle } from "@/components/help/help-article";
-import { useAuth, isAdminUser } from "@/lib/auth";
+import { useAuth } from "@/lib/auth";
 import {
   getAllCategories,
   findArticle,
@@ -26,36 +26,40 @@ import { initializeSearch } from "@/lib/help/help-search";
 export function HelpCenterModal() {
   const { isOpen, setIsOpen, currentArticle, setCurrentArticle } = useHelp();
   const { user } = useAuth();
-  const isAdmin = user ? isAdminUser(user) : false;
+  // Stabilise the permissions reference so downstream memos/effects don't
+  // re-run when the auth store returns a new array with identical values.
+  const rawPermissions = user?.permissions;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const permissions = useMemo(() => rawPermissions ?? [], [JSON.stringify(rawPermissions)]);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
-  // Get categories based on user role
-  const categories = useMemo(() => getAllCategories(isAdmin), [isAdmin]);
+  // Get categories based on user permissions
+  const categories = useMemo(() => getAllCategories(permissions), [permissions]);
 
   // Initialize search index when modal opens
   useEffect(() => {
     if (isOpen) {
-      const searchableItems = getSearchableArticles(isAdmin);
+      const searchableItems = getSearchableArticles(permissions);
       initializeSearch(searchableItems);
     }
-  }, [isOpen, isAdmin]);
+  }, [isOpen, permissions]);
 
   // Handle article selection from context (e.g., HelpLink)
   useEffect(() => {
     if (currentArticle && isOpen) {
-      const result = findArticle(currentArticle, isAdmin);
+      const result = findArticle(currentArticle, permissions);
       if (result) {
         setSelectedCategory(result.category.slug);
       }
     }
-  }, [currentArticle, isOpen, isAdmin]);
+  }, [currentArticle, isOpen, permissions]);
 
   // Get current article content
   const articleData = useMemo(() => {
     if (!currentArticle) return null;
-    return findArticle(currentArticle, isAdmin);
-  }, [currentArticle, isAdmin]);
+    return findArticle(currentArticle, permissions);
+  }, [currentArticle, permissions]);
 
   const handleSelectCategory = useCallback((categorySlug: string) => {
     setSelectedCategory((prev) =>
@@ -66,12 +70,12 @@ export function HelpCenterModal() {
   const handleSelectArticle = useCallback(
     (articleId: string) => {
       setCurrentArticle(articleId);
-      const result = findArticle(articleId, isAdmin);
+      const result = findArticle(articleId, permissions);
       if (result) {
         setSelectedCategory(result.category.slug);
       }
     },
-    [setCurrentArticle, isAdmin]
+    [setCurrentArticle, permissions]
   );
 
   const handleBack = useCallback(() => {

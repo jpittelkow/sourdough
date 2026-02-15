@@ -1,15 +1,7 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Newsreader } from "next/font/google";
 import "./globals.css";
 import { Providers } from "@/components/providers";
-
-const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
-const newsreader = Newsreader({ 
-  subsets: ["latin"], 
-  weight: ["400", "500", "600"],
-  variable: "--font-newsreader",
-  adjustFontFallback: false
-});
+import { bodyFont, headingFont } from "@/config/fonts";
 
 // Viewport config - themeColor styles the mobile address bar / status bar.
 // Dynamic branding overrides this client-side via AppConfigProvider.
@@ -56,7 +48,7 @@ export default function RootLayout({
 
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.variable} ${newsreader.variable} ${inter.className}`}>
+      <body className={`${bodyFont.variable} ${headingFont.variable} ${bodyFont.className}`}>
         <script
           dangerouslySetInnerHTML={{ __html: themeScript }}
         />

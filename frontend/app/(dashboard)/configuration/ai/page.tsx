@@ -59,6 +59,7 @@ import {
   Info,
   Cpu,
   RefreshCw,
+  Pencil,
 } from "lucide-react";
 
 interface AIProvider {
@@ -68,6 +69,11 @@ interface AIProvider {
   api_key_set: boolean;
   is_enabled: boolean;
   is_primary: boolean;
+  base_url?: string | null;
+  endpoint?: string | null;
+  region?: string | null;
+  access_key_set?: boolean;
+  secret_key_set?: boolean;
 }
 
 interface DiscoveredModel {
@@ -170,8 +176,9 @@ export default function AISettingsPage() {
   const [systemDefaultsSaving, setSystemDefaultsSaving] = useState(false);
   const [systemDefaultsLoaded, setSystemDefaultsLoaded] = useState(false);
 
-  // Add provider dialog state
+  // Add/Edit provider dialog state
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [editingProvider, setEditingProvider] = useState<AIProvider | null>(null);
   const [selectedTemplate, setSelectedTemplate] = useState<string>("");
   const [newProviderModel, setNewProviderModel] = useState<string>("");
   const [newProviderApiKey, setNewProviderApiKey] = useState<string>("");
@@ -181,12 +188,12 @@ export default function AISettingsPage() {
   const [newProviderAccessKey, setNewProviderAccessKey] = useState<string>("");
   const [newProviderSecretKey, setNewProviderSecretKey] = useState<string>("");
 
-  // API key validation state (Add Provider dialog)
+  // API key validation state (Add/Edit Provider dialog)
   const [isTestingKey, setIsTestingKey] = useState(false);
   const [keyValid, setKeyValid] = useState<boolean | null>(null);
   const [keyError, setKeyError] = useState<string | null>(null);
 
-  // Model discovery state (Add Provider dialog)
+  // Model discovery state (Add/Edit Provider dialog)
   const [discoveredModels, setDiscoveredModels] = useState<DiscoveredModel[]>([]);
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [discoveryError, setDiscoveryError] = useState<string | null>(null);
@@ -379,6 +386,96 @@ export default function AISettingsPage() {
     setKeyError(null);
     setDiscoveredModels([]);
     setDiscoveryError(null);
+    setEditingProvider(null);
+  };
+
+  const openEditDialog = (provider: AIProvider) => {
+    setEditingProvider(provider);
+    setSelectedTemplate(provider.provider);
+    setNewProviderModel(provider.model);
+    setNewProviderApiKey("");
+    setNewProviderBaseUrl(provider.base_url || "");
+    setNewProviderEndpoint(provider.endpoint || "");
+    setNewProviderRegion(provider.region || "us-east-1");
+    setNewProviderAccessKey("");
+    setNewProviderSecretKey("");
+    setKeyValid(null);
+    setKeyError(null);
+    setDiscoveryError(null);
+    const cached = getCachedModels(provider.provider);
+    setDiscoveredModels(cached ?? []);
+  };
+
+  const handleEditProvider = async () => {
+    if (!editingProvider || !newProviderModel) {
+      toast.error("Please select a model");
+      return;
+    }
+
+    if (editingProvider.provider === "azure" && !newProviderEndpoint?.trim()) {
+      toast.error("Azure OpenAI endpoint is required");
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      // Only send fields that have changed or have values
+      const payload: Record<string, unknown> = {};
+
+      if (newProviderModel !== editingProvider.model) {
+        payload.model = newProviderModel;
+      }
+
+      // Only send api_key if the user typed a new one
+      if (newProviderApiKey) {
+        payload.api_key = newProviderApiKey;
+      }
+
+      if (editingProvider.provider === "ollama") {
+        const newUrl = newProviderBaseUrl || "";
+        const oldUrl = editingProvider.base_url || "";
+        if (newUrl !== oldUrl) {
+          payload.base_url = newUrl || null;
+        }
+      }
+
+      if (editingProvider.provider === "azure") {
+        const newEp = newProviderEndpoint || "";
+        const oldEp = editingProvider.endpoint || "";
+        if (newEp !== oldEp) {
+          payload.endpoint = newEp || null;
+        }
+      }
+
+      if (editingProvider.provider === "bedrock") {
+        const newRegion = newProviderRegion || "";
+        const oldRegion = editingProvider.region || "";
+        if (newRegion !== oldRegion) {
+          payload.region = newRegion || null;
+        }
+        // Only send credentials if user typed new ones
+        if (newProviderAccessKey) {
+          payload.access_key = newProviderAccessKey;
+        }
+        if (newProviderSecretKey) {
+          payload.secret_key = newProviderSecretKey;
+        }
+      }
+
+      const response = await api.put(`/llm/providers/${editingProvider.id}`, payload);
+
+      setProviders((prev) =>
+        prev.map((p) => (p.id === editingProvider.id ? response.data.provider : p))
+      );
+      setEditingProvider(null);
+      resetAddDialog();
+      toast.success("Provider updated successfully");
+    } catch (error: unknown) {
+      toast.error(getErrorMessage(error, "Failed to update provider"));
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const testApiKey = async () => {
@@ -723,7 +820,7 @@ export default function AISettingsPage() {
                                 placeholder="Enter your API key"
                               />
                               {keyValid === true && (
-                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
                               )}
                               {keyValid === false && (
                                 <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
@@ -812,7 +909,7 @@ export default function AISettingsPage() {
                                   placeholder="AKIA..."
                                 />
                                 {keyValid === true && (
-                                  <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                                  <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
                                 )}
                                 {keyValid === false && (
                                   <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
@@ -871,7 +968,7 @@ export default function AISettingsPage() {
                                 placeholder="http://localhost:11434"
                               />
                               {keyValid === true && (
-                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
+                                <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
                               )}
                               {keyValid === false && (
                                 <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
@@ -1025,6 +1122,13 @@ export default function AISettingsPage() {
                       <Button
                         variant="ghost"
                         size="icon"
+                        onClick={() => openEditDialog(provider)}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
                         onClick={() =>
                           handleTestProvider(provider.id, provider.provider)
                         }
@@ -1066,6 +1170,14 @@ export default function AISettingsPage() {
                   }
                 >
                   <div className="flex flex-wrap items-center gap-2 pt-2 border-t">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(provider)}
+                    >
+                      <Pencil className="mr-2 h-4 w-4" />
+                      Edit settings
+                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -1119,6 +1231,308 @@ export default function AISettingsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Edit Provider Dialog */}
+      <Dialog
+        open={!!editingProvider}
+        onOpenChange={(open) => {
+          if (!open) resetAddDialog();
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit AI Provider</DialogTitle>
+            <DialogDescription>
+              Update settings for{" "}
+              {providerTemplates.find((t) => t.id === editingProvider?.provider)?.name ?? editingProvider?.provider}.
+            </DialogDescription>
+          </DialogHeader>
+          {editingProvider && selectedTemplateData && (
+            <div className="space-y-4 py-4">
+              {/* Provider (read-only) */}
+              <div className="space-y-2">
+                <Label>Provider</Label>
+                <Input
+                  value={providerTemplates.find((t) => t.id === editingProvider.provider)?.name ?? editingProvider.provider}
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+
+              {/* API Key */}
+              {selectedTemplateData.requires_api_key && (
+                <div className="space-y-2">
+                  <Label>API Key</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        type="password"
+                        value={newProviderApiKey}
+                        onChange={(e) => {
+                          setNewProviderApiKey(e.target.value);
+                          setKeyValid(null);
+                          setKeyError(null);
+                        }}
+                        placeholder={editingProvider.api_key_set ? "Leave blank to keep current" : "Enter your API key"}
+                      />
+                      {keyValid === true && (
+                        <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
+                      )}
+                      {keyValid === false && (
+                        <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={testApiKey}
+                      disabled={
+                        (editingProvider.provider === "azure" ? !newProviderEndpoint?.trim() || !newProviderApiKey?.trim() : !newProviderApiKey?.trim()) ||
+                        isTestingKey
+                      }
+                    >
+                      {isTestingKey ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+                  {keyError && (
+                    <p className="text-sm text-destructive">{keyError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Azure endpoint */}
+              {editingProvider.provider === "azure" && (
+                <div className="space-y-2">
+                  <Label>Azure OpenAI endpoint</Label>
+                  <Input
+                    type="url"
+                    value={newProviderEndpoint}
+                    onChange={(e) => {
+                      setNewProviderEndpoint(e.target.value);
+                      setKeyValid(null);
+                      setKeyError(null);
+                    }}
+                    placeholder="https://your-resource.openai.azure.com"
+                  />
+                </div>
+              )}
+
+              {/* Bedrock credentials */}
+              {editingProvider.provider === "bedrock" && (
+                <>
+                  <div className="space-y-2">
+                    <Label>AWS Region</Label>
+                    <Select
+                      value={newProviderRegion}
+                      onValueChange={(v) => {
+                        setNewProviderRegion(v);
+                        setKeyValid(null);
+                        setKeyError(null);
+                      }}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="us-east-1">us-east-1</SelectItem>
+                        <SelectItem value="us-west-2">us-west-2</SelectItem>
+                        <SelectItem value="eu-west-1">eu-west-1</SelectItem>
+                        <SelectItem value="eu-central-1">eu-central-1</SelectItem>
+                        <SelectItem value="ap-northeast-1">ap-northeast-1</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Access Key ID</Label>
+                    <div className="flex gap-2">
+                      <div className="relative flex-1">
+                        <Input
+                          type="password"
+                          value={newProviderAccessKey}
+                          onChange={(e) => {
+                            setNewProviderAccessKey(e.target.value);
+                            setKeyValid(null);
+                            setKeyError(null);
+                          }}
+                          placeholder={editingProvider.access_key_set ? "Leave blank to keep current" : "AKIA..."}
+                        />
+                        {keyValid === true && (
+                          <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
+                        )}
+                        {keyValid === false && (
+                          <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={testApiKey}
+                        disabled={!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim() || isTestingKey}
+                      >
+                        {isTestingKey ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          "Test"
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Secret Access Key</Label>
+                    <Input
+                      type="password"
+                      value={newProviderSecretKey}
+                      onChange={(e) => {
+                        setNewProviderSecretKey(e.target.value);
+                        setKeyValid(null);
+                        setKeyError(null);
+                      }}
+                      placeholder={editingProvider.secret_key_set ? "Leave blank to keep current" : "Enter secret key"}
+                    />
+                  </div>
+                  {keyError && (
+                    <p className="text-sm text-destructive">{keyError}</p>
+                  )}
+                </>
+              )}
+
+              {/* Ollama host */}
+              {editingProvider.provider === "ollama" && (
+                <div className="space-y-2">
+                  <Label>Ollama host</Label>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <Input
+                        type="text"
+                        value={newProviderBaseUrl}
+                        onChange={(e) => {
+                          setNewProviderBaseUrl(e.target.value);
+                          setKeyValid(null);
+                          setKeyError(null);
+                        }}
+                        placeholder="http://localhost:11434"
+                      />
+                      {keyValid === true && (
+                        <CheckCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-600 dark:text-green-400" />
+                      )}
+                      {keyValid === false && (
+                        <XCircle className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-destructive" />
+                      )}
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={testApiKey}
+                      disabled={!newProviderBaseUrl?.trim() || isTestingKey}
+                    >
+                      {isTestingKey ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Test"
+                      )}
+                    </Button>
+                  </div>
+                  {keyError && (
+                    <p className="text-sm text-destructive">{keyError}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Model selection */}
+              {selectedTemplateData.supports_discovery && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <Label className="mb-0">Model</Label>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={discoverModels}
+                      disabled={
+                        (selectedTemplateData.requires_api_key && !newProviderApiKey?.trim()) ||
+                        (editingProvider.provider === "ollama" && !newProviderBaseUrl?.trim()) ||
+                        (editingProvider.provider === "azure" && (!newProviderEndpoint?.trim() || !newProviderApiKey?.trim())) ||
+                        (editingProvider.provider === "bedrock" && (!newProviderAccessKey?.trim() || !newProviderSecretKey?.trim())) ||
+                        isDiscovering
+                      }
+                    >
+                      {isDiscovering ? (
+                        <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                      ) : null}
+                      Fetch Models
+                    </Button>
+                    {discoveredModels.length > 0 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={refreshModels}
+                        disabled={isDiscovering}
+                      >
+                        <RefreshCw className={`mr-1 h-3 w-3 ${isDiscovering ? "animate-spin" : ""}`} />
+                        Refresh
+                      </Button>
+                    )}
+                  </div>
+                  {discoveryError && (
+                    <p className="text-sm text-destructive">{discoveryError}</p>
+                  )}
+                  {discoveredModels.length > 0 ? (
+                    <Select
+                      value={newProviderModel}
+                      onValueChange={setNewProviderModel}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a model" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {/* If the current model isn't in the discovered list, show it as an option */}
+                        {newProviderModel && !discoveredModels.some((m) => m.id === newProviderModel) && (
+                          <SelectItem key={newProviderModel} value={newProviderModel}>
+                            {newProviderModel} (current)
+                          </SelectItem>
+                        )}
+                        {discoveredModels.map((model) => (
+                          <SelectItem key={model.id} value={model.id}>
+                            {model.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <div className="space-y-1">
+                      <Input
+                        value={newProviderModel}
+                        onChange={(e) => setNewProviderModel(e.target.value)}
+                        placeholder="Enter model name"
+                      />
+                      <p className="text-sm text-muted-foreground">
+                        Enter your API key above and click Fetch Models to browse, or type a model name directly.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => resetAddDialog()}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleEditProvider} disabled={isSaving}>
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Mode Requirements Alert */}
       {mode === "council" && providers.filter((p) => p.is_enabled).length < 2 && (

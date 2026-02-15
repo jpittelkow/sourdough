@@ -4,10 +4,13 @@ namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
 use App\Services\NotificationTemplateService;
+use App\Services\UsageTrackingService;
 use Illuminate\Support\Facades\Http;
 
 class VonageChannel implements ChannelInterface
 {
+    use ExtractsCountryFromPhone;
+
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
     {
         $resolved = $this->resolveContent($user, $type, $title, $message, $data);
@@ -50,6 +53,10 @@ class VonageChannel implements ChannelInterface
         if (isset($responseData['messages'][0]['status']) && $responseData['messages'][0]['status'] !== '0') {
             throw new \RuntimeException('Vonage SMS failed: ' . ($responseData['messages'][0]['error-text'] ?? 'Unknown error'));
         }
+
+        // Record usage for integration usage dashboard
+        $country = $this->extractCountryFromPhone($phoneNumber);
+        app(UsageTrackingService::class)->recordSMS('vonage', $country, $user->id);
 
         return [
             'message_id' => $responseData['messages'][0]['message-id'] ?? null,

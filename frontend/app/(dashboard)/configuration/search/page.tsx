@@ -25,6 +25,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Loader2, RefreshCw, Server, Settings } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface IndexStat {
   count: number;
@@ -264,7 +265,8 @@ export default function SearchConfigurationPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Search</h1>
         <p className="text-muted-foreground">
-          Manage search indexes and reindex content for full-text search.
+          Manage search indexes and reindex content for full-text search.{" "}
+          <HelpLink articleId="search-config" />
         </p>
       </div>
 

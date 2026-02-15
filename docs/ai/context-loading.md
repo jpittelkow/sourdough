@@ -16,6 +16,48 @@ Before writing any code, search the codebase:
 
 See: [Global Components Pattern](patterns/components.md)
 
+## New Project Setup
+
+When someone is starting a new project from Sourdough (forking, customizing, "build me an app"). **Trigger phrase: "Get cooking"** starts the guided wizard.
+
+**Read first:**
+```
+docs/ai/recipes/setup-new-project.md              # Master index (START HERE)
+docs/ai/recipes/setup-identity-branding.md         # Tier 1: rename app, fonts, colors, docs reset
+docs/ai/recipes/setup-features-auth.md             # Tier 2: feature removal, auth model
+docs/ai/recipes/setup-infrastructure-repo.md       # Tier 3: database, port, timezone, git
+FORK-ME.md                                         # What Sourdough provides
+docs/customization-checklist.md                    # Detailed feature removal file lists
+frontend/config/app.ts                             # App identity config (short name)
+frontend/config/fonts.ts                           # Font configuration (body + heading)
+frontend/app/layout.tsx                            # Root layout (metadata, font application)
+frontend/app/globals.css                           # CSS theme variables
+.env.example                                       # Environment variables template
+```
+
+**Also useful:**
+```
+frontend/lib/app-config.tsx             # App config provider (logo, colors, features)
+frontend/lib/theme-colors.ts            # Theme color application utilities
+frontend/app/(dashboard)/configuration/branding/page.tsx  # Branding admin page
+docs/plans/branding-ui-consistency-roadmap.md             # How branding works
+```
+
+**Key points:**
+- The setup is broken into **3 tiers** — ask questions then execute per tier, pause at any boundary
+- Tier 1 (Identity & Branding) renames ~50+ files with "Sourdough" references
+- Tier 2 (Features & Auth) removes unwanted features and trims the auth stack
+- Tier 3 (Infrastructure & Repo) configures database, port, timezone, and git
+- Font changes only require editing `frontend/config/fonts.ts` — CSS variables and Tailwind config reference generic `--font-body` / `--font-heading` names
+- Colors are managed at runtime via the branding admin page, not in code
+- Feature removal details are in `docs/customization-checklist.md` Section 4
+
+**Recipes:**
+- [Set Up New Project (master index)](recipes/setup-new-project.md)
+- [Tier 1: Identity & Branding](recipes/setup-identity-branding.md)
+- [Tier 2: Features & Auth](recipes/setup-features-auth.md)
+- [Tier 3: Infrastructure & Repo](recipes/setup-infrastructure-repo.md)
+
 ## Frontend UI Work
 
 **Read first:**
@@ -388,10 +430,10 @@ frontend/components/search/search-result-icon.tsx
 
 **Read first:**
 ```
-frontend/lib/help/help-content.ts          # Article definitions (categories, articles)
+frontend/lib/help/help-content.ts          # Article definitions (userHelpCategories + permissionHelpCategories)
 frontend/components/help/                  # HelpLink, HelpCenterModal, HelpProvider
 frontend/lib/tooltip-content.ts            # Field-level tooltip content
-backend/config/search-pages.php            # Search index (help: URL entries)
+backend/config/search-pages.php            # Search index (help: URL entries with permission field)
 ```
 
 **Also useful:**
@@ -399,7 +441,13 @@ backend/config/search-pages.php            # Search index (help: URL entries)
 frontend/components/ui/help-tooltip.tsx    # HelpTooltip for FormField
 frontend/components/search/search-modal.tsx  # Intercepts help: URLs
 frontend/components/app-shell.tsx          # HelpProvider nesting (must wrap SearchProvider)
+frontend/lib/use-permission.ts             # usePermission() hook (help uses permissions array)
 ```
+
+**Key concepts:**
+- Help categories use `permission?: string` (not `adminOnly`) to gate visibility
+- `getAllCategories(permissions)` / `findArticle(id, permissions)` take a permissions array
+- Every config page should have a `HelpLink` in its description area
 
 **Recipe:**
 - [Add help article](recipes/add-help-article.md)
@@ -673,7 +721,6 @@ backend/routes/api.php                    # webhooks routes (can:settings.view/e
 **Also useful:**
 ```
 frontend/app/(dashboard)/configuration/api/page.tsx  # Webhooks managed in API & Webhooks page
-backend/app/Services/WebhookService.php              # Webhook delivery service (if exists)
 ```
 
 Webhooks allow external systems to receive notifications when events occur. Webhooks are managed in **Configuration > API** alongside API tokens. Endpoints: list, create, update, delete, test, view deliveries.
@@ -709,6 +756,7 @@ frontend/package.json                  # version field (must match VERSION)
 - The workflow auto-syncs version files, creates a GitHub Release, and builds Docker
 - PowerShell does not support heredoc — use temp files for multiline commit messages
 - Rebase conflicts in VERSION/package.json are common after release workflow commits
+- The "push" shortcut (Cursor rule `.cursor/rules/push-shortcut.mdc`) lets you say "push" to trigger a full commit-bump-tag-push cycle
 
 **Recipe:**
 - [Commit, Push & Release](recipes/commit-and-release.md)

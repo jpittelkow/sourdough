@@ -135,6 +135,14 @@ return [
         'content' => 'notification templates push inapp chat per-type',
     ],
     [
+        'id' => 'config-changelog',
+        'title' => 'Configuration > Changelog',
+        'subtitle' => 'Version history and release notes',
+        'url' => '/configuration/changelog',
+        'admin_only' => false,
+        'content' => 'changelog version release notes updates what\'s new history',
+    ],
+    [
         'id' => 'config-ai',
         'title' => 'Configuration > AI / LLM',
         'subtitle' => 'LLM providers and models',
@@ -206,7 +214,19 @@ return [
         'admin_only' => true,
         'content' => 'restore export backup S3 SFTP Google Drive encryption retention schedule',
     ],
-    // Help articles (user-visible)
+    [
+        'id' => 'config-usage',
+        'title' => 'Configuration > Usage & Costs',
+        'subtitle' => 'Integration usage analytics and cost tracking',
+        'url' => '/configuration/usage',
+        'admin_only' => true,
+        'permission' => 'usage.view',
+        'content' => 'usage cost analytics tokens llm billing spending integrations budget',
+    ],
+
+    // -----------------------------------------------------------------------
+    // Help articles (user-visible, no permission required)
+    // -----------------------------------------------------------------------
     [
         'id' => 'help-welcome',
         'title' => 'Help: Welcome to Sourdough',
@@ -238,6 +258,14 @@ return [
         'url' => 'help:theme-appearance',
         'admin_only' => false,
         'content' => 'theme dark light appearance customization preferences',
+    ],
+    [
+        'id' => 'help-changelog',
+        'title' => 'Help: Changelog & Version History',
+        'subtitle' => 'Help article',
+        'url' => 'help:changelog',
+        'admin_only' => false,
+        'content' => 'changelog version release notes updates history what is new',
     ],
     [
         'id' => 'help-profile',
@@ -287,38 +315,20 @@ return [
         'admin_only' => false,
         'content' => 'notifications alerts preferences in-app email push',
     ],
-    // Help articles (admin-only)
+
+    // -----------------------------------------------------------------------
+    // Help articles (permission-gated)
+    // -----------------------------------------------------------------------
+
+    // Administration (settings.view)
     [
         'id' => 'help-admin-overview',
         'title' => 'Help: Administration Overview',
         'subtitle' => 'Help article',
         'url' => 'help:admin-overview',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'admin settings configuration user management audit logs',
-    ],
-    [
-        'id' => 'help-user-management',
-        'title' => 'Help: User Management',
-        'subtitle' => 'Help article',
-        'url' => 'help:user-management',
-        'admin_only' => true,
-        'content' => 'users admin accounts roles disable delete manage',
-    ],
-    [
-        'id' => 'help-security-settings',
-        'title' => 'Help: Security Configuration',
-        'subtitle' => 'Help article',
-        'url' => 'help:security-settings',
-        'admin_only' => true,
-        'content' => 'security policy 2fa password session SSO admin',
-    ],
-    [
-        'id' => 'help-backup-settings',
-        'title' => 'Help: Backup Configuration',
-        'subtitle' => 'Help article',
-        'url' => 'help:backup-settings',
-        'admin_only' => true,
-        'content' => 'backup restore admin data automatic manual',
     ],
     [
         'id' => 'help-branding',
@@ -326,14 +336,67 @@ return [
         'subtitle' => 'Help article',
         'url' => 'help:branding',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'branding logo colors theme visual app name',
     ],
+
+    // User Management (users.view)
+    [
+        'id' => 'help-user-management',
+        'title' => 'Help: User Management',
+        'subtitle' => 'Help article',
+        'url' => 'help:user-management',
+        'admin_only' => true,
+        'permission' => 'users.view',
+        'content' => 'users admin accounts roles disable delete manage',
+    ],
+    [
+        'id' => 'help-groups-management',
+        'title' => 'Help: User Groups & Permissions',
+        'subtitle' => 'Help article',
+        'url' => 'help:groups-management',
+        'admin_only' => true,
+        'permission' => 'groups.view',
+        'content' => 'groups permissions roles members access control matrix',
+    ],
+
+    // Security & Access (settings.view)
+    [
+        'id' => 'help-security-settings',
+        'title' => 'Help: Security Configuration',
+        'subtitle' => 'Help article',
+        'url' => 'help:security-settings',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'security policy 2fa password session SSO admin',
+    ],
+    [
+        'id' => 'help-sso-configuration',
+        'title' => 'Help: SSO Configuration',
+        'subtitle' => 'Help article',
+        'url' => 'help:sso-configuration',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'sso oauth google github single sign-on providers linking',
+    ],
+    [
+        'id' => 'help-api-webhooks',
+        'title' => 'Help: API & Webhooks',
+        'subtitle' => 'Help article',
+        'url' => 'help:api-webhooks',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'api tokens webhooks automation integration HMAC signature events',
+    ],
+
+    // Communications (settings.view)
     [
         'id' => 'help-email-configuration',
         'title' => 'Help: Email Configuration',
         'subtitle' => 'Help article',
         'url' => 'help:email-configuration',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'email smtp mailgun sendgrid AWS SES postmark delivery',
     ],
     [
@@ -342,23 +405,55 @@ return [
         'subtitle' => 'Help article',
         'url' => 'help:email-templates',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'email templates variables customize subject body',
     ],
     [
-        'id' => 'help-sso-configuration',
-        'title' => 'Help: SSO Configuration',
+        'id' => 'help-notification-channels',
+        'title' => 'Help: Notification Channels',
         'subtitle' => 'Help article',
-        'url' => 'help:sso-configuration',
+        'url' => 'help:notification-channels',
         'admin_only' => true,
-        'content' => 'sso oauth google github single sign-on providers linking',
+        'permission' => 'settings.view',
+        'content' => 'notification channels telegram discord slack sms push web admin configure enable',
     ],
+    [
+        'id' => 'help-notification-templates',
+        'title' => 'Help: Notification Templates',
+        'subtitle' => 'Help article',
+        'url' => 'help:notification-templates',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'notification templates push inapp chat customize variables per-type',
+    ],
+    [
+        'id' => 'help-novu-configuration',
+        'title' => 'Help: Novu Configuration',
+        'subtitle' => 'Help article',
+        'url' => 'help:novu-configuration',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'novu notification infrastructure workflows inbox optional',
+    ],
+
+    // Integrations (settings.view)
     [
         'id' => 'help-ai-llm-settings',
         'title' => 'Help: AI / LLM Settings',
         'subtitle' => 'Help article',
         'url' => 'help:ai-llm-settings',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'ai llm openai anthropic claude models providers',
+    ],
+    [
+        'id' => 'help-storage-settings',
+        'title' => 'Help: Storage Configuration',
+        'subtitle' => 'Help article',
+        'url' => 'help:storage-settings',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'storage s3 disk upload files provider local cloud azure gcs minio',
     ],
     [
         'id' => 'help-search-config',
@@ -366,6 +461,76 @@ return [
         'subtitle' => 'Help article',
         'url' => 'help:search-config',
         'admin_only' => true,
+        'permission' => 'settings.view',
         'content' => 'search meilisearch indexing reindex admin troubleshooting',
+    ],
+
+    // Logs & Monitoring
+    [
+        'id' => 'help-audit-logs',
+        'title' => 'Help: Audit Log',
+        'subtitle' => 'Help article',
+        'url' => 'help:audit-logs',
+        'admin_only' => true,
+        'permission' => 'audit.view',
+        'content' => 'audit activity tracking events filter export live streaming',
+    ],
+    [
+        'id' => 'help-application-logs',
+        'title' => 'Help: Application Logs',
+        'subtitle' => 'Help article',
+        'url' => 'help:application-logs',
+        'admin_only' => true,
+        'permission' => 'logs.view',
+        'content' => 'application logs console viewer errors debug export correlation',
+    ],
+    [
+        'id' => 'help-access-logs',
+        'title' => 'Help: Access Logs (HIPAA)',
+        'subtitle' => 'Help article',
+        'url' => 'help:access-logs',
+        'admin_only' => true,
+        'permission' => 'logs.view',
+        'content' => 'hipaa phi access compliance audit trail fields accessed',
+    ],
+    [
+        'id' => 'help-log-retention',
+        'title' => 'Help: Log Retention',
+        'subtitle' => 'Help article',
+        'url' => 'help:log-retention',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'retention cleanup logs hipaa storage days automatic',
+    ],
+    [
+        'id' => 'help-scheduled-jobs',
+        'title' => 'Help: Scheduled Jobs',
+        'subtitle' => 'Help article',
+        'url' => 'help:scheduled-jobs',
+        'admin_only' => true,
+        'permission' => 'settings.view',
+        'content' => 'jobs scheduler queue tasks cron run manual backup cleanup',
+    ],
+
+    // Usage & Costs (usage.view)
+    [
+        'id' => 'help-usage-costs',
+        'title' => 'Help: Usage & Costs',
+        'subtitle' => 'Help article',
+        'url' => 'help:usage-costs',
+        'admin_only' => true,
+        'permission' => 'usage.view',
+        'content' => 'usage cost analytics budget billing llm email sms storage trends export',
+    ],
+
+    // Backup & Data (backups.view)
+    [
+        'id' => 'help-backup-settings',
+        'title' => 'Help: Backup Configuration',
+        'subtitle' => 'Help article',
+        'url' => 'help:backup-settings',
+        'admin_only' => true,
+        'permission' => 'backups.view',
+        'content' => 'backup restore admin data automatic manual schedule retention',
     ],
 ];

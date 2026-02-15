@@ -38,6 +38,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useAuditStream, type AuditLogStreamPayload } from "@/lib/use-audit-stream";
+import { HelpLink } from "@/components/help/help-link";
 
 interface AuditLog {
   id: number;
@@ -264,7 +265,8 @@ export default function AuditLogPage() {
             Audit Log
           </h1>
           <p className="text-muted-foreground mt-1">
-            Track user actions and system changes
+            Track user actions and system changes.{" "}
+            <HelpLink articleId="audit-logs" />
           </p>
         </div>
         <div className="flex items-center gap-2">

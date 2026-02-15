@@ -138,6 +138,14 @@ export const SEARCH_PAGES: SearchPage[] = [
     keywords: ["notification", "templates", "push", "in-app", "chat"],
   },
   {
+    id: "config-changelog",
+    title: "Configuration > Changelog",
+    subtitle: "Version history and release notes",
+    url: "/configuration/changelog",
+    adminOnly: false,
+    keywords: ["changelog", "version", "release", "what's new", "updates"],
+  },
+  {
     id: "config-ai",
     title: "Configuration > AI / LLM",
     subtitle: "LLM providers and modes",
@@ -208,6 +216,14 @@ export const SEARCH_PAGES: SearchPage[] = [
     url: "/configuration/backup",
     adminOnly: true,
     keywords: ["restore", "export"],
+  },
+  {
+    id: "config-usage",
+    title: "Configuration > Usage & Costs",
+    subtitle: "Integration usage analytics and cost tracking",
+    url: "/configuration/usage",
+    adminOnly: true,
+    keywords: ["usage", "cost", "analytics", "tokens", "llm", "billing", "spending"],
   },
 ];
 

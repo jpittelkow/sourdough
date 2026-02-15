@@ -65,9 +65,12 @@ import { HelpLink } from "@/components/help/help-link";
 ```
 
 - **HelpArticle**: `id`, `title`, `content` (markdown), `tags?`
-- **HelpCategory**: `slug`, `name`, `icon?`, `articles`, `adminOnly?`
+- **HelpCategory**: `slug`, `name`, `icon?`, `articles`, `permission?`
+- Categories in `userHelpCategories` are visible to all users; categories in `permissionHelpCategories` are gated by the `permission` field (e.g., `backups.view`, `audit.view`). Admin users have all permissions, so they see everything.
+- `getAllCategories(permissions: string[])` filters by the user's permissions array
 - Help modal opened with `?` or `Ctrl+/`
-- Search integration via `backend/config/search-pages.php` with `help:` URL prefix
+- Search integration via `backend/config/search-pages.php` with `help:` URL prefix and `permission` field
+- Every config page should have a `HelpLink` in its description area
 
 **Key files:** `frontend/lib/help/help-content.ts`, `frontend/components/help/`
 

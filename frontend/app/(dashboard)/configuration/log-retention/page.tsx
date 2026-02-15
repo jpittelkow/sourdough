@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { SettingsSwitchRow } from "@/components/ui/settings-switch-row";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
+import { HelpLink } from "@/components/help/help-link";
 
 interface LogRetentionSettings {
   app_retention_days: number;
@@ -218,7 +219,8 @@ export default function LogRetentionPage() {
           Log retention
         </h1>
         <p className="text-muted-foreground mt-1">
-          Configure how long to keep application, audit, and access logs. Run cleanup from this page or via CLI.
+          Configure how long to keep application, audit, and access logs. Run cleanup from this page or via CLI.{" "}
+          <HelpLink articleId="log-retention" />
         </p>
       </div>
 
@@ -394,7 +396,7 @@ export default function LogRetentionPage() {
               {runResult !== null ? (
                 runResult.success ? (
                   <>
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                     Command completed
                   </>
                 ) : (

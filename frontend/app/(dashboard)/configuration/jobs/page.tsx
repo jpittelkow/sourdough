@@ -41,6 +41,7 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
+import { HelpLink } from "@/components/help/help-link";
 
 interface ScheduledTask {
   command: string;
@@ -262,7 +263,8 @@ export default function JobsPage() {
         <div>
           <h1 className="text-3xl font-bold">Scheduled Jobs</h1>
           <p className="text-muted-foreground mt-2">
-            Monitor and manage background jobs and scheduled tasks
+            Monitor and manage background jobs and scheduled tasks.{" "}
+            <HelpLink articleId="scheduled-jobs" />
           </p>
         </div>
         <Button onClick={fetchAll} disabled={isLoading}>
@@ -459,7 +461,7 @@ export default function JobsPage() {
                 </div>
               ) : failedJobs.length === 0 ? (
                 <div className="text-center py-12">
-                  <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
+                  <CheckCircle className="h-12 w-12 text-green-600 dark:text-green-400 mx-auto mb-4" />
                   <p className="text-muted-foreground">No failed jobs</p>
                 </div>
               ) : (
@@ -527,7 +529,7 @@ export default function JobsPage() {
               {runResult !== null ? (
                 runResult.success ? (
                   <>
-                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
                     Command completed
                   </>
                 ) : (

@@ -30,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { HelpLink } from "@/components/help/help-link";
 
 interface AccessLog {
   id: number;
@@ -192,7 +193,8 @@ export default function AccessLogsPage() {
             Access Logs (HIPAA)
           </h1>
           <p className="text-muted-foreground mt-1">
-            Track access to user data and settings for compliance
+            Track access to user data and settings for compliance.{" "}
+            <HelpLink articleId="access-logs" />
           </p>
         </div>
         <Button onClick={handleExport} disabled={isExporting}>
