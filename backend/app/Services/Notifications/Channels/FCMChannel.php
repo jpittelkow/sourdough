@@ -8,11 +8,19 @@ use Illuminate\Support\Facades\Http;
 
 class FCMChannel implements ChannelInterface
 {
-    private string $serverKey;
+    private string $projectId;
+    private ?array $serviceAccount;
 
     public function __construct()
     {
-        $this->serverKey = config('notifications.channels.fcm.server_key', '');
+        $this->projectId = config('notifications.channels.fcm.project_id', '');
+        $this->serviceAccount = config('notifications.channels.fcm.service_account');
+
+        // Backward compatibility: if service_account is a JSON string, decode it
+        if (is_string($this->serviceAccount) && !empty($this->serviceAccount)) {
+            $decoded = json_decode($this->serviceAccount, true);
+            $this->serviceAccount = is_array($decoded) ? $decoded : null;
+        }
     }
 
     public function send(User $user, string $type, string $title, string $message, array $data = []): array
@@ -27,152 +35,119 @@ class FCMChannel implements ChannelInterface
             throw new \RuntimeException('FCM token not configured for user');
         }
 
-        if (!$this->serverKey) {
-            throw new \RuntimeException('FCM server key not configured');
+        if (!$this->projectId || !$this->serviceAccount) {
+            throw new \RuntimeException('FCM service account not configured');
         }
 
-        // Build the FCM message payload
+        $accessToken = $this->getAccessToken();
+
         $payload = [
-            'to' => $fcmToken,
-            'notification' => [
-                'title' => $title,
-                'body' => $message,
-                'icon' => $data['icon'] ?? 'default',
-                'click_action' => $data['click_action'] ?? null,
-                'sound' => $data['sound'] ?? 'default',
+            'message' => [
+                'token' => $fcmToken,
+                'notification' => [
+                    'title' => $title,
+                    'body' => $message,
+                ],
+                'data' => array_map('strval', array_merge($data, [
+                    'type' => $type,
+                    'title' => $title,
+                    'message' => $message,
+                    'timestamp' => (string) time(),
+                ])),
             ],
-            'data' => array_merge($data, [
-                'type' => $type,
-                'title' => $title,
-                'message' => $message,
-                'timestamp' => time(),
-            ]),
-            'priority' => $data['priority'] ?? 'high',
         ];
 
-        // Remove null values from notification
-        $payload['notification'] = array_filter($payload['notification']);
+        // Add icon if provided
+        if (isset($data['icon'])) {
+            $payload['message']['notification']['image'] = $data['icon'];
+        }
 
         // Add Android-specific options
         if (isset($data['android'])) {
-            $payload['android'] = $data['android'];
+            $payload['message']['android'] = $data['android'];
+        } else {
+            $payload['message']['android'] = [
+                'priority' => 'high',
+                'notification' => [
+                    'click_action' => $data['click_action'] ?? 'FLUTTER_NOTIFICATION_CLICK',
+                    'sound' => $data['sound'] ?? 'default',
+                ],
+            ];
         }
 
-        // Add iOS-specific options
+        // Add APNs (iOS) options
         if (isset($data['apns'])) {
-            $payload['apns'] = $data['apns'];
+            $payload['message']['apns'] = $data['apns'];
         }
 
         // Add web-specific options
         if (isset($data['webpush'])) {
-            $payload['webpush'] = $data['webpush'];
+            $payload['message']['webpush'] = $data['webpush'];
         }
+
+        $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
         $response = Http::withHeaders([
-            'Authorization' => 'key=' . $this->serverKey,
+            'Authorization' => 'Bearer ' . $accessToken,
             'Content-Type' => 'application/json',
-        ])->post('https://fcm.googleapis.com/fcm/send', $payload);
+        ])->post($url, $payload);
 
         if (!$response->successful()) {
-            throw new \RuntimeException('FCM API error: ' . $response->body());
-        }
-
-        $responseData = $response->json();
-
-        // Check for errors in the response
-        if (isset($responseData['failure']) && $responseData['failure'] > 0) {
-            $error = $responseData['results'][0]['error'] ?? 'Unknown error';
-            throw new \RuntimeException('FCM send failed: ' . $error);
+            $error = $response->json('error.message') ?? $response->body();
+            throw new \RuntimeException('FCM API error: ' . $error);
         }
 
         return [
-            'message_id' => $responseData['results'][0]['message_id'] ?? null,
-            'multicast_id' => $responseData['multicast_id'] ?? null,
+            'message_name' => $response->json('name'),
             'sent' => true,
         ];
     }
 
     /**
-     * Send to multiple devices (multicast).
+     * Generate an OAuth2 access token from the service account credentials.
+     * Uses a self-signed JWT to exchange for an access token.
      */
-    public function sendMulticast(User $user, array $tokens, string $type, string $title, string $message, array $data = []): array
+    private function getAccessToken(): string
     {
-        if (empty($tokens)) {
-            throw new \RuntimeException('No FCM tokens provided');
+        $serviceAccount = $this->serviceAccount;
+        if (!$serviceAccount || !isset($serviceAccount['client_email'], $serviceAccount['private_key'])) {
+            throw new \RuntimeException('FCM service account is missing required fields');
         }
 
-        if (!$this->serverKey) {
-            throw new \RuntimeException('FCM server key not configured');
+        $now = time();
+        $header = json_encode(['alg' => 'RS256', 'typ' => 'JWT']);
+        $claim = json_encode([
+            'iss' => $serviceAccount['client_email'],
+            'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
+            'aud' => 'https://oauth2.googleapis.com/token',
+            'iat' => $now,
+            'exp' => $now + 3600,
+        ]);
+
+        $base64Header = rtrim(strtr(base64_encode($header), '+/', '-_'), '=');
+        $base64Claim = rtrim(strtr(base64_encode($claim), '+/', '-_'), '=');
+        $signingInput = "{$base64Header}.{$base64Claim}";
+
+        $privateKey = openssl_pkey_get_private($serviceAccount['private_key']);
+        if (!$privateKey) {
+            throw new \RuntimeException('Invalid FCM service account private key');
         }
 
-        $payload = [
-            'registration_ids' => $tokens,
-            'notification' => [
-                'title' => $title,
-                'body' => $message,
-            ],
-            'data' => array_merge($data, [
-                'type' => $type,
-                'timestamp' => time(),
-            ]),
-            'priority' => 'high',
-        ];
+        openssl_sign($signingInput, $signature, $privateKey, OPENSSL_ALGO_SHA256);
+        $base64Signature = rtrim(strtr(base64_encode($signature), '+/', '-_'), '=');
 
-        $response = Http::withHeaders([
-            'Authorization' => 'key=' . $this->serverKey,
-            'Content-Type' => 'application/json',
-        ])->post('https://fcm.googleapis.com/fcm/send', $payload);
+        $jwt = "{$signingInput}.{$base64Signature}";
+
+        $response = Http::asForm()->post('https://oauth2.googleapis.com/token', [
+            'grant_type' => 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'assertion' => $jwt,
+        ]);
 
         if (!$response->successful()) {
-            throw new \RuntimeException('FCM API error: ' . $response->body());
+            throw new \RuntimeException('Failed to obtain FCM access token: ' . $response->body());
         }
 
-        $responseData = $response->json();
-
-        return [
-            'success_count' => $responseData['success'] ?? 0,
-            'failure_count' => $responseData['failure'] ?? 0,
-            'multicast_id' => $responseData['multicast_id'] ?? null,
-            'results' => $responseData['results'] ?? [],
-            'sent' => ($responseData['success'] ?? 0) > 0,
-        ];
-    }
-
-    /**
-     * Send to a topic.
-     */
-    public function sendToTopic(string $topic, string $title, string $message, array $data = []): array
-    {
-        if (!$this->serverKey) {
-            throw new \RuntimeException('FCM server key not configured');
-        }
-
-        $payload = [
-            'to' => '/topics/' . $topic,
-            'notification' => [
-                'title' => $title,
-                'body' => $message,
-            ],
-            'data' => array_merge($data, [
-                'timestamp' => time(),
-            ]),
-            'priority' => 'high',
-        ];
-
-        $response = Http::withHeaders([
-            'Authorization' => 'key=' . $this->serverKey,
-            'Content-Type' => 'application/json',
-        ])->post('https://fcm.googleapis.com/fcm/send', $payload);
-
-        if (!$response->successful()) {
-            throw new \RuntimeException('FCM API error: ' . $response->body());
-        }
-
-        return [
-            'message_id' => $response->json('message_id'),
-            'topic' => $topic,
-            'sent' => true,
-        ];
+        return $response->json('access_token');
     }
 
     public function getName(): string

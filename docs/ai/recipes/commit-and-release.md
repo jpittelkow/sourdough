@@ -2,7 +2,7 @@
 
 Step-by-step guide to commit changes, push to remote, and create a versioned release.
 
-**Quick shortcut:** Use `./scripts/push.ps1 [patch|minor|major] [commit-message]` to automate the entire release process. See [Quick Reference](../../quick-reference.md#versioning) for details.
+**Quick shortcut:** Use `./scripts/push.ps1 [patch|minor|major] [commit-message]` to automate the entire release process. The Cursor "push" shortcut (`.cursor/rules/push-shortcut.mdc`) delegates to this script after running AI-specific pre-flight checks.
 
 ## How Releases Work
 
@@ -227,7 +227,17 @@ Both approaches work correctly:
 
 ## Quick Reference — Full Release in One Go
 
-For a clean release with no complications:
+### Option A: Use the release script (recommended)
+
+```powershell
+./scripts/push.ps1 patch "feat: short description of changes"
+./scripts/push.ps1 minor "feat: add new feature set"
+./scripts/push.ps1 major "feat!: breaking change"
+```
+
+The script handles everything: stage, commit, version bump (VERSION + package.json + sw.js), release commit, tag, and push. It pushes to the current branch (not hardcoded to master).
+
+### Option B: Manual steps (if you need more control)
 
 ```powershell
 # 1. Stage all changes

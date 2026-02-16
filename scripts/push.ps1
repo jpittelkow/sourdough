@@ -21,13 +21,17 @@ $PackageJson = Join-Path (Join-Path $RootDir "frontend") "package.json"
 $SwJs = Join-Path (Join-Path (Join-Path $RootDir "frontend") "public") "sw.js"
 
 # Check if we're in a git repository
-if (-not (Test-Path ".git")) {
+if (-not (Test-Path (Join-Path $RootDir ".git"))) {
     Write-Error "Not in a git repository. Run this script from the project root."
     exit 1
 }
 
 # Check current branch
 $CurrentBranch = git rev-parse --abbrev-ref HEAD
+if ($CurrentBranch -eq "HEAD") {
+    Write-Error "You are in detached HEAD state. Check out a branch before releasing."
+    exit 1
+}
 if ($CurrentBranch -ne "master") {
     Write-Warning "You are on branch '$CurrentBranch', not 'master'. Continue anyway? (y/N)"
     $Response = Read-Host
@@ -50,10 +54,20 @@ git status --short
 
 # Get commit message if not provided
 if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
-    Write-Host "`nEnter commit message (or press Enter for default):" -ForegroundColor Yellow
-    $CommitMessage = Read-Host
+    if ([Environment]::UserInteractive -and (-not [Console]::IsInputRedirected)) {
+        Write-Host "`nEnter commit message (or press Enter for auto-generated):" -ForegroundColor Yellow
+        $CommitMessage = Read-Host
+    }
     if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
-        $CommitMessage = "chore: update files"
+        $ChangedFiles = @(git status --porcelain | ForEach-Object { $_.Substring(3).Trim() })
+        $FileCount = $ChangedFiles.Count
+        if ($FileCount -gt 0) {
+            $Summary = ($ChangedFiles | Select-Object -First 5) -join ", "
+            if ($FileCount -gt 5) { $Summary += " (+$($FileCount - 5) more)" }
+            $CommitMessage = "chore: update $FileCount file(s) -- $Summary"
+        } else {
+            $CommitMessage = "chore: update files"
+        }
     }
 }
 
@@ -63,7 +77,7 @@ git add -A
 
 # Commit
 Write-Host "Committing changes..." -ForegroundColor Cyan
-git commit -m $CommitMessage
+git commit -m "$CommitMessage"
 
 # Read current version
 $CurrentVersion = (Get-Content $VersionFile).Trim()
@@ -126,9 +140,9 @@ git commit -m "Release v$NewVersion"
 Write-Host "Creating tag v$NewVersion..." -ForegroundColor Cyan
 git tag "v$NewVersion"
 
-# Push everything
+# Push everything (commit + tag together to avoid race conditions)
 Write-Host "`nPushing to origin..." -ForegroundColor Cyan
-git push origin master "v$NewVersion"
+git push origin $CurrentBranch "v$NewVersion"
 
 Write-Host ""
 Write-Host "Release complete!" -ForegroundColor Green
