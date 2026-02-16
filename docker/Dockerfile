@@ -117,8 +117,9 @@ COPY docker/entrypoint.sh /entrypoint.sh
 COPY docker/start-nextjs.sh /start-nextjs.sh
 COPY docker/php.ini /usr/local/etc/php/conf.d/app.ini
 
-# Copy VERSION file
+# Copy VERSION file and CHANGELOG for the in-app changelog page
 COPY --chown=www-data:www-data VERSION ./VERSION
+COPY --chown=www-data:www-data CHANGELOG.md ./CHANGELOG.md
 
 # Create required directories
 RUN mkdir -p /var/www/html/backend/storage/app/public \

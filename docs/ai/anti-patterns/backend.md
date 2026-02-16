@@ -215,6 +215,25 @@ foreach ($providers as $provider) {
 }
 ```
 
+### Don't: Use Null-Coalescing on json_decode
+
+`json_decode()` returns `null` for both the valid JSON literal `"null"` and for decode failures. The `??` operator treats `null` as "missing", so `json_decode($v) ?? $v` silently converts a legitimate `null` value back to the raw string `"null"`.
+
+```php
+// BAD - json_decode("null") returns PHP null, ?? falls back to raw string "null"
+return json_decode($value, true) ?? $value;
+// If $value is the string "null", this returns "null" (string) instead of null (PHP null)
+
+// GOOD - use json_last_error() to distinguish valid decode from failure
+$decoded = json_decode($value, true);
+if (json_last_error() === JSON_ERROR_NONE) {
+    return $decoded;  // Returns PHP null for "null", [] for "[]", false for "false", etc.
+}
+return $value;  // Only returns raw string when JSON was actually invalid
+```
+
+**Real impact:** This caused the branding API to return `"null"` (string) instead of JSON `null` for deleted logo URLs, making the frontend render `<img src="null">` — a broken image.
+
 ### Don't: Create Providers/Channels Without Implementing Interface
 
 ```php

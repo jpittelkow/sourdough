@@ -43,10 +43,10 @@ class SystemSetting extends Model
                         $toDecrypt = is_string($decoded) ? $decoded : $value;
                         return decrypt($toDecrypt);
                     } catch (\Throwable $e) {
-                        return is_string($value) ? json_decode($value, true) ?? $value : $value;
+                        return self::jsonDecodeValue($value);
                     }
                 }
-                return is_string($value) ? json_decode($value, true) ?? $value : $value;
+                return self::jsonDecodeValue($value);
             },
             set: function (mixed $value): string {
                 if ($value === null) {
@@ -55,6 +55,30 @@ class SystemSetting extends Model
                 return is_string($value) ? $value : json_encode($value);
             },
         );
+    }
+
+    /**
+     * Safely JSON-decode a string value.
+     *
+     * Uses json_last_error() to distinguish between a valid JSON literal
+     * (e.g. "null", "false", "0") and an invalid JSON string. The previous
+     * approach used `json_decode($v) ?? $v` which incorrectly discarded
+     * legitimate null values via the null-coalescing operator, causing
+     * PHP null to be replaced by the raw string "null".
+     */
+    private static function jsonDecodeValue(mixed $value): mixed
+    {
+        if (!is_string($value)) {
+            return $value;
+        }
+
+        $decoded = json_decode($value, true);
+
+        if (json_last_error() === JSON_ERROR_NONE) {
+            return $decoded;
+        }
+
+        return $value;
     }
 
     /**

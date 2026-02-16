@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-02-15
+
+### Fixed
+- SystemSetting model returned string "null" instead of PHP null when settings were cleared, causing broken images in branding after logo deletion
+- Changelog page empty in Docker — CHANGELOG.md was not copied into Docker image or volume-mounted for development
+
+### Changed
+- SystemSetting value getter now uses json_last_error() instead of null-coalescing operator for correct null handling
+- Frontend branding settings and app-config provider sanitize the string "null" as defense-in-depth
+
 ## [0.1.26] - 2026-02-14
 
 ### Added

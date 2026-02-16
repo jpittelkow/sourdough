@@ -90,27 +90,30 @@ export default function BrandingSettingsPage() {
       const response = await api.get("/branding");
       const settings = response.data.settings || {};
 
+      // Sanitize: treat the literal string "null" (a backend serialization artifact) as empty
+      const clean = (v: unknown): string => (typeof v === "string" && v !== "null") ? v : "";
+
       // Reset form with fetched values (this sets them as the new default state)
       // Using reset() ensures isDirty works correctly by establishing new default values
       const formValues = {
-        logo_url: settings.logo_url || "",
-        logo_url_dark: settings.logo_url_dark || "",
-        favicon_url: settings.favicon_url || "",
-        primary_color: settings.primary_color || "",
-        secondary_color: settings.secondary_color || "",
-        custom_css: settings.custom_css || "",
+        logo_url: clean(settings.logo_url),
+        logo_url_dark: clean(settings.logo_url_dark),
+        favicon_url: clean(settings.favicon_url),
+        primary_color: clean(settings.primary_color),
+        secondary_color: clean(settings.secondary_color),
+        custom_css: clean(settings.custom_css),
       };
       
       reset(formValues);
 
-      if (settings.logo_url) {
-        setLogoPreview(settings.logo_url);
+      if (formValues.logo_url) {
+        setLogoPreview(formValues.logo_url);
       }
-      if (settings.logo_url_dark) {
-        setLogoDarkPreview(settings.logo_url_dark);
+      if (formValues.logo_url_dark) {
+        setLogoDarkPreview(formValues.logo_url_dark);
       }
-      if (settings.favicon_url) {
-        setFaviconPreview(settings.favicon_url);
+      if (formValues.favicon_url) {
+        setFaviconPreview(formValues.favicon_url);
       }
     } catch (error: unknown) {
       toast.error(getErrorMessage(error, "Failed to load branding settings"));

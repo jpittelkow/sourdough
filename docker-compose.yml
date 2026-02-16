@@ -15,6 +15,8 @@ services:
       # Mount source code for development
       - ./backend:/var/www/html/backend
       - ./frontend:/var/www/html/frontend
+      # Mount CHANGELOG for the in-app changelog page
+      - ./CHANGELOG.md:/var/www/html/CHANGELOG.md:ro
       # Use named volumes to avoid host/container conflicts
       - frontend_node_modules:/var/www/html/frontend/node_modules
       - frontend_next_cache:/var/www/html/frontend/.next

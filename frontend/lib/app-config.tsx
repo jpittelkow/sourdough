@@ -68,15 +68,20 @@ function useAppConfigQuery() {
             }
           : null;
 
+        // Sanitize a setting value: treat empty strings and the literal string "null"
+        // (a backend serialization artifact) as actual null.
+        const sanitize = (v: unknown): string | null =>
+          typeof v === "string" && v !== "" && v !== "null" ? v : null;
+
         // Backend ensures app_name always has a default value, so it should always be present
         return {
           appName: systemSettings.general?.app_name || '',
-          logoUrl: branding.logo_url || null,
-          logoDarkUrl: branding.logo_url_dark || null,
-          faviconUrl: branding.favicon_url || null,
-          primaryColor: branding.primary_color || null,
-          secondaryColor: branding.secondary_color || null,
-          customCss: branding.custom_css || null,
+          logoUrl: sanitize(branding.logo_url),
+          logoDarkUrl: sanitize(branding.logo_url_dark),
+          faviconUrl: sanitize(branding.favicon_url),
+          primaryColor: sanitize(branding.primary_color),
+          secondaryColor: sanitize(branding.secondary_color),
+          customCss: sanitize(branding.custom_css),
           novu,
           features: features
             ? {
