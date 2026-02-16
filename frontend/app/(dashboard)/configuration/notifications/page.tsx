@@ -285,11 +285,12 @@ export default function NotificationsPage() {
       const res = await api.post("/admin/notification-channels/test-all");
       const results = res.data?.results ?? {};
       setVerifyResults(results);
-      const successes = Object.values(results).filter(
-        (r: { status: string }) => r.status === "success"
+      const values = Object.values(results) as { status: string }[];
+      const successes = values.filter(
+        (r) => r.status === "success"
       ).length;
-      const failures = Object.values(results).filter(
-        (r: { status: string }) => r.status === "error"
+      const failures = values.filter(
+        (r) => r.status === "error"
       ).length;
       if (failures > 0) {
         toast.warning(`${successes} passed, ${failures} failed`);
