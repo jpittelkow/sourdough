@@ -11,7 +11,7 @@ importScripts('/workbox/workbox-sw.js');
 
 workbox.setConfig({ debug: false, modulePathPrefix: '/workbox/' });
 
-const CACHE_VERSION = 'sourdough-v2';
+const CACHE_VERSION = 'sourdough-v0.3.0';
 const OFFLINE_URL = '/offline.html';
 const REQUEST_QUEUE_DB = 'sourdough-request-queue';
 const REQUEST_QUEUE_STORE = 'requests';
@@ -31,9 +31,17 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// Claim clients so new SW takes control immediately
+// Claim clients and clean up old versioned caches
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames
+          .filter((name) => name.startsWith('sourdough-v') && !name.startsWith(CACHE_VERSION))
+          .map((name) => caches.delete(name))
+      );
+    }).then(() => self.clients.claim())
+  );
 });
 
 // Push: display notification (payload from backend is decrypted by browser)

@@ -747,15 +747,18 @@ API tokens allow programmatic access to the API (uses Laravel Sanctum's built-in
 docs/ai/recipes/commit-and-release.md  # Step-by-step release recipe (START HERE)
 VERSION                                 # Current version number
 .github/workflows/release.yml          # Release workflow (tag push + workflow_dispatch)
-scripts/bump-version.sh                # Version bump script
+scripts/bump-version.sh                # Version bump script (updates VERSION, package.json, sw.js)
 frontend/package.json                  # version field (must match VERSION)
+frontend/public/sw.js                  # CACHE_VERSION (auto-bumped to sourdough-vX.Y.Z)
 ```
 
 **Key points:**
 - Releases are triggered by pushing a `v*` tag to remote
 - The workflow auto-syncs version files, creates a GitHub Release, and builds Docker
+- `scripts/bump-version.sh` (and `push.ps1`) updates three files: `VERSION`, `frontend/package.json`, and `frontend/public/sw.js` (`CACHE_VERSION`)
+- The `CACHE_VERSION` in `sw.js` is set to `sourdough-vX.Y.Z` to bust service worker caches on each release
 - PowerShell does not support heredoc — use temp files for multiline commit messages
-- Rebase conflicts in VERSION/package.json are common after release workflow commits
+- Rebase conflicts in VERSION/package.json/sw.js are common after release workflow commits
 - The "push" shortcut (Cursor rule `.cursor/rules/push-shortcut.mdc`) lets you say "push" to trigger a full commit-bump-tag-push cycle
 
 **Recipe:**

@@ -18,6 +18,7 @@ $ScriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RootDir = Split-Path -Parent $ScriptDir
 $VersionFile = Join-Path $RootDir "VERSION"
 $PackageJson = Join-Path (Join-Path $RootDir "frontend") "package.json"
+$SwJs = Join-Path (Join-Path (Join-Path $RootDir "frontend") "public") "sw.js"
 
 # Check if we're in a git repository
 if (-not (Test-Path ".git")) {
@@ -101,10 +102,21 @@ $NewPattern = '"version": "' + $NewVersion + '"'
 $PackageContent = $PackageContent -replace $OldPattern, $NewPattern
 Set-Content -Path $PackageJson -Value $PackageContent -NoNewline
 
+# Update CACHE_VERSION in service worker so caches bust on release
+if (Test-Path $SwJs) {
+    $SwContent = Get-Content $SwJs -Raw
+    $SwOldPattern = "const CACHE_VERSION = 'sourdough-v[^']*'"
+    $SwNewPattern = "const CACHE_VERSION = 'sourdough-v$NewVersion'"
+    $SwContent = $SwContent -replace $SwOldPattern, $SwNewPattern
+    Set-Content -Path $SwJs -Value $SwContent -NoNewline
+}
+
 Write-Host "Updated version files" -ForegroundColor Cyan
 
 # Stage version files
-git add "$VersionFile" "$PackageJson"
+$FilesToStage = @($VersionFile, $PackageJson)
+if (Test-Path $SwJs) { $FilesToStage += $SwJs }
+git add @FilesToStage
 
 # Commit version bump
 Write-Host "Committing version bump..." -ForegroundColor Cyan

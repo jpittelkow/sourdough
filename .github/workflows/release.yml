@@ -61,7 +61,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION frontend/package.json
+          git add VERSION frontend/package.json frontend/public/sw.js
           git commit -m "Release v${{ steps.bump.outputs.version }}"
           git tag "v${{ steps.bump.outputs.version }}"
           git push origin ${{ github.ref_name }} --tags
@@ -113,7 +113,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add VERSION frontend/package.json
+          git add VERSION frontend/package.json frontend/public/sw.js
           if git diff --cached --quiet; then
             echo "Version files already up to date"
             echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT

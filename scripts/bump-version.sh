@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bump application version across VERSION file and frontend/package.json.
+# Bump application version across VERSION, frontend/package.json, and frontend/public/sw.js.
 # Usage: ./scripts/bump-version.sh patch|minor|major|1.2.3
 # Output: prints the new version to stdout (for GITHUB_OUTPUT).
 
@@ -9,6 +9,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 VERSION_FILE="$ROOT_DIR/VERSION"
 PACKAGE_JSON="$ROOT_DIR/frontend/package.json"
+SW_JS="$ROOT_DIR/frontend/public/sw.js"
 
 if [ ! -f "$VERSION_FILE" ]; then
   echo "Error: VERSION file not found at $VERSION_FILE" >&2
@@ -57,6 +58,15 @@ if sed --version 2>/dev/null | grep -q GNU; then
   sed -i "s/\"version\": *\"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$PACKAGE_JSON"
 else
   sed -i '' "s/\"version\": *\"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" "$PACKAGE_JSON"
+fi
+
+# Update CACHE_VERSION in service worker so caches bust on release
+if [ -f "$SW_JS" ]; then
+  if sed --version 2>/dev/null | grep -q GNU; then
+    sed -i "s/const CACHE_VERSION = 'sourdough-v[^']*'/const CACHE_VERSION = 'sourdough-v$NEW_VERSION'/" "$SW_JS"
+  else
+    sed -i '' "s/const CACHE_VERSION = 'sourdough-v[^']*'/const CACHE_VERSION = 'sourdough-v$NEW_VERSION'/" "$SW_JS"
+  fi
 fi
 
 echo "$NEW_VERSION"

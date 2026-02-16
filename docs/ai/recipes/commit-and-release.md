@@ -21,7 +21,8 @@ Sourdough uses a **tag-triggered release workflow** (`.github/workflows/release.
 |------|---------|
 | `VERSION` | Single source of truth for app version (e.g. `0.1.15`) |
 | `frontend/package.json` | `"version"` field — must match `VERSION` |
-| `scripts/bump-version.sh` | Script to bump both files (`patch`, `minor`, `major`, or exact version) |
+| `frontend/public/sw.js` | `CACHE_VERSION` constant — auto-bumped to `sourdough-vX.Y.Z` on release |
+| `scripts/bump-version.sh` | Script to bump all version files (`patch`, `minor`, `major`, or exact version) |
 | `scripts/push.ps1` | Quick release script — automates commit, version bump, tag, and push |
 | `.github/workflows/release.yml` | Release workflow (tag push or workflow_dispatch) |
 
@@ -182,7 +183,7 @@ git commit -F .git/COMMIT_MSG
 
 ### 2. Version File Conflicts After Rebase
 
-The release workflow pushes a `Release vX.Y.Z` commit that updates `VERSION` and `frontend/package.json`. If you rebase on top of this, you'll get conflicts in those files. Always resolve to the **version you're about to release**.
+The release workflow pushes a `Release vX.Y.Z` commit that updates `VERSION`, `frontend/package.json`, and `frontend/public/sw.js`. If you rebase on top of this, you'll get conflicts in those files. Always resolve to the **version you're about to release**.
 
 ### 3. Tag Already Exists on Remote
 
@@ -218,9 +219,9 @@ Git rebase operations modify files in `.git/` (like `index.lock`, `rebase-merge/
 
 Both approaches work correctly:
 
-- **Bump locally**: Use `scripts/bump-version.sh` before committing. The workflow's sync step will detect files are already up to date and skip creating a separate commit. This keeps version bumps in your feature commits (cleaner history).
+- **Bump locally**: Use `scripts/bump-version.sh` before committing. This updates `VERSION`, `frontend/package.json`, and `frontend/public/sw.js` (CACHE_VERSION). The workflow's sync step will detect files are already up to date and skip creating a separate commit. This keeps version bumps in your feature commits (cleaner history).
 
-- **Let workflow bump**: Don't bump locally. The workflow will create a separate `Release vX.Y.Z` commit. This is fine but creates an extra commit in history.
+- **Let workflow bump**: Don't bump locally. The workflow will create a separate `Release vX.Y.Z` commit updating all three version files. This is fine but creates an extra commit in history.
 
 **Recommendation**: Bump locally for cleaner git history. See the "Version Bumping Strategy" section above for details.
 
@@ -242,8 +243,8 @@ bash scripts/bump-version.sh patch
 # Or for exact version:
 bash scripts/bump-version.sh 0.1.16
 
-# 4. Commit version bump
-git add VERSION frontend/package.json
+# 4. Commit version bump (bump-version.sh also updates sw.js CACHE_VERSION)
+git add VERSION frontend/package.json frontend/public/sw.js
 git commit -m "Release v0.1.16"
 
 # 5. Tag
@@ -257,7 +258,7 @@ git push origin master v0.1.16
 
 - [ ] All changes staged and committed with descriptive message
 - [ ] No debug code, secrets, or console.log in committed files
-- [ ] Version bumped in `VERSION` and `frontend/package.json`
+- [ ] Version bumped in `VERSION`, `frontend/package.json`, and `frontend/public/sw.js`
 - [ ] Tag created matching the version (`vX.Y.Z`)
 - [ ] Commit and tag pushed to remote
 - [ ] Release workflow triggered (check GitHub Actions)
