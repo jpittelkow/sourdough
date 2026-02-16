@@ -140,6 +140,8 @@ frontend/app/(dashboard)/user/preferences/page.tsx             # User UI
 - [Trigger Notifications](recipes/trigger-notifications.md)
 - [Add Notification Channel](recipes/add-notification-channel.md)
 - [Configure Novu](recipes/configure-novu.md)
+- [Test Notifications](recipes/test-notifications.md)
+- [Verify Notification Config](recipes/verify-notification-config.md)
 
 ## LLM Work
 

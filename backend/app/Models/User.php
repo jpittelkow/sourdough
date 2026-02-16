@@ -184,38 +184,30 @@ class User extends Authenticatable implements \Illuminate\Contracts\Auth\MustVer
 
     /**
      * Set a setting value.
-     * 
-     * Supports two signatures:
-     * - setSetting('group', 'key', 'value') - group-based (new)
-     * - setSetting('key', 'value', 'group') - legacy (backward compatible)
-     * 
-     * @param string $groupOrKey The setting group (new) or key (legacy)
-     * @param mixed $keyOrValue The setting key (new) or value (legacy)
-     * @param mixed $valueOrGroup The value to set (new) or group (legacy)
+     *
+     * @param string $group The setting group (e.g. 'general', 'notifications')
+     * @param string $key The setting key
+     * @param mixed $value The value to set
      * @return Setting
      */
-    public function setSetting(string $groupOrKey, mixed $keyOrValue, mixed $valueOrGroup = 'general'): Setting
+    public function setSetting(string $group, string $key, mixed $value): Setting
     {
-        // New signature: setSetting('group', 'key', 'value')
-        // Check if second param is a string (key) and third is not a string (value)
-        if (func_num_args() >= 3 && is_string($keyOrValue) && !is_string($valueOrGroup)) {
-            $group = $groupOrKey;
-            $key = $keyOrValue;
-            $value = $valueOrGroup;
-            return $this->settings()->updateOrCreate(
-                ['group' => $group, 'key' => $key],
-                ['value' => $value]
-            );
-        }
-        
-        // Legacy signature: setSetting('key', 'value', 'group')
-        $key = $groupOrKey;
-        $value = $keyOrValue;
-        $group = is_string($valueOrGroup) ? $valueOrGroup : 'general';
         return $this->settings()->updateOrCreate(
-            ['key' => $key],
-            ['value' => $value, 'group' => $group]
+            ['group' => $group, 'key' => $key],
+            ['value' => $value]
         );
+    }
+
+    /**
+     * Get the user's effective timezone.
+     *
+     * Fallback chain: user setting -> admin system default -> APP_TIMEZONE -> UTC
+     */
+    public function getTimezone(): string
+    {
+        return $this->getSetting('general', 'timezone')
+            ?? SystemSetting::get('default_timezone', null, 'general')
+            ?? config('app.timezone', 'UTC');
     }
 
     /**

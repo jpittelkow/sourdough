@@ -27,7 +27,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
-import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send, Smartphone, Download } from "lucide-react";
+import { Moon, Sun, Monitor, Loader2, Palette, Bell, Brain, Send, Smartphone, Download, Globe } from "lucide-react";
 import { SaveButton } from "@/components/ui/save-button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Link from "next/link";
@@ -40,11 +40,14 @@ import {
 import { useAppConfig } from "@/lib/app-config";
 import { HelpLink } from "@/components/help/help-link";
 import { useInstallPrompt } from "@/lib/use-install-prompt";
+import { TIMEZONES } from "@/lib/timezones";
+import { setUserTimezone } from "@/lib/utils";
 
 interface UserPreferences {
   theme?: "light" | "dark" | "system";
   default_llm_mode?: "single" | "aggregation" | "council";
   notification_channels?: string[];
+  timezone?: string | null;
 }
 
 interface NotificationSetting {
@@ -72,10 +75,13 @@ export default function PreferencesPage() {
   const [preferences, setPreferences] = useState<UserPreferences>({
     default_llm_mode: "single",
     notification_channels: [],
+    timezone: null,
   });
+  const [effectiveTimezone, setEffectiveTimezone] = useState<string>("UTC");
   const [channels, setChannels] = useState<NotificationChannelPref[]>([]);
   const [channelsLoading, setChannelsLoading] = useState(true);
   const [channelSettings, setChannelSettings] = useState<Record<string, Record<string, string>>>({});
+  const [savedChannelSettings, setSavedChannelSettings] = useState<Record<string, Record<string, string>>>({});
   const [savingChannel, setSavingChannel] = useState<string | null>(null);
   const [testingChannel, setTestingChannel] = useState<string | null>(null);
   const [webpushLoading, setWebpushLoading] = useState(false);
@@ -107,6 +113,7 @@ export default function PreferencesPage() {
         });
       });
       setChannelSettings(initial);
+      setSavedChannelSettings(initial);
     } catch (e) {
       errorLogger.captureMessage(
         "Failed to fetch notification channels",
@@ -139,7 +146,11 @@ export default function PreferencesPage() {
         notification_channels: Array.isArray(data.notification_channels) 
           ? data.notification_channels 
           : [],
+        timezone: data.timezone ?? null,
       }));
+      if (data.effective_timezone) {
+        setEffectiveTimezone(data.effective_timezone);
+      }
     } catch (error: unknown) {
       // If endpoint doesn't exist yet, use defaults
       errorLogger.captureMessage("Failed to fetch preferences", "warning", {
@@ -199,6 +210,10 @@ export default function PreferencesPage() {
       const settings = channelSettings[channelId] ?? {};
       await api.put("/user/notification-settings", { channel: channelId, settings });
       toast.success("Settings saved");
+      setSavedChannelSettings((prev) => ({
+        ...prev,
+        [channelId]: { ...(channelSettings[channelId] ?? {}) },
+      }));
       setChannels((prev) =>
         prev.map((ch) =>
           ch.id === channelId ? { ...ch, configured: true } : ch
@@ -298,8 +313,8 @@ export default function PreferencesPage() {
   const savePreferences = async (updates: Partial<UserPreferences>) => {
     setIsSaving(true);
     try {
-      // Only send the fields that are being updated, filtering out undefined/null
-      const payload: Partial<UserPreferences> = {};
+      // Only send the fields that are being updated, filtering out undefined
+      const payload: Record<string, unknown> = {};
       if (updates.theme !== undefined && updates.theme !== null) {
         payload.theme = updates.theme;
       }
@@ -309,6 +324,9 @@ export default function PreferencesPage() {
       if (updates.notification_channels !== undefined && updates.notification_channels !== null) {
         payload.notification_channels = updates.notification_channels;
       }
+      if (updates.timezone !== undefined) {
+        payload.timezone = updates.timezone;
+      }
       
       // Ensure we have at least one field to update
       if (Object.keys(payload).length === 0) {
@@ -317,11 +335,19 @@ export default function PreferencesPage() {
         return;
       }
       
-      await api.put("/user/settings", payload);
+      const response = await api.put("/user/settings", payload);
       
       // Update local state with the merged preferences
       const newPreferences = { ...preferences, ...updates };
       setPreferences(newPreferences);
+
+      // Update effective timezone from response if available
+      const prefs = response.data?.preferences;
+      if (prefs?.effective_timezone) {
+        setEffectiveTimezone(prefs.effective_timezone);
+        setUserTimezone(prefs.effective_timezone);
+      }
+
       toast.success("Preferences saved");
     } catch (error: unknown) {
       const data = error && typeof error === "object" && "response" in error
@@ -467,6 +493,56 @@ export default function PreferencesPage() {
         </CardContent>
       </Card>
 
+      {/* Regional */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Globe className="h-5 w-5" />
+            Regional
+          </CardTitle>
+          <CardDescription>
+            Set your preferred timezone for dates and times throughout the app.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="timezone">Timezone</Label>
+            <Select
+              value={preferences.timezone ?? ""}
+              onValueChange={(value) => {
+                if (isOffline) return;
+                savePreferences({ timezone: value === "__system_default__" ? null : value });
+              }}
+              disabled={isOffline}
+            >
+              <SelectTrigger id="timezone">
+                <SelectValue placeholder="Use system default" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__system_default__">Use system default</SelectItem>
+                {/* Show current value if not in curated list (e.g. auto-detected unusual timezone) */}
+                {preferences.timezone && !TIMEZONES.some((tz) => tz.value === preferences.timezone) && (
+                  <SelectItem key={preferences.timezone} value={preferences.timezone}>
+                    {preferences.timezone} (detected)
+                  </SelectItem>
+                )}
+                {TIMEZONES.map((tz) => (
+                  <SelectItem key={tz.value} value={tz.value}>
+                    {tz.label} ({tz.value})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-sm text-muted-foreground">
+              {preferences.timezone
+                ? `Manually set to ${preferences.timezone}.`
+                : `Auto-detected from your browser. Currently using: ${effectiveTimezone}.`}
+              {" "}Select &quot;Use system default&quot; to revert to automatic detection.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Notification Preferences */}
       <Card>
         <CardHeader>
@@ -584,7 +660,7 @@ export default function PreferencesPage() {
                           <SaveButton
                             type="button"
                             size="sm"
-                            isDirty={true}
+                            isDirty={JSON.stringify(channelSettings[channel.id] ?? {}) !== JSON.stringify(savedChannelSettings[channel.id] ?? {})}
                             isSaving={savingChannel === channel.id}
                             disabled={isOffline}
                             onClick={() => saveChannelSettings(channel.id)}

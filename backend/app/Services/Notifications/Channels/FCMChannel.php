@@ -4,6 +4,7 @@ namespace App\Services\Notifications\Channels;
 
 use App\Models\User;
 use App\Services\NotificationTemplateService;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 
 class FCMChannel implements ChannelInterface
@@ -29,7 +30,7 @@ class FCMChannel implements ChannelInterface
         $title = $resolved['title'];
         $message = $resolved['body'];
 
-        $fcmToken = $user->getSetting('fcm_token');
+        $fcmToken = $user->getSetting('notifications', 'fcm_token');
 
         if (!$fcmToken) {
             throw new \RuntimeException('FCM token not configured for user');
@@ -48,12 +49,14 @@ class FCMChannel implements ChannelInterface
                     'title' => $title,
                     'body' => $message,
                 ],
-                'data' => array_map('strval', array_merge($data, [
+                'data' => collect(array_merge($data, [
                     'type' => $type,
                     'title' => $title,
                     'message' => $message,
                     'timestamp' => (string) time(),
-                ])),
+                ]))->filter(fn ($v) => is_scalar($v) || is_null($v))
+                    ->map(fn ($v) => (string) $v)
+                    ->all(),
             ],
         ];
 
@@ -105,9 +108,21 @@ class FCMChannel implements ChannelInterface
 
     /**
      * Generate an OAuth2 access token from the service account credentials.
-     * Uses a self-signed JWT to exchange for an access token.
+     * Uses a self-signed JWT to exchange for an access token, cached for 50 minutes.
      */
     private function getAccessToken(): string
+    {
+        $cacheKey = 'fcm_access_token_' . md5($this->projectId);
+
+        return Cache::remember($cacheKey, 3000, function () {
+            return $this->fetchAccessToken();
+        });
+    }
+
+    /**
+     * Fetch a fresh OAuth2 access token from Google.
+     */
+    private function fetchAccessToken(): string
     {
         $serviceAccount = $this->serviceAccount;
         if (!$serviceAccount || !isset($serviceAccount['client_email'], $serviceAccount['private_key'])) {
@@ -128,9 +143,14 @@ class FCMChannel implements ChannelInterface
         $base64Claim = rtrim(strtr(base64_encode($claim), '+/', '-_'), '=');
         $signingInput = "{$base64Header}.{$base64Claim}";
 
-        $privateKey = openssl_pkey_get_private($serviceAccount['private_key']);
-        if (!$privateKey) {
-            throw new \RuntimeException('Invalid FCM service account private key');
+        try {
+            $privateKey = openssl_pkey_get_private($serviceAccount['private_key']);
+        } catch (\Throwable $e) {
+            throw new \RuntimeException('Invalid FCM service account private key: ' . $e->getMessage());
+        }
+
+        if ($privateKey === false) {
+            throw new \RuntimeException('Invalid FCM service account private key: unable to parse');
         }
 
         openssl_sign($signingInput, $signature, $privateKey, OPENSSL_ALGO_SHA256);
@@ -147,7 +167,12 @@ class FCMChannel implements ChannelInterface
             throw new \RuntimeException('Failed to obtain FCM access token: ' . $response->body());
         }
 
-        return $response->json('access_token');
+        $token = $response->json('access_token');
+        if (empty($token)) {
+            throw new \RuntimeException('FCM access token response missing access_token field');
+        }
+
+        return $token;
     }
 
     public function getName(): string
@@ -158,7 +183,7 @@ class FCMChannel implements ChannelInterface
     public function isAvailableFor(User $user): bool
     {
         return config('notifications.channels.fcm.enabled', false)
-            && !empty($user->getSetting('fcm_token'));
+            && !empty($user->getSetting('notifications', 'fcm_token'));
     }
 
     private function resolveContent(User $user, string $type, string $title, string $message, array $data): array

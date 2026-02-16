@@ -27,19 +27,29 @@ When Novu is **not** configured, Sourdough uses its built-in notification system
 
 Sourdough triggers events by **workflow identifier**. Create workflows in Novu with these identifiers and wire channel steps (in-app, email, push, etc.) as needed.
 
-| Notification type       | Novu workflow identifier |
-|-------------------------|--------------------------|
-| `backup.completed`      | `backup-completed`       |
-| `backup.failed`         | `backup-failed`          |
-| `auth.login`            | `auth-login`             |
-| `auth.password_reset`   | `auth-password-reset`    |
-| `system.update`         | `system-update`          |
-| `llm.quota_warning`     | `llm-quota-warning`      |
-| `storage.warning`       | `storage-warning`        |
-| `storage.critical`       | `storage-critical`       |
-| `suspicious_activity`   | `suspicious-activity`    |
+| Notification type       | Novu workflow identifier | Key variables |
+|-------------------------|--------------------------|---------------|
+| `backup.completed`      | `backup-completed`       | `backup_name` |
+| `backup.failed`         | `backup-failed`          | `backup_name`, `error_message` |
+| `auth.login`            | `auth-login`             | `ip`, `timestamp` |
+| `auth.password_reset`   | `auth-password-reset`    | — |
+| `system.update`         | `system-update`          | `version` |
+| `llm.quota_warning`     | `llm-quota-warning`      | `usage` |
+| `storage.warning`       | `storage-warning`        | `usage`, `threshold`, `free_formatted`, `total_formatted` |
+| `storage.critical`      | `storage-critical`       | `usage`, `threshold`, `free_formatted`, `total_formatted` |
+| `suspicious_activity`   | `suspicious-activity`    | `alert_summary`, `alert_count` |
+| `usage.budget_warning`  | `usage-budget-warning`   | `integration`, `percent`, `current_cost`, `budget` |
+| `usage.budget_exceeded` | `usage-budget-exceeded`  | `integration`, `percent`, `current_cost`, `budget` |
 
-Payload variables passed to workflows include `user` (name, email), `app_name`, and type-specific fields (e.g. `backup_name`, `error_message`). Define these in your Novu workflow templates.
+All payloads include `user` (with `name` and `email`), and `app_name`. Type-specific variables are listed in the table above.
+
+### Creating Workflows in Novu
+
+1. Go to your Novu dashboard > Workflows > Create Workflow
+2. Set the workflow identifier to match the table above (e.g., `backup-completed`)
+3. Add channel steps: In-App, Email, Push, Chat, SMS, etc.
+4. Use the payload variables in your templates: `{{user.name}}`, `{{app_name}}`, `{{backup_name}}`, etc.
+5. Test the workflow from the Novu dashboard or via `php artisan novu:test`
 
 ## Artisan Commands
 

@@ -3,15 +3,24 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Traits\ApiResponseTrait;
 use App\Models\SystemSetting;
 use App\Services\Notifications\NotificationChannelMetadata;
+use App\Services\Notifications\NotificationOrchestrator;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class NotificationChannelConfigController extends Controller
 {
+    use ApiResponseTrait;
     use NotificationChannelMetadata;
     private const GROUP = 'notifications';
+
+    public function __construct(
+        private NotificationOrchestrator $orchestrator,
+        private SettingService $settingService
+    ) {}
 
     /**
      * List all notification channels with provider-configured and available status.
@@ -79,7 +88,7 @@ class NotificationChannelConfigController extends Controller
         if (isset($validated['channels'])) {
             foreach ($validated['channels'] as $entry) {
                 $id = $entry['id'];
-                if ($this->isAlwaysAvailableChannel($id)) {
+                if (!NotificationOrchestrator::isKnownChannel($id) || $this->isAlwaysAvailableChannel($id)) {
                     continue;
                 }
                 SystemSetting::set("channel_{$id}_available", $entry['available'], self::GROUP, $updatedBy);
@@ -92,4 +101,73 @@ class NotificationChannelConfigController extends Controller
 
         return response()->json(['message' => 'Notification channel config updated']);
     }
+
+    /**
+     * Test all enabled notification channels and return per-channel results.
+     */
+    public function testAll(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        // Apply latest settings from DB so tests use current credentials
+        $settings = $this->settingService->getGroup(self::GROUP);
+        $this->applyNotificationsConfigForRequest($settings);
+
+        $channelConfig = config('notifications.channels');
+        $results = [];
+
+        foreach ($channelConfig as $id => $config) {
+            $enabled = (bool) ($config['enabled'] ?? false);
+            $available = $this->isAlwaysAvailableChannel($id) || filter_var(
+                SystemSetting::get("channel_{$id}_available", false, self::GROUP),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            if (!$enabled && !$this->isUserConfigurableChannel($id)) {
+                $results[$id] = ['status' => 'skipped', 'reason' => 'not_configured'];
+                continue;
+            }
+
+            if (!$available) {
+                $results[$id] = ['status' => 'skipped', 'reason' => 'not_available'];
+                continue;
+            }
+
+            try {
+                $this->orchestrator->sendTestNotification($user, $id);
+                $results[$id] = ['status' => 'success'];
+            } catch (\Exception $e) {
+                $results[$id] = ['status' => 'error', 'error' => $e->getMessage()];
+            }
+        }
+
+        return $this->dataResponse(['results' => $results]);
+    }
+
+    /**
+     * Verify configuration status of all notification channels (without sending).
+     */
+    public function verify(): JsonResponse
+    {
+        $channelConfig = config('notifications.channels');
+        $results = [];
+
+        foreach ($channelConfig as $id => $config) {
+            $enabled = (bool) ($config['enabled'] ?? false);
+            $available = $this->isAlwaysAvailableChannel($id) || filter_var(
+                SystemSetting::get("channel_{$id}_available", false, self::GROUP),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            $results[$id] = [
+                'name' => $this->getChannelName($id),
+                'provider_configured' => $this->isUserConfigurableChannel($id) ? true : $enabled,
+                'available_to_users' => $available,
+                'always_available' => $this->isAlwaysAvailableChannel($id),
+            ];
+        }
+
+        return $this->dataResponse(['channels' => $results]);
+    }
+
 }

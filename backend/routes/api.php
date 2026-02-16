@@ -7,7 +7,7 @@ use App\Http\Controllers\Api\SSOController;
 use App\Http\Controllers\Api\TwoFactorController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SettingController;
-use App\Http\Controllers\Api\NotificationSettingsController;
+// NotificationSettingsController deprecated - routes now use UserNotificationSettingsController
 use App\Http\Controllers\Api\NotificationChannelConfigController;
 use App\Http\Controllers\Api\SystemSettingController;
 use App\Http\Controllers\Api\UserController;
@@ -165,6 +165,7 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     Route::prefix('user')->group(function () {
         Route::get('/settings', [UserSettingController::class, 'show'])->middleware('log.access:Setting');
         Route::put('/settings', [UserSettingController::class, 'update'])->middleware('log.access:Setting');
+        Route::post('/settings/detect-timezone', [UserSettingController::class, 'detectTimezone']);
         Route::get('/notification-settings', [UserNotificationSettingsController::class, 'show'])->middleware('log.access:Setting');
         Route::put('/notification-settings', [UserNotificationSettingsController::class, 'update'])->middleware('log.access:Setting');
         Route::post('/webpush-subscription', [UserNotificationSettingsController::class, 'storeWebPushSubscription'])->middleware('log.access:Setting');
@@ -190,8 +191,9 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     Route::prefix('settings')->group(function () {
         Route::get('/', [SettingController::class, 'index'])->middleware('can:settings.view');
         Route::put('/', [SettingController::class, 'update'])->middleware('can:settings.edit');
-        Route::get('/notifications', [NotificationSettingsController::class, 'show'])->middleware('can:settings.view');
-        Route::put('/notifications', [NotificationSettingsController::class, 'update'])->middleware('can:settings.edit');
+        // Legacy routes - deprecated, use /user/notification-settings instead
+        Route::get('/notifications', [UserNotificationSettingsController::class, 'show'])->middleware('log.access:Setting');
+        Route::put('/notifications', [UserNotificationSettingsController::class, 'update'])->middleware('log.access:Setting');
         Route::get('/{group}', [SettingController::class, 'show'])->middleware('can:settings.view');
         Route::put('/{group}', [SettingController::class, 'updateGroup'])->middleware('can:settings.edit');
     });
@@ -207,6 +209,8 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
     Route::prefix('admin')->group(function () {
         Route::get('notification-channels', [NotificationChannelConfigController::class, 'index'])->middleware('can:settings.view');
         Route::put('notification-channels', [NotificationChannelConfigController::class, 'update'])->middleware('can:settings.edit');
+        Route::post('notification-channels/test-all', [NotificationChannelConfigController::class, 'testAll'])->middleware('can:settings.edit');
+        Route::get('notification-channels/verify', [NotificationChannelConfigController::class, 'verify'])->middleware('can:settings.view');
     });
     
     // Search (authenticated; returns user data when searching users — access logged)
@@ -221,8 +225,8 @@ Route::middleware(['auth:sanctum', 'verified', '2fa.setup'])->group(function () 
         Route::post('/mark-all-read', [NotificationController::class, 'markAllAsRead']);
         Route::delete('/{notification}', [NotificationController::class, 'destroy']);
         
-        // Test notification
-        Route::post('/test/{channel}', [NotificationController::class, 'test']);
+        // Test notification (throttled: 5 per minute)
+        Route::post('/test/{channel}', [NotificationController::class, 'test'])->middleware('throttle:5,1');
     });
     
     // LLM/AI (permission: settings.view / settings.edit)

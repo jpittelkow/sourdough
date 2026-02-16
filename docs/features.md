@@ -23,6 +23,17 @@ Core functionality and feature documentation:
 - **User groups & permissions:** Role-based access via user groups and a permission enum. Admin status is solely via the **admin** group (no `is_admin` column); the first registered user is assigned to the admin group. **Permission model:** Permissions (e.g. `users.view`, `settings.edit`, `backups.create`) are defined in `Permission` enum; Laravel Gates are auto-registered so routes use `can:permission.name`. Admin group users have all permissions implicitly. Auth response (`GET /auth/user`) includes computed `permissions` array for the frontend. **Backend:** `user_groups`, `user_group_members`, `group_permissions` tables; default groups (Administrators, Users); `HasGroups` trait; `GroupService`, `PermissionService` (cached checks); API for groups, members, permissions; `PUT /api/users/{user}/groups`. All admin/config routes are protected by granular permissions (users, groups, settings, backups, logs, audit). **Frontend:** `usePermission(permission)` and `<PermissionGate>` for conditional UI; Configuration layout shows nav items only when the user has the required permission; access to Configuration requires at least one config-related permission or admin. **Admin UI:** Configuration > Groups – list, create/edit/delete groups, manage members, permission matrix; Configuration > Users – groups column, group assignment (`UserGroupPicker`), filter by group; User profile shows group memberships. See [Recipe: Add a new permission](ai/recipes/add-new-permission.md), [Recipe: Create a custom group](ai/recipes/create-custom-group.md), [User Groups Roadmap](plans/user-groups-roadmap.md).
 - All features optional for self-hosted deployments
 
+## User Preferences & Regional Settings
+
+**Capabilities:**
+- **Per-user timezone:** Each user has a timezone setting (Preferences > Regional) that controls how all dates and times are displayed in the frontend. On login/registration, the browser's timezone is auto-detected via `Intl.DateTimeFormat` and silently sent to the backend (`POST /user/settings/detect-timezone`), which sets it only if the user hasn't explicitly chosen one. Users can override manually or select "Use system default" to revert.
+- **Timezone fallback chain:** User setting -> Admin system default (`Configuration > System > Default Timezone`) -> `APP_TIMEZONE` env var -> UTC.
+- **Backend support:** `User::getTimezone()` returns the effective timezone. The `GET /auth/user` response includes a `timezone` field so the frontend always has the active timezone without extra API calls.
+- **Date formatting:** `formatDate()`, `formatDateTime()`, and `formatTimestamp()` in `frontend/lib/utils.ts` automatically apply the user's timezone via the `Intl.DateTimeFormat` `timeZone` option.
+- **Admin default:** Admins set the system-wide default timezone in Configuration > System (General tab). This is backed by `settings-schema.php` (`general.default_timezone`) with `APP_TIMEZONE` env fallback.
+- **Theme preferences:** Light, dark, or system theme (Preferences > Appearance).
+- **Default LLM mode:** Per-user default for AI interactions (Preferences > Defaults).
+
 ## Dashboard & Widgets
 
 - [Recipe: Add Dashboard Widget](ai/recipes/add-dashboard-widget.md) - Create new static widgets for the dashboard
@@ -93,12 +104,28 @@ Core functionality and feature documentation:
 | Discord | Webhooks | ✅ |
 | Slack | Webhooks | ✅ |
 | SMS | Twilio, Vonage, AWS SNS | ✅ |
-| Signal | signal-cli | 🔄 Planned |
+| Signal | signal-cli | ✅ |
 | Matrix | Homeserver API | ✅ |
 | ntfy | ntfy push service | ✅ |
-| Web Push | VAPID (browser push) | ✅ |
-| FCM | Firebase Cloud Messaging | 🔄 Planned |
+| Web Push | VAPID via minishlink/web-push | ✅ |
+| FCM | Firebase Cloud Messaging v1 API | ✅ |
 | In-App | Database + WebSocket | ✅ |
+
+**Notification types** (with per-channel templates for push, inapp, chat):
+
+| Type | Trigger |
+|------|---------|
+| `backup.completed` | Backup finishes successfully |
+| `backup.failed` | Backup fails |
+| `auth.login` | New sign-in detected |
+| `auth.password_reset` | Password changed |
+| `system.update` | System update available |
+| `llm.quota_warning` | API quota threshold exceeded |
+| `storage.warning` | Disk usage exceeds warning threshold |
+| `storage.critical` | Disk usage exceeds critical threshold |
+| `suspicious_activity` | Suspicious login/access patterns detected |
+| `usage.budget_warning` | Integration budget nearing limit |
+| `usage.budget_exceeded` | Integration budget exceeded |
 
 ## AI/LLM Orchestration
 

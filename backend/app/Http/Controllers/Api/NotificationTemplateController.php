@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponseTrait;
 use App\Models\NotificationTemplate;
+use App\Services\AuditService;
 use App\Services\NotificationTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,7 +15,8 @@ class NotificationTemplateController extends Controller
     use ApiResponseTrait;
 
     public function __construct(
-        private NotificationTemplateService $templateService
+        private NotificationTemplateService $templateService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -81,6 +83,12 @@ class NotificationTemplateController extends Controller
             'threshold' => 'Configured warning threshold percentage',
             'free_formatted' => 'Free disk space (human-readable)',
             'total_formatted' => 'Total disk space (human-readable)',
+            'alert_summary' => 'Summary of suspicious activity alerts',
+            'alert_count' => 'Number of suspicious patterns detected',
+            'integration' => 'Integration/service name (LLM, Email, SMS, etc.)',
+            'percent' => 'Budget usage percentage',
+            'current_cost' => 'Current month cost (dollar amount)',
+            'budget' => 'Monthly budget limit (dollar amount)',
         ];
     }
 
@@ -100,7 +108,16 @@ class NotificationTemplateController extends Controller
             'is_active' => ['sometimes', 'boolean'],
         ]);
 
+        $oldValues = $template->only(['title', 'body', 'is_active']);
         $template->update($validated);
+
+        $this->auditService->log(
+            'notification_template.updated',
+            $template,
+            $oldValues,
+            $validated,
+            $request->user()?->id
+        );
 
         return $this->successResponse('Template updated.', [
             'data' => [
@@ -154,7 +171,7 @@ class NotificationTemplateController extends Controller
     /**
      * Reset system template to default content.
      */
-    public function reset(int $id): JsonResponse
+    public function reset(Request $request, int $id): JsonResponse
     {
         $template = NotificationTemplate::find($id);
         if (!$template) {
@@ -169,10 +186,19 @@ class NotificationTemplateController extends Controller
             return $this->errorResponse('No default content for this template.', 422);
         }
 
+        $oldValues = $template->only(['title', 'body']);
         $template->update([
             'title' => $defaults['title'],
             'body' => $defaults['body'],
         ]);
+
+        $this->auditService->log(
+            'notification_template.reset',
+            $template,
+            $oldValues,
+            ['title' => $defaults['title'], 'body' => $defaults['body']],
+            $request->user()?->id
+        );
 
         return $this->successResponse('Template reset to default.');
     }
@@ -235,6 +261,28 @@ class NotificationTemplateController extends Controller
                 'threshold' => '95',
                 'free_formatted' => '2.0 GB',
                 'total_formatted' => '50.0 GB',
+            ],
+            'suspicious_activity' => [
+                'user' => $user,
+                'app_name' => $appName,
+                'alert_summary' => 'Multiple failed logins from 192.168.1.100',
+                'alert_count' => '3',
+            ],
+            'usage.budget_warning' => [
+                'user' => $user,
+                'app_name' => $appName,
+                'integration' => 'LLM',
+                'percent' => '85',
+                'current_cost' => '42.50',
+                'budget' => '50.00',
+            ],
+            'usage.budget_exceeded' => [
+                'user' => $user,
+                'app_name' => $appName,
+                'integration' => 'LLM',
+                'percent' => '112',
+                'current_cost' => '56.00',
+                'budget' => '50.00',
             ],
             default => [
                 'user' => $user,

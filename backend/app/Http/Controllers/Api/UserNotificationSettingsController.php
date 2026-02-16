@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\SystemSetting;
 use App\Services\Notifications\NotificationChannelMetadata;
+use App\Services\Notifications\NotificationOrchestrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -62,6 +63,12 @@ class UserNotificationSettingsController extends Controller
         $user = $request->user();
         $channelId = $validated['channel'];
 
+        if (!NotificationOrchestrator::isKnownChannel($channelId)) {
+            return response()->json([
+                'message' => "Unknown notification channel: {$channelId}",
+            ], 422);
+        }
+
         if (isset($validated['enabled']) && $validated['enabled']) {
             if (!$this->isChannelAvailableToUser($channelId)) {
                 return response()->json([
@@ -71,16 +78,20 @@ class UserNotificationSettingsController extends Controller
         }
 
         if (isset($validated['enabled'])) {
-            $user->setSetting("{$channelId}_enabled", $validated['enabled'], self::GROUP);
+            $user->setSetting(self::GROUP, "{$channelId}_enabled", $validated['enabled']);
         }
 
         if (isset($validated['usage_accepted'])) {
-            $user->setSetting("{$channelId}_usage_accepted", $validated['usage_accepted'], self::GROUP);
+            $user->setSetting(self::GROUP, "{$channelId}_usage_accepted", $validated['usage_accepted']);
         }
 
         if (isset($validated['settings'])) {
+            $allowedKeys = collect($this->getRequiredSettings($channelId))->pluck('key')->toArray();
             foreach ($validated['settings'] as $key => $value) {
-                $user->setSetting("{$channelId}_{$key}", $value, self::GROUP);
+                if (!in_array($key, $allowedKeys, true)) {
+                    continue;
+                }
+                $user->setSetting(self::GROUP, "{$channelId}_{$key}", (string) $value);
             }
         }
 
@@ -100,8 +111,8 @@ class UserNotificationSettingsController extends Controller
         ]);
 
         $user = $request->user();
-        $user->setSetting('webpush_subscription', $validated, self::GROUP);
-        $user->setSetting('webpush_enabled', true, self::GROUP);
+        $user->setSetting(self::GROUP, 'webpush_subscription', $validated);
+        $user->setSetting(self::GROUP, 'webpush_enabled', true);
 
         return response()->json(['message' => 'Subscription saved']);
     }

@@ -12,6 +12,7 @@
 return [
     'general' => [
         'app_name' => ['env' => 'APP_NAME', 'default' => 'Sourdough', 'public' => true],
+        'default_timezone' => ['env' => 'APP_TIMEZONE', 'default' => 'UTC'],
         // app_url removed -- controlled exclusively by APP_URL env var (see config('app.url'))
     ],
 
@@ -62,8 +63,9 @@ return [
         'vapid_public_key' => ['env' => 'VAPID_PUBLIC_KEY', 'default' => null],
         'vapid_private_key' => ['env' => 'VAPID_PRIVATE_KEY', 'default' => null, 'encrypted' => true],
         'vapid_subject' => ['env' => 'VAPID_SUBJECT', 'default' => null],
-        // FCM
-        'fcm_server_key' => ['env' => 'FCM_SERVER_KEY', 'default' => null, 'encrypted' => true],
+        // FCM (v1 API - service account JSON)
+        'fcm_project_id' => ['env' => 'FCM_PROJECT_ID', 'default' => null],
+        'fcm_service_account' => ['env' => 'FCM_SERVICE_ACCOUNT', 'default' => null, 'encrypted' => true],
         // ntfy
         'ntfy_enabled' => ['env' => 'NTFY_ENABLED', 'default' => true],
         'ntfy_server' => ['env' => 'NTFY_SERVER', 'default' => 'https://ntfy.sh'],

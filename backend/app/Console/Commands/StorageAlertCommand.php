@@ -71,16 +71,14 @@ class StorageAlertCommand extends Command
         }
 
         if ($diskUsedPercent >= $critical) {
-            $variables['title'] = 'Storage critical: ' . $diskUsedPercent . '% used';
-            $variables['message'] = "Storage usage is at {$diskUsedPercent}% (critical threshold: {$critical}%). Free: {$variables['free_formatted']} of {$variables['total_formatted']}. Take action immediately to prevent data loss.";
+            $variables['title'] = "Storage critical: {$diskUsedPercent}% used";
+            $variables['message'] = "Storage usage is at {$diskUsedPercent}% (critical threshold: {$critical}%). Free: {$variables['free_formatted']} of {$variables['total_formatted']}. Take action immediately.";
 
             foreach ($admins as $admin) {
                 try {
-                    $orchestrator->send(
+                    $orchestrator->sendByType(
                         $admin,
                         'storage.critical',
-                        $variables['title'],
-                        $variables['message'],
                         $variables,
                         $channels
                     );
@@ -95,16 +93,14 @@ class StorageAlertCommand extends Command
         }
 
         if ($diskUsedPercent >= $threshold) {
-            $variables['title'] = 'Storage warning: ' . $diskUsedPercent . '% used';
-            $variables['message'] = "Storage usage is at {$diskUsedPercent}% (warning threshold: {$threshold}%). Free: {$variables['free_formatted']} of {$variables['total_formatted']}. Consider freeing space or expanding storage.";
+            $variables['title'] = "Storage warning: {$diskUsedPercent}% used";
+            $variables['message'] = "Storage usage is at {$diskUsedPercent}% (warning threshold: {$threshold}%). Free: {$variables['free_formatted']} of {$variables['total_formatted']}.";
 
             foreach ($admins as $admin) {
                 try {
-                    $orchestrator->send(
+                    $orchestrator->sendByType(
                         $admin,
                         'storage.warning',
-                        $variables['title'],
-                        $variables['message'],
                         $variables,
                         $channels
                     );

@@ -54,17 +54,18 @@ We will implement a **channel-based notification orchestrator** with a unified i
 
 ### Channel Interface
 
-All channels implement `ChannelInterface`:
+All channels implement `ChannelInterface`. The interface has evolved since this ADR was written; the current signature is:
 
 ```php
 interface ChannelInterface
 {
-    public function send(Notifiable $user, Notification $notification): bool;
-    public function isConfigured(): bool;
-    public function getIdentifier(): string;
+    public function send(User $user, string $type, string $title, string $message, array $data = []): array;
     public function getName(): string;
+    public function isAvailableFor(User $user): bool;
 }
 ```
+
+> **Note:** The original ADR specified `Notifiable $user` and `Notification $notification` parameters, plus `isConfigured()` and `getIdentifier()` methods. The implementation evolved to use `User` directly, pass title/message/data as separate parameters, and use `isAvailableFor()` for per-user availability checks. `isConfigured()` was replaced by channel-enabled checks in the config layer.
 
 ### Supported Channels
 

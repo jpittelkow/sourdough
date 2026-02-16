@@ -5,6 +5,32 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// ---------------------------------------------------------------------------
+// User timezone (set by auth flow, used by date formatters)
+// ---------------------------------------------------------------------------
+
+let _userTimezone: string | undefined;
+
+/**
+ * Set the user's effective timezone. Called from the auth store
+ * when the user data loads (GET /auth/user includes timezone).
+ * Pass undefined to clear (e.g. on logout).
+ */
+export function setUserTimezone(tz: string | undefined): void {
+  _userTimezone = tz;
+}
+
+/**
+ * Get the user's effective timezone, or undefined to use browser default.
+ */
+export function getUserTimezone(): string | undefined {
+  return _userTimezone;
+}
+
+// ---------------------------------------------------------------------------
+// Formatting utilities
+// ---------------------------------------------------------------------------
+
 /**
  * Format byte count as human-readable string (B, KB, MB, GB, TB).
  */
@@ -19,6 +45,7 @@ export function formatBytes(bytes: number, decimals = 2): string {
 
 /**
  * Format date string or Date for display. Default: "Jan 1, 2026".
+ * Uses the user's timezone when available.
  * Returns the original input if the date is invalid.
  */
 export function formatDate(
@@ -28,11 +55,16 @@ export function formatDate(
   try {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return typeof date === "string" ? date : String(date);
-    return d.toLocaleDateString(undefined, options ?? {
+    const tz = _userTimezone;
+    const baseOpts: Intl.DateTimeFormatOptions = options ?? {
       year: "numeric",
       month: "short",
       day: "numeric",
-    });
+    };
+    const opts: Intl.DateTimeFormatOptions = tz && !baseOpts.timeZone
+      ? { ...baseOpts, timeZone: tz }
+      : baseOpts;
+    return d.toLocaleDateString(undefined, opts);
   } catch {
     return typeof date === "string" ? date : String(date);
   }
@@ -40,25 +72,32 @@ export function formatDate(
 
 /**
  * Format date with time (e.g. for backup created_at).
+ * Uses the user's timezone when available.
  * Returns the original input if the date is invalid.
  */
 export function formatDateTime(date: string | Date): string {
   try {
     const d = new Date(date);
     if (Number.isNaN(d.getTime())) return typeof date === "string" ? date : String(date);
-    return d.toLocaleString();
+    const tz = _userTimezone;
+    const opts: Intl.DateTimeFormatOptions = tz ? { timeZone: tz } : {};
+    return d.toLocaleString(undefined, opts);
   } catch {
     return typeof date === "string" ? date : String(date);
   }
 }
 
 /**
- * Format Unix timestamp (seconds) for display. Returns "—" for null/undefined or invalid numbers.
+ * Format Unix timestamp (seconds) for display. Returns "---" for null/undefined or invalid numbers.
+ * Uses the user's timezone when available.
  */
 export function formatTimestamp(ts: number | null | undefined): string {
-  if (ts === null || ts === undefined || typeof ts !== "number" || Number.isNaN(ts)) return "—";
+  if (ts === null || ts === undefined || typeof ts !== "number" || Number.isNaN(ts)) return "\u2014";
   const d = new Date(ts * 1000);
-  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString();
+  if (Number.isNaN(d.getTime())) return "\u2014";
+  const tz = _userTimezone;
+  const opts: Intl.DateTimeFormatOptions = tz ? { timeZone: tz } : {};
+  return d.toLocaleString(undefined, opts);
 }
 
 /**

@@ -190,13 +190,35 @@ $this->orchestrator->createInAppNotification(
 
 This writes to the `notifications` table and, when broadcasting is configured, emits real-time events. It does **not** send email, Telegram, etc.
 
+## Novu Behavior
+
+When Novu is enabled (Configuration > Novu), both `send()` and `sendByType()` delegate to the Novu API instead of using local channels:
+- `sendByType()` always delegates when Novu is enabled
+- `send()` delegates only when a Novu workflow exists for the notification type (via the workflow map in `config/novu.php`)
+- When Novu handles the notification, local channels are not used
+
+The notification payload (title, message, variables) is passed as-is to the Novu workflow. You must create matching workflows in the Novu dashboard. See [Configure Novu](configure-novu.md).
+
+## Choosing `send()` vs `sendByType()`
+
+**Prefer `sendByType()`** for all new code. It uses the template system so admins can customize notification content without code changes.
+
+| Method | Use when |
+|--------|----------|
+| `sendByType($user, $type, $variables, $channels?)` | Standard approach. Templates render per-channel content. |
+| `send($user, $type, $title, $message, $data, $channels?)` | Legacy/simple cases where you want to pass raw title/message. |
+| `createInAppNotification($user, $type, $title, $message, $data)` | In-app only; no other channels. |
+
 ## Checklist
 
 - [ ] Orchestrator injected (constructor or method).
-- [ ] `send($user, $type, $title, $message, $data, $channels?)` or `createInAppNotification(...)` used correctly.
+- [ ] `sendByType()` preferred; `send()` only if templates are unnecessary.
 - [ ] Type is semantic where useful (`backup.completed`, `auth.*`, etc.).
 - [ ] Optional `data` used for links, IDs, or client-side routing.
 - [ ] Channels omitted to use config defaults, or explicitly set when needed.
+- [ ] If using `sendByType()`, templates exist in `NotificationTemplateSeeder` for the type.
+- [ ] Variable descriptions added to `NotificationTemplateController::variableDescriptions()`.
+- [ ] Sample variables added to `NotificationTemplateController::sampleVariables()` for preview.
 
 ## Reference
 

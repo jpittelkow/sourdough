@@ -258,10 +258,13 @@ class ConfigServiceProvider extends ServiceProvider
             config(['notifications.channels.webpush.subject' => $settings['vapid_subject'] ?? config('app.url')]);
             config(['notifications.channels.webpush.enabled' => !empty($settings['vapid_public_key']) && !empty($settings['vapid_private_key'] ?? null)]);
         }
-        // FCM
-        if (array_key_exists('fcm_server_key', $settings)) {
-            config(['notifications.channels.fcm.server_key' => $settings['fcm_server_key']]);
-            config(['notifications.channels.fcm.enabled' => !empty($settings['fcm_server_key'])]);
+        // FCM (v1 API)
+        if (array_key_exists('fcm_project_id', $settings)) {
+            config(['notifications.channels.fcm.project_id' => $settings['fcm_project_id']]);
+        }
+        if (array_key_exists('fcm_service_account', $settings)) {
+            config(['notifications.channels.fcm.service_account' => $settings['fcm_service_account']]);
+            config(['notifications.channels.fcm.enabled' => !empty($settings['fcm_project_id'] ?? null) && !empty($settings['fcm_service_account'])]);
         }
         // ntfy
         if (array_key_exists('ntfy_enabled', $settings)) {

@@ -130,6 +130,43 @@ You can choose from three theme modes:
 Your theme preference is saved and will persist across sessions and devices.`,
       },
       {
+        id: "timezone-settings",
+        title: "Timezone Settings",
+        tags: ["timezone", "time", "regional", "date", "time zone"],
+        content: `# Timezone Settings
+
+Control how dates and times are displayed throughout the application.
+
+## How Timezone Is Set
+
+Your timezone is **automatically detected** from your browser when you first log in or register. You can override it manually at any time.
+
+## Changing Your Timezone
+
+1. Click your profile picture in the top-right
+2. Select **Preferences**
+3. Find the **Regional** card
+4. Choose your preferred timezone from the dropdown
+5. Select "Use system default" to revert to automatic detection
+
+## Timezone Fallback
+
+If you haven't set a personal timezone, the app uses this fallback chain:
+
+1. **Your personal setting** (set in Preferences)
+2. **System default** (set by an administrator in System Settings)
+3. **Server timezone** (UTC by default)
+
+## Where Timezone Applies
+
+Your timezone affects all dates and times shown in the app, including:
+
+- Notification timestamps
+- Audit log entries
+- Backup timestamps
+- Activity history`,
+      },
+      {
         id: "changelog",
         title: "Changelog & Version History",
         tags: ["changelog", "version", "release", "updates", "what's new"],

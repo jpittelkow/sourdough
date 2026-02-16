@@ -2,6 +2,8 @@
 
 import { create } from "zustand";
 import { api } from "./api";
+import { detectBrowserTimezone } from "./timezones";
+import { setUserTimezone } from "./utils";
 
 export interface User {
   id: number;
@@ -12,6 +14,20 @@ export interface User {
   email_verified_at: string | null;
   groups?: { id: number; name: string; slug: string }[];
   permissions?: string[];
+}
+
+/**
+ * Fire-and-forget: send the browser's timezone to the backend.
+ * Only sets it if the user hasn't explicitly chosen one.
+ * Also immediately sets the browser timezone as a temporary frontend
+ * value so date formatting works before fetchUser() completes.
+ */
+function sendDetectedTimezone(): void {
+  const tz = detectBrowserTimezone();
+  setUserTimezone(tz);
+  api.post("/user/settings/detect-timezone", { timezone: tz }).catch(() => {
+    // Silently ignore -- this is best-effort
+  });
 }
 
 /** Whether the user is an admin (in admin group). Prefer over user.is_admin for resilience. */
@@ -48,10 +64,14 @@ export const useAuth = create<AuthState>((set, get) => ({
         user: User;
         groups?: string[];
         permissions?: string[];
+        timezone?: string;
       };
       const user = data.user
         ? { ...data.user, permissions: data.permissions ?? [] }
         : null;
+      if (data.timezone) {
+        setUserTimezone(data.timezone);
+      }
       set({ user, isLoading: false, error: null });
     } catch (error) {
       set({ user: null, isLoading: false, error: null });
@@ -84,6 +104,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     }
 
     set({ user: response.data.user, isLoading: false, error: null });
+    sendDetectedTimezone();
     return response.data;
   },
 
@@ -101,10 +122,12 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
 
     set({ user: response.data.user, isLoading: false, error: null });
+    sendDetectedTimezone();
   },
 
   logout: async () => {
     await api.post("/auth/logout");
+    setUserTimezone(undefined);
     set({ user: null, error: null });
   },
 
@@ -116,6 +139,7 @@ export const useAuth = create<AuthState>((set, get) => ({
     });
 
     set({ user: response.data.user, isLoading: false, error: null });
+    sendDetectedTimezone();
   },
 }));
 

@@ -102,16 +102,16 @@ class UsageAlertService
 
             foreach ($admins as $admin) {
                 try {
-                    $this->orchestrator->send(
+                    $this->orchestrator->sendByType(
                         $admin,
                         $type,
-                        $title,
-                        $message,
                         [
-                            'integration' => $alert['integration'],
-                            'budget' => $alert['budget'],
-                            'current_cost' => $alert['current_cost'],
-                            'percent' => $alert['percent'],
+                            'title' => $title,
+                            'message' => $message,
+                            'integration' => $integrationLabel,
+                            'budget' => number_format($alert['budget'], 2),
+                            'current_cost' => number_format($alert['current_cost'], 2),
+                            'percent' => (string) $alert['percent'],
                         ]
                     );
                 } catch (\Throwable $e) {

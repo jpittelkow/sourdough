@@ -182,9 +182,10 @@ return [
         */
 
         'fcm' => [
-            'enabled' => !empty(env('FCM_SERVER_KEY')),
+            'enabled' => !empty(env('FCM_PROJECT_ID')) && !empty(env('FCM_SERVICE_ACCOUNT')),
             'driver' => 'fcm',
-            'server_key' => env('FCM_SERVER_KEY'),
+            'project_id' => env('FCM_PROJECT_ID'),
+            'service_account' => env('FCM_SERVICE_ACCOUNT'),
         ],
 
         /*
@@ -194,7 +195,7 @@ return [
         */
 
         'ntfy' => [
-            'enabled' => env('NTFY_ENABLED', true),
+            'enabled' => env('NTFY_ENABLED', false),
             'driver' => 'ntfy',
             'server' => env('NTFY_SERVER', 'https://ntfy.sh'),
         ],

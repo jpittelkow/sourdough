@@ -32,30 +32,7 @@ import { SaveButton } from "@/components/ui/save-button";
 import { HelpTooltip } from "@/components/ui/help-tooltip";
 import { HelpLink } from "@/components/help/help-link";
 import { TOOLTIP_CONTENT } from "@/lib/tooltip-content";
-
-const TIMEZONES = [
-  { value: "UTC", label: "UTC" },
-  { value: "America/New_York", label: "Eastern Time (US)" },
-  { value: "America/Chicago", label: "Central Time (US)" },
-  { value: "America/Denver", label: "Mountain Time (US)" },
-  { value: "America/Los_Angeles", label: "Pacific Time (US)" },
-  { value: "America/Toronto", label: "Toronto" },
-  { value: "America/Vancouver", label: "Vancouver" },
-  { value: "Europe/London", label: "London" },
-  { value: "Europe/Paris", label: "Paris" },
-  { value: "Europe/Berlin", label: "Berlin" },
-  { value: "Europe/Rome", label: "Rome" },
-  { value: "Europe/Madrid", label: "Madrid" },
-  { value: "Europe/Amsterdam", label: "Amsterdam" },
-  { value: "Asia/Tokyo", label: "Tokyo" },
-  { value: "Asia/Shanghai", label: "Shanghai" },
-  { value: "Asia/Hong_Kong", label: "Hong Kong" },
-  { value: "Asia/Singapore", label: "Singapore" },
-  { value: "Asia/Dubai", label: "Dubai" },
-  { value: "Australia/Sydney", label: "Sydney" },
-  { value: "Australia/Melbourne", label: "Melbourne" },
-  { value: "Pacific/Auckland", label: "Auckland" },
-];
+import { TIMEZONES } from "@/lib/timezones";
 
 const LOCALES = [
   { value: "en", label: "English" },
@@ -347,6 +324,12 @@ export default function SystemSettingsPage() {
                       <SelectValue placeholder="Select timezone" />
                     </SelectTrigger>
                     <SelectContent>
+                      {/* Show current value if not in curated list (e.g. from APP_TIMEZONE env) */}
+                      {watch("general.default_timezone") && !TIMEZONES.some((tz) => tz.value === watch("general.default_timezone")) && (
+                        <SelectItem value={watch("general.default_timezone")}>
+                          {watch("general.default_timezone")}
+                        </SelectItem>
+                      )}
                       {TIMEZONES.map((tz) => (
                         <SelectItem key={tz.value} value={tz.value}>
                           {tz.label}

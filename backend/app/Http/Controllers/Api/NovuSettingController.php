@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateNovuSettingsRequest;
 use App\Http\Traits\ApiResponseTrait;
+use App\Services\AuditService;
 use App\Services\NovuService;
 use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +19,8 @@ class NovuSettingController extends Controller
 
     public function __construct(
         private NovuService $novuService,
-        private SettingService $settingService
+        private SettingService $settingService,
+        private AuditService $auditService
     ) {}
 
     /**
@@ -54,6 +56,14 @@ class NovuSettingController extends Controller
 
         $this->settingService->clearCache();
         \Illuminate\Support\Facades\Cache::forget('system_settings_public');
+
+        $this->auditService->log(
+            'novu_settings.updated',
+            null,
+            [],
+            ['keys_updated' => array_keys($validated)],
+            $request->user()?->id
+        );
 
         return $this->successResponse('Novu settings updated successfully');
     }

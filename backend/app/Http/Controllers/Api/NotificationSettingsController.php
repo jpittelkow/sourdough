@@ -7,6 +7,11 @@ use App\Services\EmailConfigService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * @deprecated Use UserNotificationSettingsController instead.
+ * Routes previously pointing to this controller have been migrated.
+ * This file is retained for reference only and will be removed in a future release.
+ */
 class NotificationSettingsController extends Controller
 {
     /**
@@ -50,13 +55,13 @@ class NotificationSettingsController extends Controller
 
         // Update enabled status
         if (isset($validated['enabled'])) {
-            $user->setSetting("{$channelId}_enabled", $validated['enabled'], 'notifications');
+            $user->setSetting('notifications', "{$channelId}_enabled", $validated['enabled']);
         }
 
         // Update channel-specific settings
         if (isset($validated['settings'])) {
             foreach ($validated['settings'] as $key => $value) {
-                $user->setSetting("{$channelId}_{$key}", $value, 'notifications');
+                $user->setSetting('notifications', "{$channelId}_{$key}", $value);
             }
         }
 

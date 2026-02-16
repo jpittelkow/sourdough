@@ -26,7 +26,7 @@ class WebPushChannel implements ChannelInterface
         $title = $resolved['title'];
         $message = $resolved['body'];
 
-        $subscriptionData = $user->getSetting('webpush_subscription');
+        $subscriptionData = $user->getSetting('notifications', 'webpush_subscription');
 
         if (!$subscriptionData) {
             throw new \RuntimeException('Web Push subscription not configured for user');
@@ -67,9 +67,7 @@ class WebPushChannel implements ChannelInterface
             ],
         ];
 
-        $webPush = new WebPush($auth, [], 30, [
-            'TTL' => 86400,
-        ]);
+        $webPush = new WebPush($auth, ['TTL' => 86400], 30);
 
         $report = $webPush->sendOneNotification($subscription, $payload);
 
@@ -102,7 +100,7 @@ class WebPushChannel implements ChannelInterface
     public function isAvailableFor(User $user): bool
     {
         return config('notifications.channels.webpush.enabled', false)
-            && !empty($user->getSetting('webpush_subscription'));
+            && !empty($user->getSetting('notifications', 'webpush_subscription'));
     }
 
     private function resolveContent(User $user, string $type, string $title, string $message, array $data): array

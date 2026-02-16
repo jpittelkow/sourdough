@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
@@ -23,7 +23,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { SettingsPageSkeleton } from "@/components/ui/settings-page-skeleton";
 import { SaveButton } from "@/components/ui/save-button";
-import { ArrowLeft, RotateCcw, Loader2, Copy } from "lucide-react";
+import { ArrowLeft, RotateCcw, Loader2, Copy, Send } from "lucide-react";
 import { CollapsibleCard } from "@/components/ui/collapsible-card";
 
 const templateSchema = z.object({
@@ -66,9 +66,11 @@ export default function NotificationTemplateEditorPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [previewTitle, setPreviewTitle] = useState("");
   const [previewBody, setPreviewBody] = useState("");
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const isInitialLoad = useRef(true);
 
   const {
     register,
@@ -131,6 +133,10 @@ export default function NotificationTemplateEditorPage() {
 
   useEffect(() => {
     if (!id || !template) return;
+    if (isInitialLoad.current) {
+      isInitialLoad.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       setIsPreviewLoading(true);
       api
@@ -146,7 +152,7 @@ export default function NotificationTemplateEditorPage() {
           }
         })
         .catch(() => {
-          setPreviewBody("");
+          // Keep last good preview on transient errors
         })
         .finally(() => {
           setIsPreviewLoading(false);
@@ -203,6 +209,31 @@ export default function NotificationTemplateEditorPage() {
     }
   };
 
+  const channelGroupToChannel: Record<string, string> = {
+    inapp: "database",
+    push: "webpush",
+    chat: "slack",
+  };
+
+  const handleSendTest = async () => {
+    if (!template) return;
+    const channel = channelGroupToChannel[template.channel_group] ?? "database";
+    setIsTesting(true);
+    try {
+      await api.post(`/notification-settings/test/${channel}`);
+      toast.success(`Test notification sent via ${channel}`);
+    } catch (error: unknown) {
+      const message =
+        error && typeof error === "object" && "response" in error
+          ? (error as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : "Failed to send test notification";
+      toast.error(message || "Failed to send test notification");
+    } finally {
+      setIsTesting(false);
+    }
+  };
+
   if (isLoading || !template) {
     return <SettingsPageSkeleton />;
   }
@@ -216,8 +247,10 @@ export default function NotificationTemplateEditorPage() {
     channelGroupLabel[template.channel_group] ?? template.channel_group;
 
   const copyPlaceholder = (placeholder: string) => {
-    void navigator.clipboard.writeText(placeholder).then(() => {
+    navigator.clipboard.writeText(placeholder).then(() => {
       toast.success("Copied to clipboard");
+    }).catch(() => {
+      toast.error("Failed to copy to clipboard");
     });
   };
 
@@ -304,6 +337,19 @@ export default function NotificationTemplateEditorPage() {
               </div>
             </CardContent>
             <CardFooter className="flex flex-wrap justify-end gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleSendTest}
+                disabled={isTesting}
+              >
+                {isTesting ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Send test
+              </Button>
               <SaveButton isDirty={isDirty} isSaving={isSaving} />
               {template.is_system && (
                 <Button

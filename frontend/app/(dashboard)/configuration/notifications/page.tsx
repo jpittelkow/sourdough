@@ -38,6 +38,8 @@ import {
   Bell,
   CheckCircle,
   XCircle,
+  PlayCircle,
+  MinusCircle,
 } from "lucide-react";
 import { HelpLink } from "@/components/help/help-link";
 
@@ -95,7 +97,8 @@ const credentialSchema = z.object({
   vapid_public_key: z.string().optional(),
   vapid_private_key: z.string().optional(),
   vapid_subject: z.string().optional(),
-  fcm_server_key: z.string().optional(),
+  fcm_project_id: z.string().optional(),
+  fcm_service_account: z.string().optional(),
   ntfy_enabled: z.boolean().default(true),
   ntfy_server: z.string().optional(),
   matrix_homeserver: z.string().optional(),
@@ -125,7 +128,8 @@ const credentialDefaultValues: CredentialForm = {
   vapid_public_key: "",
   vapid_private_key: "",
   vapid_subject: "",
-  fcm_server_key: "",
+  fcm_project_id: "",
+  fcm_service_account: "",
   ntfy_enabled: true,
   ntfy_server: "",
   matrix_homeserver: "",
@@ -141,6 +145,8 @@ export default function NotificationsPage() {
   const [savingChannels, setSavingChannels] = useState<Set<string>>(new Set());
   const [isSavingCredentials, setIsSavingCredentials] = useState(false);
   const [testingChannel, setTestingChannel] = useState<string | null>(null);
+  const [verifyResults, setVerifyResults] = useState<Record<string, { status: string; error?: string; reason?: string }> | null>(null);
+  const [isTestingAll, setIsTestingAll] = useState(false);
 
   const {
     register,
@@ -258,16 +264,47 @@ export default function NotificationsPage() {
 
   const handleSmsProviderChange = async (value: string) => {
     const next = value === "__none__" ? null : value;
+    const previous = smsProvider;
     setSmsProvider(next);
     try {
       await api.put("/admin/notification-channels", { sms_provider: next });
       toast.success("SMS provider updated");
     } catch (err: unknown) {
-      setSmsProvider(smsProvider);
+      setSmsProvider(previous);
       const msg = err && typeof err === "object" && "response" in err
         ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
         : null;
       toast.error(msg ?? "Failed to update SMS provider");
+    }
+  };
+
+  const handleTestAllChannels = async () => {
+    setIsTestingAll(true);
+    setVerifyResults(null);
+    try {
+      const res = await api.post("/admin/notification-channels/test-all");
+      const results = res.data?.results ?? {};
+      setVerifyResults(results);
+      const successes = Object.values(results).filter(
+        (r: { status: string }) => r.status === "success"
+      ).length;
+      const failures = Object.values(results).filter(
+        (r: { status: string }) => r.status === "error"
+      ).length;
+      if (failures > 0) {
+        toast.warning(`${successes} passed, ${failures} failed`);
+      } else {
+        toast.success(`All ${successes} enabled channels passed`);
+      }
+    } catch (err: unknown) {
+      const msg =
+        err && typeof err === "object" && "response" in err
+          ? (err as { response?: { data?: { message?: string } } }).response
+              ?.data?.message
+          : null;
+      toast.error(msg ?? "Failed to test channels");
+    } finally {
+      setIsTestingAll(false);
     }
   };
 
@@ -284,6 +321,65 @@ export default function NotificationsPage() {
           <HelpLink articleId="notification-channels" />
         </p>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Verify Configuration</CardTitle>
+          <CardDescription>
+            Test all enabled channels to verify notifications are working correctly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {verifyResults ? (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {Object.entries(verifyResults).map(([id, result]) => (
+                <div
+                  key={id}
+                  className="flex items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                >
+                  {result.status === "success" ? (
+                    <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                  ) : result.status === "error" ? (
+                    <XCircle className="h-4 w-4 shrink-0 text-destructive" />
+                  ) : (
+                    <MinusCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <span className="font-medium">
+                    {channels.find((c) => c.id === id)?.name ?? id}
+                  </span>
+                  {result.status === "skipped" && (
+                    <span className="text-xs text-muted-foreground">
+                      ({result.reason === "not_configured" ? "not configured" : "not available"})
+                    </span>
+                  )}
+                  {result.status === "error" && result.error && (
+                    <span className="truncate text-xs text-destructive" title={result.error}>
+                      {result.error.length > 40 ? result.error.substring(0, 40) + "..." : result.error}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Click the button below to send a test notification on every enabled channel.
+            </p>
+          )}
+        </CardContent>
+        <CardFooter>
+          <Button
+            onClick={handleTestAllChannels}
+            disabled={isTestingAll}
+          >
+            {isTestingAll ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <PlayCircle className="mr-2 h-4 w-4" />
+            )}
+            Test all enabled channels
+          </Button>
+        </CardFooter>
+      </Card>
 
       {smsProvidersConfigured.length > 0 && (
         <Card>
@@ -662,17 +758,20 @@ export default function NotificationsPage() {
 
         <CollapsibleCard
           title="Firebase Cloud Messaging"
-          description="FCM server key"
+          description="FCM v1 API (service account JSON)"
           icon={<Bell className="h-4 w-4" />}
           status={{
-            label: watch("fcm_server_key") ? "Configured" : "Not configured",
-            variant: watch("fcm_server_key") ? "success" : "default",
+            label: watch("fcm_project_id") && watch("fcm_service_account") ? "Configured" : "Not configured",
+            variant: watch("fcm_project_id") && watch("fcm_service_account") ? "success" : "default",
           }}
           defaultOpen={false}
         >
           <div className="space-y-4">
-            <FormField id="fcm_server_key" label="Server key" error={errors.fcm_server_key?.message}>
-              <Input id="fcm_server_key" type="password" placeholder="Optional" {...register("fcm_server_key")} className="min-h-[44px]" />
+            <FormField id="fcm_project_id" label="Project ID" error={errors.fcm_project_id?.message}>
+              <Input id="fcm_project_id" placeholder="my-project-id" {...register("fcm_project_id")} className="min-h-[44px]" />
+            </FormField>
+            <FormField id="fcm_service_account" label="Service Account JSON" error={errors.fcm_service_account?.message} description="Paste the full service account JSON key from Firebase Console.">
+              <Input id="fcm_service_account" type="password" placeholder="Optional" {...register("fcm_service_account")} className="min-h-[44px]" />
             </FormField>
             <Button
               type="button"

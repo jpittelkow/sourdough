@@ -68,7 +68,8 @@ class NotificationOrchestrator
         }
 
         $channels = $channels ?? $this->getDefaultChannels();
-        $variables = array_merge($baseVariables, $variables);
+        $callerVariables = $variables;
+        $mergedVariables = array_merge($baseVariables, $variables);
         $results = [];
 
         foreach ($channels as $channel) {
@@ -96,19 +97,27 @@ class NotificationOrchestrator
                 $message = null;
 
                 if ($channelGroup === 'email') {
-                    $title = $variables['title'] ?? $type;
-                    $message = $variables['message'] ?? '';
+                    $title = $mergedVariables['title'] ?? $type;
+                    $message = $mergedVariables['message'] ?? '';
                 } else {
                     try {
-                        $rendered = $this->notificationTemplateService->render($type, $channelGroup, $variables);
+                        $rendered = $this->notificationTemplateService->render($type, $channelGroup, $mergedVariables);
                         $title = $rendered['title'];
                         $message = $rendered['body'];
                     } catch (\InvalidArgumentException $e) {
+                        Log::warning("Notification template not found, skipping channel", [
+                            'type' => $type,
+                            'channel' => $channel,
+                            'channel_group' => $channelGroup,
+                            'error' => $e->getMessage(),
+                        ]);
                         continue;
                     }
                 }
 
-                $result = $channelInstance->send($user, $type, $title, $message, $variables);
+                // Pass caller variables (without PII base vars) as data to avoid
+                // storing user email/name in the notification data column.
+                $result = $channelInstance->send($user, $type, $title, $message, $callerVariables);
                 $results[$channel] = [
                     'success' => true,
                     'result' => $result,
@@ -305,6 +314,24 @@ class NotificationOrchestrator
         $result = $this->novuService->triggerWorkflow($workflowId, $subscriberId, $payload);
 
         return ['novu' => $result];
+    }
+
+    /**
+     * Get all known channel identifiers.
+     *
+     * @return string[]
+     */
+    public static function knownChannels(): array
+    {
+        return ['database', 'email', 'telegram', 'discord', 'slack', 'twilio', 'signal', 'matrix', 'vonage', 'sns', 'webpush', 'fcm', 'ntfy'];
+    }
+
+    /**
+     * Check if a channel identifier is valid.
+     */
+    public static function isKnownChannel(string $channel): bool
+    {
+        return in_array($channel, self::knownChannels(), true);
     }
 
     /**

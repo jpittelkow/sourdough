@@ -27,7 +27,8 @@ class NotificationController extends Controller
             $query->unread();
         }
 
-        $notifications = $query->paginate($request->input('per_page', config('app.pagination.default')));
+        $perPage = min((int) $request->input('per_page', config('app.pagination.default')), 100);
+        $notifications = $query->paginate($perPage);
 
         return response()->json($notifications);
     }
@@ -104,6 +105,13 @@ class NotificationController extends Controller
      */
     public function test(Request $request, string $channel): JsonResponse
     {
+        if (!NotificationOrchestrator::isKnownChannel($channel)) {
+            return response()->json([
+                'message' => 'Unknown notification channel',
+                'error' => "Channel '{$channel}' is not a recognized notification channel.",
+            ], 422);
+        }
+
         $user = $request->user();
 
         try {
@@ -114,9 +122,13 @@ class NotificationController extends Controller
                 'channel' => $channel,
             ]);
         } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::warning('Test notification failed', [
+                'channel' => $channel,
+                'error' => $e->getMessage(),
+            ]);
             return response()->json([
                 'message' => 'Failed to send test notification',
-                'error' => $e->getMessage(),
+                'error' => 'The test notification could not be sent. Check channel configuration.',
             ], 400);
         }
     }

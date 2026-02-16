@@ -22,19 +22,22 @@ class CheckSuspiciousActivityCommand extends Command
             return self::SUCCESS;
         }
 
-        $title = 'Suspicious activity detected';
-        $message = implode(' ', array_column($alerts, 'message'));
-
         $admins = User::whereHas('groups', fn ($q) => $q->where('slug', 'admin'))->get();
+
+        $alertSummary = implode('; ', array_column($alerts, 'message'));
 
         foreach ($admins as $admin) {
             try {
-                $orchestrator->send(
+                $orchestrator->sendByType(
                     $admin,
                     'suspicious_activity',
-                    $title,
-                    $message,
-                    ['alerts' => $alerts]
+                    [
+                        'title' => 'Suspicious activity detected',
+                        'message' => $alertSummary,
+                        'alert_summary' => $alertSummary,
+                        'alert_count' => (string) count($alerts),
+                        'alerts' => $alerts,
+                    ]
                 );
             } catch (\Throwable $e) {
                 $this->warn("Failed to notify admin {$admin->id}: " . $e->getMessage());

@@ -192,6 +192,7 @@ class AuthController extends Controller
             'groups' => $user->groups->pluck('slug'),
             'permissions' => $permissions,
             'two_factor_enabled' => $user->hasTwoFactorEnabled(),
+            'timezone' => $user->getTimezone(),
         ]);
     }
 

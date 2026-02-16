@@ -57,9 +57,9 @@ class SettingController extends Controller
 
         foreach ($validated['settings'] as $setting) {
             $user->setSetting(
+                $setting['group'] ?? 'general',
                 $setting['key'],
-                $setting['value'],
-                $setting['group'] ?? 'general'
+                $setting['value']
             );
         }
 
@@ -80,7 +80,7 @@ class SettingController extends Controller
         $user = $request->user();
 
         foreach ($validated['settings'] as $key => $value) {
-            $user->setSetting($key, $value, $group);
+            $user->setSetting($group, $key, $value);
         }
 
         return response()->json([
